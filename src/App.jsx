@@ -28,6 +28,7 @@ function Button({text, callfunc}){
 
 
 
+
 function App() {
   const [count, setCount] = useState(0)
 
@@ -39,7 +40,7 @@ function App() {
         <InputField par = 'Password :' classname = 'passwordField' inputtype = 'password' />  
       </div>
       <div>
-        <Button  text = 'Login' />
+        <Button  text = 'hi sami' />
         <Button text="Count" callfunc={() => {
           setCount(count + 1)
         }} />
