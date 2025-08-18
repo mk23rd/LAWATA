@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 
 
@@ -25,26 +23,9 @@ function Button({text, callfunc}){
   )
 }
 
-async function getPokemon(name){
-
-    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`)
-
-        if(!response.ok){
-            throw new Error(`cant find ${temp}`)
-        }
-        else{
-
-          const data = await response.json()
-
-          text = `${data.name}`
-
-  
-        }
-
-}
 
 
-let text 
+
 
 
 function App() {
