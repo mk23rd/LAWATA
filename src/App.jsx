@@ -4,10 +4,6 @@ import viteLogo from '/vite.svg'
 import './App.css'
 
 
-function countup(){
-  console.log('hellow from submit button')
-}
-
 
 function InputField({par, classname ,inputtype}){
 
@@ -20,18 +16,35 @@ function InputField({par, classname ,inputtype}){
 
 }
 
-function Button({text, callfunc}){
+function Button({text, callfunc}){  
   return(
 
-    <button onClick={() =>{
-      
-    }}>
+   <button onClick={callfunc}>
       {text}
-    </button>
+   </button>
   )
 }
 
+async function getPokemon(name){
 
+    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`)
+
+        if(!response.ok){
+            throw new Error(`cant find ${temp}`)
+        }
+        else{
+
+          const data = await response.json()
+
+          text = `${data.name}`
+
+  
+        }
+
+}
+
+
+let text 
 
 
 function App() {
@@ -46,8 +59,11 @@ function App() {
       </div>
       <div>
         <Button  text = 'Login' />
-        <Button text = 'Sign up' />
+        <Button text="Count" callfunc={() => {
+          setCount(count + 1)
+        }} />
       </div>
+      <p>{count}</p>
     </>
   )
 }
