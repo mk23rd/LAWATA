@@ -37,6 +37,13 @@ function App() {
         <InputField par = 'Username :' classname = 'usernameField' inputtype= 'text' />
         <InputField par = 'Password :' classname = 'passwordField' inputtype = 'password' />  
       </div>
+      <div className="login-opt">
+        <div className="rememberme">
+          <input type="checkbox" name="remember" id="" />
+          <span>Remember me!</span>
+        </div>
+        <p><a href="#blank">Forgot password?</a></p>
+      </div>
       <div className='login-btns'>
         <Button  text = 'LOG IN' />
       </div>

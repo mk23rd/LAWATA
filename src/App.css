@@ -5,6 +5,12 @@
 
 }
 
+a{
+  text-decoration: none;
+  font-weight: 600;
+  color: black;
+}
+
 p{
   align-self: last baseline;
   padding: 0;
@@ -21,7 +27,6 @@ p{
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-around;
   border-style: dotted;
 }
 
@@ -32,6 +37,8 @@ p{
 .login-inp{
   display: flex;
   flex-direction: column;
+
+  margin: 64px 0px;
 }
 
 .login-inp input{
@@ -49,13 +56,29 @@ p{
   border-radius: 4px;
 
   width: calc(100%);
+  box-sizing: border-box;
 }
 
 .login-inp p{
   text-align: left;
   margin-bottom: 4px;
+  font-weight: 600;
 }
 
+.login-opt{
+  display: flex;
+  justify-content: space-between;
+
+  margin-bottom: 24px;
+}
+
+.login-opt div{
+  display: flex;
+  justify-content: flex-start;
+}
+.login-opt p{
+  text-align: right;
+}
 .login-btns{
   margin-top: 12px;
   display: flex;
@@ -65,7 +88,7 @@ p{
   padding-top: 16px;
   padding-bottom: 16px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   background-color: #278192;
   color: white;
   border: none;
