@@ -34,11 +34,11 @@ function App() {
       <h1>Welcome!</h1>
       
       <div className='login-inp'>
-        <InputField par = 'Username :' classname = 'usernameField' />
+        <InputField par = 'Username :' classname = 'usernameField' inputtype= 'text' />
         <InputField par = 'Password :' classname = 'passwordField' inputtype = 'password' />  
       </div>
       <div className='login-btns'>
-        <Button  text = 'Login' />
+        <Button  text = 'LOG IN' />
       </div>
       {/* <p>{count}</p> */}
       
