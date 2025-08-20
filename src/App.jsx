@@ -30,16 +30,15 @@ function App() {
 
   return (
     <div  className='login-card'>
+
+      <h1>Welcome!</h1>
       
-      <div>
+      <div className='login-inp'>
         <InputField par = 'Username :' classname = 'usernameField' />
         <InputField par = 'Password :' classname = 'passwordField' inputtype = 'password' />  
       </div>
       <div className='login-btns'>
         <Button  text = 'Login' />
-        <Button text="Count" callfunc={() => {
-          setCount(count + 1)
-        }} />
       </div>
       {/* <p>{count}</p> */}
       
