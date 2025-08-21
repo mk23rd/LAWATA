@@ -7,8 +7,8 @@ import Signing from './pages/Signing'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    {/* <App /> */}
     {/* <Home/> */}
-    {/* <Signing/> */}
+    <Signing/>
   </StrictMode>,
 )

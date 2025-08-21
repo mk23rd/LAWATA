@@ -42,6 +42,8 @@ function Footer({goto,textOne,textTwo}){
     
   )
 }
+
+
 function SignInPage(){
   return(
     <div  className='login-card'>
@@ -51,6 +53,7 @@ function SignInPage(){
         <InputField par = 'Username' classname = 'usernameField' inputtype= 'text' />
         <InputField par = 'Password' classname = 'passwordField' inputtype = 'password' />  
       </div>
+      
       <div className="login-opt">
         <div className="rememberme">
           <input type="checkbox" name="remember" id="" />
@@ -58,15 +61,20 @@ function SignInPage(){
         </div>
         <p><a href="#blank">Forgot password?</a></p>
       </div>
+
       <div className='login-btns'>
         <Button  text = 'LOG IN' />
       </div>
+
       <div className='create-account'>
         <Footer goto="/signup" textOne = "Don't have an account" textTwo="Sign up"/>
       </div>
     </div>
   );
 }
+
+
+
 function SignUpPage(){
     return(
     <div  className='signup-card'>
