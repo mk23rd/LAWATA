@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react
 import './App.css'
 
 
-
 function InputField({ par, classname, inputtype }) {
   return (
     <div className="input-field">
