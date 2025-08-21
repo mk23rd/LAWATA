@@ -39,7 +39,7 @@ p{
   flex-direction: column;
 
   margin: 64px 0px;
-  gap: 12px;
+  gap: 24px;
 }
 
 .login-inp input{
