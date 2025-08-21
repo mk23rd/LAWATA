@@ -39,25 +39,20 @@ p{
   flex-direction: column;
 
   margin: 64px 0px;
-  gap: 24px;
+  gap: 36px;
 }
 
 .login-inp input{
 
-  padding-bottom: 16px;
-  padding-top: 16px;
-  padding-left: 16px;
-
-  font-size: 16px;
-
-  background-color: #f3f7f9;
-
-  margin-bottom: 16px;
-  border: solid 1px;
-  border-radius: 4px;
-
-  width: calc(100%);
-  box-sizing: border-box;
+  width: 80%;
+  padding: 16px 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1rem;
+  color: #2d3748;
+  background: #fafafa;
+  transition: all 0.3s ease;
+  outline: none;
 }
 
 .login-inp p{
