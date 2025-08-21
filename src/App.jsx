@@ -4,15 +4,22 @@ import './App.css'
 
 
 
-function InputField({par, classname ,inputtype}){
-
+function InputField({ par, classname, inputtype }) {
   return (
-    <>
-      <p>{par}</p>
-      <input type={inputtype} className={classname}/>
-    </>
-  )
-
+    <div className="input-field">
+      <input 
+        type={inputtype} 
+        className={classname}
+        placeholder=" "
+        required
+      />
+      <label>{par}</label>
+    </div>
+    //  <>
+    //   <p>{par}</p>
+    //   <input type={inputtype} className={classname}/>
+    // </>
+  );
 }
 
 function Button({text, callfunc}){  
@@ -24,14 +31,15 @@ function Button({text, callfunc}){
   )
 }
 
-function Footer({goto}){
+function Footer({goto,textOne,textTwo}){
   return(
-    <>
-      <p>Don't have an Account? <Link to={goto} style={{ color: '#007bff', textDecoration: 'none' }}>
-          Sign up
+    <div className='footer'>
+      <p>{textOne} <Link to={goto} style={{ color: '#667eea', textDecoration: 'none'}}>
+          {textTwo}
         </Link></p>
+        
       
-    </>
+    </div>
     
   )
 }
@@ -55,17 +63,27 @@ function SignInPage(){
         <Button  text = 'LOG IN' />
       </div>
       <div className='create-account'>
-        <Footer goto="/signup" />
+        <Footer goto="/signup" textOne = "Don't have an account" textTwo="Sign up"/>
       </div>
     </div>
   );
 }
 function SignUpPage(){
     return(
-    <div  className='login-card'>
-      <h1>Welcome to signup!</h1>
+    <div  className='signup-card'>
+      <h1>Create Account</h1>
+      <div className='signup-inp'>
+        <InputField par = 'User Name' classname = 'usernameField' inputtype= 'text' />
+        <InputField par = 'Email' classname = 'passwordField' inputtype = 'password' />  
+        <InputField par = 'Password' classname = 'passwordField' inputtype = 'password' />  
+        <InputField par = 'Confirm Password' classname = 'passwordField' inputtype = 'password' />  
+      </div>
       
-      <Footer goto="/" />
+      <div className='signup-btns'>
+        <Button  text = 'SIGN UP' />
+      </div>
+      
+      <Footer goto="/" textOne = "Already have an account" textTwo="Log In"/>
       
     </div>
   );

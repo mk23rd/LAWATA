@@ -94,3 +94,154 @@ p{
   border: none;
   border-radius: 4px;
 }
+
+
+.signup-card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  width: 500px;
+  max-width: 450px;
+  animation: slideUp 0.6s ease-out;
+}
+
+.signup-card h1 {
+  text-align: center;
+  color: #2d3748;
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 30px;
+  letter-spacing: -0.5px;
+}
+
+
+.signup-inp {
+
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  margin-bottom: 30px;
+ 
+
+ 
+}
+
+.input-field {
+  position: relative;
+}
+
+.input-field input {
+  width: 80%;
+  padding: 16px 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1rem;
+  color: #2d3748;
+  background: #fafafa;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.input-field input:focus {
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  transform: translateY(-2px);
+}
+
+.input-field input::placeholder {
+  color: #a0aec0;
+}
+
+.input-field label {
+  position: absolute;
+  top: 50%;
+  left: 50px;
+  transform: translateY(-50%);
+  color: #a0aec0;
+  font-size: 1rem;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.input-field input:focus + label,
+.input-field input:not(:placeholder-shown) + label {
+  top: -15px;
+  left: 15px;
+  font-size: 1rem;
+  background: transparent;
+  padding: 0 8px;
+  color: #667eea;
+  font-weight: 600;
+}
+
+
+.signup-btns {
+  margin-bottom: 25px;
+}
+
+.signup-btns button {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.signup-btns button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.signup-btns button:active {
+  transform: translateY(0);
+}
+
+.footer {
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.footer p {
+  color: #718096;
+  margin-bottom: 10px;
+  font-size: 1rem;
+}
+
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+@media (max-width: 480px) {
+  .signup-card {
+    padding: 30px 25px;
+    margin: 10px;
+  }
+  
+  .signup-card h1 {
+    font-size: 1.8rem;
+  }
+  
+  .input-field input {
+    padding: 14px 18px;
+  }
+}
