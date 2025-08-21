@@ -20,14 +20,14 @@ p{
 .login-card{
   background-color: white;
   padding: 24px;
-  width: 600px;
+  width: 500px;
   height: 600px;
   border-radius: 12px;
 
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-style: dotted;
+  
 }
 
 .login-card div{
