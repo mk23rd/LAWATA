@@ -9,10 +9,11 @@ import Registration from './pages/registration.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter> {/* Wrap App with BrowserRouter */}
+    <BrowserRouter> 
       <App />
       {/* <Home/> */}
       {/* <Signing /> */}
+      {/* <Registration/> */}
     </BrowserRouter>
   </StrictMode>,
 )
