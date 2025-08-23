@@ -1,14 +1,18 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'; // Add this
 import './index.css'
 import App from './App.jsx'
 import Home from './pages/home'
 import Signing from './pages/Signing'
+import Registration from './pages/registration.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
-    {/* <Home/> */}
-    {/* <Signing/> */}
+    <BrowserRouter> {/* Wrap App with BrowserRouter */}
+      <App />
+      {/* <Home/> */}
+      {/* <Signing /> */}
+    </BrowserRouter>
   </StrictMode>,
 )
