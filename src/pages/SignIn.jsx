@@ -26,7 +26,7 @@ function SignIn({ onSignIn, loading }) {
 
   return (
     <div className='login-card'>
-      <h1>Welcome!</h1>
+      <h1>Welcome Back!</h1>
       
       <div className='login-inp'>
         <InputField 
