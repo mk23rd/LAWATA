@@ -1,4 +1,4 @@
-#root {
+/* #root {
   margin: 0 auto;
   padding: 4rem;
   text-align: center;
@@ -65,7 +65,6 @@ p{
   justify-content: space-between;
   margin-bottom: 24px;
 }
-
 .login-opt div{
   display: flex;
   justify-content: flex-start;
@@ -224,14 +223,6 @@ p{
 
 
 
-
-
-
-
-
-
-
-/* Browse page styles */
 .container {
   max-width: 1200px;
 }
@@ -305,4 +296,4 @@ p{
   .input-field input {
     padding: 14px 18px;
   }
-}
+} */
