@@ -106,7 +106,9 @@ const Browse = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
             Discover Amazing Projects
           </h1>
-          
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Support innovative ideas and bring creative projects to life
+          </p>
           <div className="mt-6 bg-white rounded-full px-4 py-2 inline-flex items-center shadow-md">
             <span className="text-green-600 font-semibold mr-2">●</span>
             <span className="text-gray-700">{projects.length} projects live</span>
