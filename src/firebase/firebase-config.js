@@ -2,11 +2,6 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from "firebase/firestore";
 
-// Load environment variables (only in development)
-if (import.meta.env.MODE === 'development') {
-  import('dotenv').then(dotenv => dotenv.config());
-}
-
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -18,14 +13,12 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Validate that all environment variables are present
-const missingVars = Object.entries(firebaseConfig)
-  .filter(([_, value]) => !value)
-  .map(([key]) => key);
-
-if (missingVars.length > 0) {
-  throw new Error(`Missing Firebase environment variables: ${missingVars.join(', ')}`);
-}
+// Debug: Log environment variables (remove in production)
+console.log('Firebase config loaded:', {
+  hasApiKey: !!import.meta.env.VITE_FIREBASE_API_KEY,
+  hasProjectId: !!import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID
+});
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

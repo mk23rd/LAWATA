@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom' // Import Link
 import HomeLogo from '../components/homeLogo'
 import { signOut } from 'firebase/auth'
 import { auth, db } from '../firebase/firebase-config'
@@ -41,6 +42,20 @@ const Home = () => {
     setShowDropdown(!showDropdown)
   }
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.user-dropdown')) {
+        setShowDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
   return (
     <div className='bg-color-d overflow-x-clip'>
       <div className='flex flex-col justify-center items-center h-screen'>
@@ -52,13 +67,14 @@ const Home = () => {
 
             <div className='w-4/6 h-full flex justify-center items-center'>
               <div className='bg-color-e rounded-2xl w-2xl h-13 relative gap-40 top-5 flex items-center justify-evenly'>
-                <a href="" className='text-color-d text-2xl'>Create</a>
-                <a href="" className='text-color-d text-2xl'>Browse Works</a>
-                <a href="" className='text-color-d text-2xl'>About</a>
+                {/* Replace <a> tags with <Link> components */}
+                <Link to="/create" className='text-color-d text-2xl hover:underline'>Create</Link>
+                <Link to="/browse" className='text-color-d text-2xl hover:underline'>Browse Works</Link>
+                <Link to="/about" className='text-color-d text-2xl hover:underline'>About</Link>
               </div>
             </div>
 
-            <div className='w-1/6 h-full flex justify-center items-center'>
+            <div className='w-1/6 h-full flex justify-center items-center user-dropdown'>
               {/* User Profile Dropdown */}
               <div className="relative">
                 <button 
@@ -77,7 +93,7 @@ const Home = () => {
                       </div>
                       <button
                         onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-opacity-10 transition-colors"
+                        className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-d hover:bg-opacity-10 transition-colors"
                       >
                         Logout
                       </button>

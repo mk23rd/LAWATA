@@ -11,11 +11,11 @@ import CreateProjectForm from './pages/CreateProject.jsx';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter> 
-      {/* <App /> */}
+      <App />
       {/* <Home/> */}
       {/* <Signing /> */}
       {/* <Registration/> */}
-      <CreateProjectForm />
+      {/* <CreateProjectForm /> */}
     </BrowserRouter>
   </StrictMode>,
 )
