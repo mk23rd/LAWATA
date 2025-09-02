@@ -80,6 +80,8 @@ export default function CreateProjectForm() {
         fundingGoal: Number(formData.fundingGoal),
         imageUrl, // store uploaded image URL
         duration,
+        backers: 0,
+        fundedMoney: 0,
         createdAt: Timestamp.now(),
       };
 
