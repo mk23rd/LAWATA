@@ -96,7 +96,7 @@ const ProjectDetails = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Back Button */}
         <Link 
-          to="/"
+          to="/browse"
           className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6 font-medium"
         >
           <ArrowLeft size={20} className="mr-2" />
