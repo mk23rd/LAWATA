@@ -36,6 +36,7 @@ export default function CreateProjectForm() {
         ...formData,
         fundingGoal: Number(formData.fundingGoal),
         fundedMoney: 0, // Add fundedMoney with default value of 0
+        backers:0,
         duration,
         createdAt: Timestamp.now(),
       };

@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
 import { Clock, Calendar, DollarSign, Tag, Target } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Browse = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -16,10 +18,12 @@ const Browse = () => {
         
         const projectsData = [];
         querySnapshot.forEach((doc) => {
-          projectsData.push({
-            id: doc.id,
+          // Use the document ID if available, otherwise generate a unique ID
+          const projectData = {
+            id: doc.id || generateUniqueId(),
             ...doc.data()
-          });
+          };
+          projectsData.push(projectData);
         });
         
         setProjects(projectsData);
@@ -34,6 +38,11 @@ const Browse = () => {
 
     fetchProjects();
   }, []);
+
+  // Generate a simple unique ID if needed
+  const generateUniqueId = () => {
+    return 'proj-' + Math.random().toString(36).substr(2, 9);
+  };
 
   // Calculate funding percentage
   const calculateFundingPercentage = (fundedMoney, fundingGoal) => {
@@ -210,11 +219,14 @@ const Browse = () => {
                     </div>
 
                     {/* Action Button */}
-                    <button className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${
-                      isFullyFunded 
-                        ? 'bg-green-500 hover:bg-green-600 text-white' 
-                        : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
-                    }`}>
+                    <button 
+                      onClick={() => navigate(`/project/${project.id}`)}
+                      className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 ${
+                        isFullyFunded 
+                          ? 'bg-green-500 hover:bg-green-600 text-white' 
+                          : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
+                      }`}
+                    >
                       {isFullyFunded ? 'View Project' : 'Support Now'}
                     </button>
                   </div>
