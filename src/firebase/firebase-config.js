@@ -13,7 +13,6 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Debug: Log environment variables (remove in production)
 console.log('Firebase config loaded:', {
   hasApiKey: !!import.meta.env.VITE_FIREBASE_API_KEY,
   hasProjectId: !!import.meta.env.VITE_FIREBASE_PROJECT_ID,
