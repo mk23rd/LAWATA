@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { gsap } from "gsap";
+import { useGSAP } from "@gsap/react";
+
 import { Link } from 'react-router-dom' // Import Link
 import HomeLogo from '../components/homeLogo'
 import { signOut } from 'firebase/auth'
@@ -113,175 +116,220 @@ const Home = () => {
             offset="w-1/26 relative top-28 flex flex-col items-center"
             connectorTop=""
             boxHeight="bg-color-e w-full h-50 font-titan flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-25"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-25"
             connectorBottom="bg-color-e w-0.5 h-56"
           />
           <HomeLogo 
             letter="N"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative top-8 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-9"
             boxHeight="bg-color-e w-full h-65 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-35"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-35"
             connectorBottom="bg-color-e w-0.5 h-6"
           />
           <HomeLogo 
             letter="V"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative -top-5 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-3"
             boxHeight="bg-color-e w-full h-80 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-54"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-54"
             connectorBottom="bg-color-e w-0.5 h-18"
           />
-          <HomeLogo 
+          <HomeLogo
             letter="C"
             offset="w-1/26 relative -top-25 flex flex-col items-center"
             connectorTop="bg-color-b w-0.5 h-35"
-            boxHeight="border-color-b border-3 w-full h-20 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-2"
+            boxHeight="border-color-b bg-color-d border-3 w-full h-20 flex justify-center z-10"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-2"
             connectorBottom="bg-color-b w-0.5 h-25"
           />
           <HomeLogo 
             letter="E"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative -top-25 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-32"
             boxHeight="bg-color-e w-full h-68 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-45"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-45"
             connectorBottom=""
           />
           <HomeLogo 
             letter="S"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative top-3 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-15"
             boxHeight="bg-color-e w-full h-55 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-34"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-34"
             connectorBottom="bg-color-e w-0.5 h-25"
           />
           <HomeLogo 
             letter="R"
             offset="w-1/26 relative top-2 flex flex-col items-center"
             connectorTop="bg-color-b w-0.5 h-5"
-            boxHeight="border-color-b border-3 w-full h-58 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-5"
+            boxHeight="border-color-b bg-color-d border-3 w-full h-58 flex justify-center"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-5"
             connectorBottom="bg-color-b w-0.5 h-5"
           />
           <HomeLogo 
             letter="T"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative -top-14 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-15"
             boxHeight="bg-color-e w-full h-70 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-51"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-51"
             connectorBottom="bg-color-e w-0.5 h-5"
           />
           <HomeLogo 
             letter="/"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative -top-15 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-60"
             boxHeight="bg-color-e w-full h-28 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-8"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-8"
             connectorBottom="bg-color-e w-0.5 h-3"
           />
           <HomeLogo 
             letter="C"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative -top-5 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-40"
             boxHeight="bg-color-e w-full h-60 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-18"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-18"
             connectorBottom=""
           />
           <HomeLogo 
             letter="E"
             offset="w-1/26 relative -top-15 flex flex-col items-center"
             connectorTop=""
-            boxHeight="border-color-b border-3 w-full h-70 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-27"
+            boxHeight="border-color-b bg-color-d border-3 w-full h-70 flex justify-center"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-27"
             connectorBottom="bg-color-b w-0.5 h-30"
           />
           <HomeLogo 
             letter="R"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative -top-5 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-5"
             boxHeight="bg-color-e w-full h-75 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-53"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-53"
             connectorBottom="bg-color-e w-0.5 h-5"
           />
           <HomeLogo 
             letter="O"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative top-30 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-3"
             boxHeight="bg-color-e w-full h-52 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-20"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-20"
             connectorBottom="bg-color-e w-0.5 h-28"
           />
           <HomeLogo 
             letter="A"
             offset="w-1/26 relative top-2 flex flex-col items-center"
             connectorTop="bg-color-b w-0.5 h-5"
-            boxHeight="border-color-b border-3 w-full h-58 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-5"
+            boxHeight="border-color-b bg-color-d border-3 w-full h-58 flex justify-center"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-5"
             connectorBottom="bg-color-b w-0.5 h-30"
           />
           <HomeLogo 
             letter="W"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative top-5 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-45"
             boxHeight="bg-color-e w-full h-20 flex justify-center"
-            paragraph="text-color-b font-titan text-5xl relative top-5"
+            paragraph="text-color-b font-titan sm:text-xl md:text-3xl lg:text-5xl relative top-5"
             connectorBottom="bg-color-e w-0.5 h-10"
           />
           <HomeLogo 
             letter="D"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative top-30 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-15"
             boxHeight="bg-color-e w-full h-50 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-9"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-9"
             connectorBottom="bg-color-e w-0.5 h-5"
           />
           <HomeLogo 
             letter="F"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative top-10 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-3"
             boxHeight="bg-color-e w-full h-60 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-41"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-41"
             connectorBottom="bg-color-e w-0.5 h-15"
           />
           <HomeLogo 
             letter="T"
             offset="w-1/26 relative -top-30 flex flex-col items-center"
             connectorTop="bg-color-b w-0.5 h-35"
-            boxHeight="border-color-b border-3 w-full h-30 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-5"
+            boxHeight="border-color-b bg-color-d border-3 w-full h-30 flex justify-center"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-5"
             connectorBottom="bg-color-b w-0.5 h-3"
           />
           <HomeLogo 
             letter="U"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative top-25 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-5"
             boxHeight="bg-color-e w-full h-75 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-25"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-25"
             connectorBottom="bg-color-e w-0.5 h-20"
           />
           <HomeLogo 
             letter="N"
+            expandable
+            group="invest"
+            wid="130%"
             offset="w-1/26 relative -top-20 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-30"
             boxHeight="bg-color-e w-full h-60 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-45"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-45"
             connectorBottom="bg-color-e w-0.5 h-8"
           />
           <HomeLogo 
             letter="D"
+            expandable
+            group="invest"
+            wid="110%"
             offset="w-1/26 relative top-20 flex flex-col items-center"
             connectorTop="bg-color-e w-0.5 h-15"
             boxHeight="bg-color-e w-full h-50 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-20"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-20"
             connectorBottom="bg-color-e w-0.5 h-15"
           />
           <HomeLogo 
             letter="E"
             offset="w-1/26 relative -top-15 flex flex-col items-center"
             connectorTop="bg-color-b w-0.5 h-15"
-            boxHeight="border-color-b border-3 w-full h-45 flex justify-center"
-            paragraph="text-color-b font-titan text-6xl relative top-12"
+            boxHeight="border-color-b bg-color-d border-3 w-full h-45 flex justify-center"
+            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-12"
             connectorBottom="bg-color-b w-0.5 h-40"
           />
 
@@ -289,7 +337,10 @@ const Home = () => {
         </main>
 
         <div className='w-screen h-1/5 flex items-center'>
-          <p className='text-4xl text-color-e font-light relative left-38'>Crowdfunding Meets Risk Intelligence - Where Every Investment <br /> is an Informed Decision</p>
+          <div className=' w-1/10 h-full'></div>
+          <div className=' w-9/10 h-full flex items-center justify-baseline'>
+                <p className='sm:text-3xl md:text-3xl lg:text-4xl text-xl text-color-e font-light'>Crowdfunding Meets Risk Intelligence - Where Every Investment <br /> is an Informed Decision</p>
+          </div>       
         </div>
       </div>
 
