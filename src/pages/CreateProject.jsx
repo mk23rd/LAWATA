@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { db } from "../firebase/firebase-config"; // adjust path if needed
+import { db } from "../firebase/firebase-config";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 
 export default function CreateProjectForm() {
@@ -8,11 +8,11 @@ export default function CreateProjectForm() {
     category: "",
     shortDescription: "",
     longDescription: "",
-    imageUrl: "",
     fundingGoal: "",
     endDate: "",
   });
 
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -21,12 +21,55 @@ export default function CreateProjectForm() {
     setFormData({ ...formData, [name]: value });
   };
 
+  const handleFileChange = (e) => {
+    setImageFile(e.target.files[0]);
+  };
+
+  // Convert file to base64 string
+  const toBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(",")[1]); // remove "data:image/...;base64,"
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  // Upload image to ImgBB
+  const uploadImage = async (file) => {
+    const apiKey = import.meta.env.VITE_IMGBB_API_KEY; // from .env
+    if (!apiKey) throw new Error("Missing ImgBB API key in .env");
+
+    const base64Image = await toBase64(file);
+
+    const formData = new FormData();
+    formData.append("image", base64Image);
+
+    const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+    console.log("ImgBB response:", data); // 👀 see exact response
+
+    if (!data.success) {
+      throw new Error("Image upload failed: " + JSON.stringify(data));
+    }
+    return data.data.url;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
 
     try {
+      let imageUrl = "";
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+
       // Calculate campaign duration
       const today = new Date();
       const endDate = new Date(formData.endDate);
@@ -35,9 +78,11 @@ export default function CreateProjectForm() {
       const projectData = {
         ...formData,
         fundingGoal: Number(formData.fundingGoal),
-        fundedMoney: 0, // Add fundedMoney with default value of 0
-        backers:0,
+        imageUrl, // store uploaded image URL
         duration,
+        backers: 0,
+        fundedMoney: 0,
+        status: "Pending",
         createdAt: Timestamp.now(),
       };
 
@@ -49,10 +94,10 @@ export default function CreateProjectForm() {
         category: "",
         shortDescription: "",
         longDescription: "",
-        imageUrl: "",
         fundingGoal: "",
         endDate: "",
       });
+      setImageFile(null);
     } catch (error) {
       console.error("Error adding project: ", error);
       setMessage("❌ Failed to submit project.");
@@ -109,12 +154,11 @@ export default function CreateProjectForm() {
             required
           />
 
+          {/* Image Upload */}
           <input
-            type="url"
-            name="imageUrl"
-            placeholder="Image URL"
-            value={formData.imageUrl}
-            onChange={handleChange}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
             className="w-full p-2 border rounded-lg"
             required
           />
@@ -151,7 +195,9 @@ export default function CreateProjectForm() {
         </form>
 
         {message && (
-          <p className="text-center mt-4 font-semibold text-gray-700">{message}</p>
+          <p className="text-center mt-4 font-semibold text-gray-700">
+            {message}
+          </p>
         )}
       </div>
     </div>

@@ -65,7 +65,6 @@ p{
   justify-content: space-between;
   margin-bottom: 24px;
 }
-
 .login-opt div{
   display: flex;
   justify-content: flex-start;
@@ -222,6 +221,16 @@ p{
 
 
 
+
+
+
+
+
+
+
+
+
+/* Browse page styles */
 .container {
   max-width: 1200px;
 }

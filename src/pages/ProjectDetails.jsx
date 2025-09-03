@@ -76,7 +76,7 @@ const ProjectDetails = () => {
               <h2 className="text-2xl font-bold text-gray-800 mb-4">Project Not Found</h2>
               <p className="text-gray-600 mb-6">{error || 'The project you are looking for does not exist.'}</p>
               <Link 
-                to="/"
+                to="/browse"
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-semibold transition-colors inline-block"
               >
                 Back to Browse
@@ -96,7 +96,7 @@ const ProjectDetails = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Back Button */}
         <Link 
-          to="/browse"
+          to="/"
           className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6 font-medium"
         >
           <ArrowLeft size={20} className="mr-2" />

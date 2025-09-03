@@ -2,7 +2,7 @@ import './App.css'
 import { Routes, Route } from 'react-router-dom';
 import Registration from "./pages/registration"
 import Home from './pages/Home';
-import CreateProject from './pages/CreateProject';
+import CreateProject from "./pages/CreateProject"
 import Browse from "./pages/Browse"
 import ProjectDetails from "./pages/ProjectDetails"
 
