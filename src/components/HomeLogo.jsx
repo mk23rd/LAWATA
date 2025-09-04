@@ -1,61 +1,176 @@
 import React, { useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom' // Import Link
 import { gsap } from "gsap";
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-const HomeLogo = (Props) => {
-  const logoRef = useRef(null)
+gsap.registerPlugin(ScrollTrigger);
 
-  // Register ref into global groups (via window or context)
+const HomeLogo = () => {
+  const letterRef = useRef([]);
+
   useEffect(() => {
-    if (!window.logoGroups) window.logoGroups = { create: [], invest: [] }
+    gsap.utils.toArray(".letter").forEach(letter => {
+      gsap.to(letter, {
+        bottom: "0%", // how far it should move down
+        ease: "none",
+        scrollTrigger: {
+        trigger: letterRef.current,
+        start: "top 70%", // when the top of the element hits center of viewport
+        end: "bottom 30%", // when bottom hits topof viewport
+        scrub: true, // smooth animation linked to scroll
+        }
+      });
+    });
+  }, []);
 
-    if (Props.group) {
-      window.logoGroups[Props.group].push(logoRef)
-    }
+  
+  
+  
+  
+  const divRefs = useRef([]);
 
-    return () => {
-      if (Props.group) {
-        window.logoGroups[Props.group] = window.logoGroups[Props.group].filter(
-          ref => ref !== logoRef
-        )
-      }
-    }
-  }, [Props.group])
-
-  const handleMouseEnter = () => {
-    if (Props.group && window.logoGroups[Props.group]) {
-      gsap.to(window.logoGroups[Props.group].map(r => r.current), {
-        width: [Props.wid],
-        duration: 0.5,
-        ease: "power3.out",
-        stagger: 0.05
-      })
-    }
+// Add element to refs array (only if not already added)
+const addToRefs = (el) => {
+  if (el && !divRefs.current.includes(el)) {
+    divRefs.current.push(el);
   }
+};
 
-  const handleMouseLeave = () => {
-    if (Props.group && window.logoGroups[Props.group]) {
-      gsap.to(window.logoGroups[Props.group].map(r => r.current), {
-        width: "100%",
-        duration: 0.5,
-        ease: "power3.inOut",
-        stagger: 0.05
-      })
-    }
-  }
+const handleMouseEnter = () => {
+  divRefs.current?.forEach((el) => {
+    gsap.to(el, {
+      width: "150%",
+      duration: 0.5,
+      ease: "power3.out",
+    });
+  });
+};
+
+const handleMouseLeave = () => {
+  divRefs.current?.forEach((el) => {
+    gsap.to(el, {
+      width: "100%",
+      duration: 0.5,
+      ease: "power3.inOut",
+    });
+  });
+};
+  
 
   return (
-    <div className={`${Props.offset}`}>
-      <div className={`${Props.connectorTop}`}></div>
-      <div
-        ref={logoRef}
-        onMouseEnter={Props.expandable ? handleMouseEnter : undefined}
-        onMouseLeave={Props.expandable ? handleMouseLeave : undefined}
-        className={`${Props.boxHeight}`}
-      >
-        <p className={`${Props.paragraph}`}>{Props.letter}</p>
+    <>
+      <div className="w-1/20 h-full flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e h-50 w-full font-titan flex justify-center items-center relative z-10 mx-auto flex-none" style={{ bottom: "40%"}}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">I</p>
+        </Link>
       </div>
-      <div className={`${Props.connectorBottom}`}></div>
-    </div>
+
+      <div className="w-1/20 h-full flex items-center justify-center relative top-20">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="bg-color-e w-full h-30 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "23%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">N</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-70 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "20%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">V</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-20 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "45%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">E</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-80 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "10%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">S</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-45 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "5%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">T</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-30 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "40%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">/</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="bg-color-e w-full h-70 font-titan flex justify-center items-center z-10 mx-auto flex-none">
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">C</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-50 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "30%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">R</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-35 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "35%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">O</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-55 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "15%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">W</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-30 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "35%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">D</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-75 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "15%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">F</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-50 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "40%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">U</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-20 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "40%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">N</p>
+        </Link>
+      </div>
+
+      <div className="w-1/20 h-full  flex items-center justify-center relative">
+        <div className="bg-color-e w-0.5 h-115 absolute"></div>
+        <Link to="/browse" ref={addToRefs} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="letter bg-color-e w-full h-30 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "10%" }}>
+          <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">D</p>
+        </Link>
+      </div>
+    </>
   )
 }
 

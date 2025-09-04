@@ -27,52 +27,62 @@ function SignUp({ onSignUp, loading }) {
   };
 
   return (
-    <div className='signup-card'>
-      <h1>Create Account</h1>
-      <div className='signup-inp'>
+    <div className="bg-white rounded-2xl p-10 shadow-2xl w-[500px] max-w-[450px] animate-slideUp">
+      <h1 className="text-center text-gray-800 text-3xl font-bold mb-8 tracking-tight">
+        Create Account
+      </h1>
+
+      <div className="flex flex-col gap-6 mb-8">
         <InputField 
-          par='User Name' 
-          classname='usernameField' 
-          inputtype='text' 
+          par="User Name" 
+          classname="w-4/5 px-5 py-4 border-2 border-gray-200 rounded-xl text-gray-800 bg-gray-50 text-base focus:border-indigo-500 focus:bg-white focus:shadow-md outline-none transition duration-300"
+          inputtype="text" 
           name="username"
           value={formData.username}
           onChange={handleInputChange}
         />
         <InputField 
-          par='Email' 
-          classname='emailField' 
-          inputtype='email' 
+          par="Email" 
+          classname="w-4/5 px-5 py-4 border-2 border-gray-200 rounded-xl text-gray-800 bg-gray-50 text-base focus:border-indigo-500 focus:bg-white focus:shadow-md outline-none transition duration-300"
+          inputtype="email" 
           name="email"
           value={formData.email}
           onChange={handleInputChange}
         />  
         <InputField 
-          par='Password' 
-          classname='passwordField' 
-          inputtype='password' 
+          par="Password" 
+          classname="w-4/5 px-5 py-4 border-2 border-gray-200 rounded-xl text-gray-800 bg-gray-50 text-base focus:border-indigo-500 focus:bg-white focus:shadow-md outline-none transition duration-300"
+          inputtype="password" 
           name="password"
           value={formData.password}
           onChange={handleInputChange}
         />  
         <InputField 
-          par='Confirm Password' 
-          classname='passwordField' 
-          inputtype='password' 
+          par="Confirm Password" 
+          classname="w-4/5 px-5 py-4 border-2 border-gray-200 rounded-xl text-gray-800 bg-gray-50 text-base focus:border-indigo-500 focus:bg-white focus:shadow-md outline-none transition duration-300"
+          inputtype="password" 
           name="confirmPassword"
           value={formData.confirmPassword}
           onChange={handleInputChange}
         />  
       </div>
       
-      <div className='signup-btns'>
-        <Button text='SIGN UP' callfunc={handleSignUp} loading={loading} />
+      <div className="mb-6">
+        <Button 
+          text="SIGN UP" 
+          callfunc={handleSignUp} 
+          loading={loading}
+          className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-lg font-semibold uppercase tracking-wide hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 transition-all duration-300"
+        />
       </div>
       
-      <Footer 
-        onNavigate={navigateToSignIn}
-        textOne="Already have an account? "
-        textTwo="Log In"
-      />
+      <div className="text-center border-t pt-6">
+        <Footer 
+          onNavigate={navigateToSignIn}
+          textOne="Already have an account? "
+          textTwo="Log In"
+        />
+      </div>
     </div>
   );
 }

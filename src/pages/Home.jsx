@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { gsap } from "gsap";
-import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 import { Link } from 'react-router-dom' // Import Link
 import HomeLogo from '../components/homeLogo'
@@ -59,286 +61,85 @@ const Home = () => {
     }
   }, [])
 
+  const twoHundredRef = useRef(null);
+
+  useEffect(() => {
+  if (twoHundredRef.current) {
+    const st = ScrollTrigger.create({
+      trigger: twoHundredRef.current,
+      start: "top top",
+      end: "bottom+=190% top",
+      pin: true,
+      pinSpacing: true,
+      scrub: true,
+    });
+
+    // Cleanup on unmount
+    return () => {
+      st.kill(); // Kill the specific ScrollTrigger instance
+    };
+  }
+}, []);
+
+  
+
   return (
     <div className='bg-color-d overflow-x-clip'>
-      <div className='flex flex-col justify-center items-center h-screen'>
-        <nav className='w-screen h-1/5'>
-          <div className='fixed flex w-screen'>
-            <div className='w-1/6 h-full flex justify-center items-center'>
-              <p className='font-titan text-3xl text-color-e relative top-5'>Name/Logo</p>
-            </div>
+      <nav className='fixed top-0 left-0 w-screen h-20 z-50 flex items-center'>
+        <div className='w-1/6 h-full flex justify-center items-center'>
+          <p className='font-titan text-5xl text-color-b'>LAWATA</p>
+        </div>
 
-            <div className='w-4/6 h-full flex justify-center items-center'>
-              <div className='bg-color-e rounded-2xl w-2xl h-13 relative gap-40 top-5 flex items-center justify-evenly'>
-                {/* Replace <a> tags with <Link> components */}
-                <Link to="/create" className='text-color-d text-2xl hover:underline'>Create</Link>
-                <Link to="/browse" className='text-color-d text-2xl hover:underline'>Browse Works</Link>
-                <Link to="/about" className='text-color-d text-2xl hover:underline'>About</Link>
-              </div>
-            </div>
-
-            <div className='w-1/6 h-full flex justify-center items-center user-dropdown'>
-              {/* User Profile Dropdown */}
-              <div className="relative">
-                <button 
-                  onClick={toggleDropdown}
-                  className='bg-color-e rounded-2xl w-35 h-10 relative top-5 flex items-center justify-center text-color-d font-medium hover:bg-opacity-90 transition-colors px-4 truncate'
-                >
-                  {userData?.username || user?.email || 'User'}
-                </button>
-                
-                {showDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-color-e rounded-md shadow-lg z-10">
-                    <div className="py-1">
-                      <div className="px-4 py-2 text-sm text-color-d border-b border-color-d border-opacity-20">
-                        <p className="font-medium truncate">{userData?.username || 'User'}</p>
-                        <p className="truncate text-opacity-80">{user?.email}</p>
-                      </div>
-                      <button
-                        onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-d hover:bg-opacity-10 transition-colors"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+        <div className='w-4/6 h-full flex justify-center items-center'>
+          <div className='bg-color-e rounded-2xl w-2xl h-13 gap-40 flex items-center justify-evenly'>
+            <Link to="/create" className='text-color-d text-2xl hover:underline'>Create</Link>
+            <Link to="/browse" className='text-color-d text-2xl hover:underline'>Browse Works</Link>
+            <Link to="/about" className='text-color-d text-2xl hover:underline'>About</Link>
           </div>
-        </nav>
+        </div>
 
-        <main className='w-full h-3/5 flex gap-2 justify-center'>
-          <div className='bg-color-d w-2/26'></div>
+        <div className='w-1/6 h-full flex justify-center items-center user-dropdown'>
+          {/* User Profile Dropdown */}
+          <div className="relative">
+            <button 
+              onClick={toggleDropdown}
+              className='bg-color-e rounded-2xl w-35 h-10 flex items-center justify-center text-color-d font-medium hover:bg-opacity-90 transition-colors px-4 truncate'
+            >
+              {userData?.username || user?.email || 'User'}
+            </button>
+            
+            {showDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-color-e rounded-md shadow-lg z-10">
+                <div className="py-1">
+                  <div className="px-4 py-2 text-sm text-color-d border-b border-color-d border-opacity-20">
+                    <p className="font-medium truncate">{userData?.username || 'User'}</p>
+                    <p className="truncate text-opacity-80">{user?.email}</p>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-d hover:bg-opacity-10 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </nav>
 
-          <HomeLogo 
-            letter="I"
-            offset="w-1/26 relative top-28 flex flex-col items-center"
-            connectorTop=""
-            boxHeight="bg-color-e w-full h-50 font-titan flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-25"
-            connectorBottom="bg-color-e w-0.5 h-56"
-          />
-          <HomeLogo 
-            letter="N"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative top-8 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-9"
-            boxHeight="bg-color-e w-full h-65 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-35"
-            connectorBottom="bg-color-e w-0.5 h-6"
-          />
-          <HomeLogo 
-            letter="V"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative -top-5 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-3"
-            boxHeight="bg-color-e w-full h-80 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-54"
-            connectorBottom="bg-color-e w-0.5 h-18"
-          />
-          <HomeLogo
-            letter="C"
-            offset="w-1/26 relative -top-25 flex flex-col items-center"
-            connectorTop="bg-color-b w-0.5 h-35"
-            boxHeight="border-color-b bg-color-d border-3 w-full h-20 flex justify-center z-10"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-2"
-            connectorBottom="bg-color-b w-0.5 h-25"
-          />
-          <HomeLogo 
-            letter="E"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative -top-25 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-32"
-            boxHeight="bg-color-e w-full h-68 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-45"
-            connectorBottom=""
-          />
-          <HomeLogo 
-            letter="S"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative top-3 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-15"
-            boxHeight="bg-color-e w-full h-55 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-34"
-            connectorBottom="bg-color-e w-0.5 h-25"
-          />
-          <HomeLogo 
-            letter="R"
-            offset="w-1/26 relative top-2 flex flex-col items-center"
-            connectorTop="bg-color-b w-0.5 h-5"
-            boxHeight="border-color-b bg-color-d border-3 w-full h-58 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-5"
-            connectorBottom="bg-color-b w-0.5 h-5"
-          />
-          <HomeLogo 
-            letter="T"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative -top-14 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-15"
-            boxHeight="bg-color-e w-full h-70 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-51"
-            connectorBottom="bg-color-e w-0.5 h-5"
-          />
-          <HomeLogo 
-            letter="/"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative -top-15 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-60"
-            boxHeight="bg-color-e w-full h-28 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-8"
-            connectorBottom="bg-color-e w-0.5 h-3"
-          />
-          <HomeLogo 
-            letter="C"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative -top-5 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-40"
-            boxHeight="bg-color-e w-full h-60 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-18"
-            connectorBottom=""
-          />
-          <HomeLogo 
-            letter="E"
-            offset="w-1/26 relative -top-15 flex flex-col items-center"
-            connectorTop=""
-            boxHeight="border-color-b bg-color-d border-3 w-full h-70 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-27"
-            connectorBottom="bg-color-b w-0.5 h-30"
-          />
-          <HomeLogo 
-            letter="R"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative -top-5 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-5"
-            boxHeight="bg-color-e w-full h-75 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-53"
-            connectorBottom="bg-color-e w-0.5 h-5"
-          />
-          <HomeLogo 
-            letter="O"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative top-30 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-3"
-            boxHeight="bg-color-e w-full h-52 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-20"
-            connectorBottom="bg-color-e w-0.5 h-28"
-          />
-          <HomeLogo 
-            letter="A"
-            offset="w-1/26 relative top-2 flex flex-col items-center"
-            connectorTop="bg-color-b w-0.5 h-5"
-            boxHeight="border-color-b bg-color-d border-3 w-full h-58 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-5"
-            connectorBottom="bg-color-b w-0.5 h-30"
-          />
-          <HomeLogo 
-            letter="W"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative top-5 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-45"
-            boxHeight="bg-color-e w-full h-20 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-xl md:text-3xl lg:text-5xl relative top-5"
-            connectorBottom="bg-color-e w-0.5 h-10"
-          />
-          <HomeLogo 
-            letter="D"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative top-30 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-15"
-            boxHeight="bg-color-e w-full h-50 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-9"
-            connectorBottom="bg-color-e w-0.5 h-5"
-          />
-          <HomeLogo 
-            letter="F"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative top-10 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-3"
-            boxHeight="bg-color-e w-full h-60 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-41"
-            connectorBottom="bg-color-e w-0.5 h-15"
-          />
-          <HomeLogo 
-            letter="T"
-            offset="w-1/26 relative -top-30 flex flex-col items-center"
-            connectorTop="bg-color-b w-0.5 h-35"
-            boxHeight="border-color-b bg-color-d border-3 w-full h-30 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-5"
-            connectorBottom="bg-color-b w-0.5 h-3"
-          />
-          <HomeLogo 
-            letter="U"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative top-25 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-5"
-            boxHeight="bg-color-e w-full h-75 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-25"
-            connectorBottom="bg-color-e w-0.5 h-20"
-          />
-          <HomeLogo 
-            letter="N"
-            expandable
-            group="invest"
-            wid="130%"
-            offset="w-1/26 relative -top-20 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-30"
-            boxHeight="bg-color-e w-full h-60 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-45"
-            connectorBottom="bg-color-e w-0.5 h-8"
-          />
-          <HomeLogo 
-            letter="D"
-            expandable
-            group="invest"
-            wid="110%"
-            offset="w-1/26 relative top-20 flex flex-col items-center"
-            connectorTop="bg-color-e w-0.5 h-15"
-            boxHeight="bg-color-e w-full h-50 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-20"
-            connectorBottom="bg-color-e w-0.5 h-15"
-          />
-          <HomeLogo 
-            letter="E"
-            offset="w-1/26 relative -top-15 flex flex-col items-center"
-            connectorTop="bg-color-b w-0.5 h-15"
-            boxHeight="border-color-b bg-color-d border-3 w-full h-45 flex justify-center"
-            paragraph="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl relative top-12"
-            connectorBottom="bg-color-b w-0.5 h-40"
-          />
+      <div ref={twoHundredRef} className='flex flex-col justify-center items-center w-screen h-screen pt-30'>
+        <main className='w-full  h-3/5 gap-5 flex items-center justify-center'>
+          <div className='bg-color-d w-2/20 h-full'></div>
 
-          <div className='bg-color-d w-2/26'></div>
+          <HomeLogo/>
+
+          <div className='bg-color-d w-2/20 h-full'></div>
         </main>
 
-        <div className='w-screen h-1/5 flex items-center'>
-          <div className=' w-1/10 h-full'></div>
-          <div className=' w-9/10 h-full flex items-center justify-baseline'>
+        <div className='w-screen h-1/5 flex items-center pt-25'>
+          <div className=' w-2/10 h-full'></div>
+          <div className=' w-10/10 h-full flex items-center justify-baseline'>
                 <p className='sm:text-3xl md:text-3xl lg:text-4xl text-xl text-color-e font-light'>Crowdfunding Meets Risk Intelligence - Where Every Investment <br /> is an Informed Decision</p>
           </div>       
         </div>
