@@ -83,6 +83,7 @@ export default function CreateProjectForm() {
         backers: 0,
         fundedMoney: 0,
         status: "Pending",
+        createdby: 'temp',//will change in future  
         createdAt: Timestamp.now(),
       };
 

@@ -214,7 +214,7 @@ const Browse = () => {
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <Calendar size={16} className="mr-2 text-cyan-600" />
-                        <span>Ends: {project.endDate || 'TBD'}</span>
+                        <span>Ends: {  || 'TBD'}</span>
                       </div>
                     </div>
 

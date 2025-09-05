@@ -66,7 +66,10 @@ const Registration = () => {
         username: signUpData.username,
         email: signUpData.email,
         createdAt: new Date(),
-        lastLogin: new Date()
+        lastLogin: new Date(),
+        investor: false,
+        creator: false,
+        visitor: true,
       });
       
       alert("Account created successfully!");
