@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { db } from "../firebase/firebase-config";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // 🔹 Import Firebase Auth
 
 export default function CreateProjectForm() {
   const [formData, setFormData] = useState({
@@ -30,14 +31,14 @@ export default function CreateProjectForm() {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result.split(",")[1]); // remove "data:image/...;base64,"
+      reader.onload = () => resolve(reader.result.split(",")[1]);
       reader.onerror = (error) => reject(error);
     });
   };
 
   // Upload image to ImgBB
   const uploadImage = async (file) => {
-    const apiKey = import.meta.env.VITE_IMGBB_API_KEY; // from .env
+    const apiKey = import.meta.env.VITE_IMGBB_API_KEY; 
     if (!apiKey) throw new Error("Missing ImgBB API key in .env");
 
     const base64Image = await toBase64(file);
@@ -51,7 +52,7 @@ export default function CreateProjectForm() {
     });
 
     const data = await response.json();
-    console.log("ImgBB response:", data); // 👀 see exact response
+    console.log("ImgBB response:", data);
 
     if (!data.success) {
       throw new Error("Image upload failed: " + JSON.stringify(data));
@@ -65,6 +66,15 @@ export default function CreateProjectForm() {
     setMessage("");
 
     try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+
+      if (!user) {
+        setMessage("❌ You must be logged in to create a project.");
+        setLoading(false);
+        return;
+      }
+
       let imageUrl = "";
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
@@ -78,13 +88,19 @@ export default function CreateProjectForm() {
       const projectData = {
         ...formData,
         fundingGoal: Number(formData.fundingGoal),
-        imageUrl, // store uploaded image URL
+        imageUrl,
         duration,
         backers: 0,
         fundedMoney: 0,
         status: "Pending",
-        createdby: 'temp',//will change in future  
         createdAt: Timestamp.now(),
+
+        // Add creator info
+        createdBy: {
+          uid: user.uid,
+          email: user.email,
+          name: user.username || "Anonymous",
+        },
       };
 
       await addDoc(collection(db, "projects"), projectData);
@@ -155,7 +171,6 @@ export default function CreateProjectForm() {
             required
           />
 
-          {/* Image Upload */}
           <input
             type="file"
             accept="image/*"
