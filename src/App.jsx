@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import CreateProject from "./pages/CreateProject"
 import Browse from "./pages/Browse"
 import ProjectDetails from "./pages/ProjectDetails"
+import Signing from "./pages/Signing";
 
 function App() {
   const [loadingComplete, setLoadingComplete] = useState(false);
@@ -16,7 +17,7 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/*" element={<Registration />} />
+      <Route path="/*" element={<Signing />} />
       <Route path="/home" element={<Home />} />
       <Route path="/create" element={<CreateProject />} />
       <Route path="/browse" element={<Browse />} />

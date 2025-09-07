@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthState
 import { doc, setDoc } from 'firebase/firestore';
 import SignIn from './SignIn';
 import SignUp from './SignUp';
+import Signing from './Signing';
 import '../App.css';
 
 // Main Registration Component
