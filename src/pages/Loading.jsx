@@ -52,7 +52,7 @@ const Loading = ({ onComplete }) => {
   }, [onComplete]);
 
   return (
-    <div className="h-screen w-screen overflow-clip flex justify-center items-center">
+    <div className="h-screen w-screen overflow-clip flex justify-center items-center bg-color-d">
       <div className="w-1/24 h-full"></div>
       <div className="w-22/24 h-full flex flex-col justify-center items-center">
         {/* Animated Bars */}
