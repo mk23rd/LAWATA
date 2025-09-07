@@ -190,6 +190,14 @@ const ProjectDetails = () => {
                   <div className="text-sm text-gray-500">Backers</div>
                 </div>
               </div>
+
+              <div className="flex items-center text-gray-700 bg-gray-50 p-4 rounded-lg">
+                <Users size={20} className="mr-3 text-purple-600" />
+                <div>
+                  <div className="font-semibold">{project.backers || "Anonumous"} </div>
+                  <div className="text-sm text-gray-500">creator</div>
+                </div>
+              </div>
             </div>
 
             {/* Support Button */}
