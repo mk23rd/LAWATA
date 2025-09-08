@@ -7,6 +7,7 @@ import CreateProject from "./pages/CreateProject"
 import Browse from "./pages/Browse"
 import ProjectDetails from "./pages/ProjectDetails"
 import Signing from "./pages/Signing";
+import Profile from "./pages/Profile";
 
 function App() {
   const [loadingComplete, setLoadingComplete] = useState(false);
@@ -22,6 +23,7 @@ function App() {
       <Route path="/create" element={<CreateProject />} />
       <Route path="/browse" element={<Browse />} />
       <Route path="/project/:id" element={<ProjectDetails />} />
+      <Route path="/profile" element={<Profile />} />
     </Routes>
   )
 }

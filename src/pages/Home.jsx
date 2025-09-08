@@ -121,6 +121,13 @@ const Home = () => {
                   >
                     Logout
                   </button>
+                  <button
+                    onClick={() => navigate("/profile")}
+                    className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-d hover:bg-opacity-10 transition-colors"
+                    >
+                    Profile
+                  </button>
+
                 </div>
               </div>
             )}
