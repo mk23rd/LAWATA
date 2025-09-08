@@ -7,10 +7,7 @@
 - 📊Risk Awareness – Transparent project risk scores (**Low / Medium / High**).  
 - 🏦Milestone Escrow - Funds are released in phases when milestones are approved.  
 - 🔒Investor Protection-Refunds if projects fail to meet goals or milestones.  
-- ✨Interactive UI – Smooth👍 I’ll make everythifor cards, progress bars, and onboarding.  
-- 🌱Local Impact– Focused on empoweringerything consistent with proper Markdown sn  
-
----
+- ✨Interactive UI – Smooth transitions thatmake everything look better and fluid.
 
 ## 🛠️ Tech Stack  
 
