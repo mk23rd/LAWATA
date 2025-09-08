@@ -87,6 +87,7 @@ export default function CreateProjectForm() {
         backers: 0,
         fundedMoney: 0,
         status: "Pending",
+        riskLevel: "High",
         createdAt: Timestamp.now(),
         createdBy: {
           uid: user.uid,

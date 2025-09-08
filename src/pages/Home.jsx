@@ -92,7 +92,7 @@ const Home = () => {
 
         <div className='w-4/6 h-full flex justify-center items-center'>
           <div className='bg-color-e rounded-2xl w-2xl h-13 gap-40 flex items-center justify-evenly'>
-            <Link to="/create" className='text-color-d text-2xl hover:underline'>Create</Link>
+            <Link to="/projects" className='text-color-d text-2xl hover:underline'>Create</Link>
             <Link to="/browse" className='text-color-d text-2xl hover:underline'>Browse Works</Link>
             <Link to="/about" className='text-color-d text-2xl hover:underline'>About</Link>
           </div>
