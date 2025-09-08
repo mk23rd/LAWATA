@@ -89,15 +89,14 @@ const Signing = () => {
       );
       const user = userCredential.user;
 
+      // Create user doc in Firestore with roles array
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
-        username: signupformData.username,
         email: signupformData.email,
+        username: signupformData.username,
+        roles: ["visitor"], // default role
         createdAt: new Date(),
         lastLogin: new Date(),
-        investor: false,
-        creator: false,
-        visitor: true,
       });
 
       alert("Account created successfully!");
@@ -107,7 +106,7 @@ const Signing = () => {
     } finally {
       setLoading(false);
     }
-  };
+};
 
   // Firebase Sign In
   const handleSignIn = async () => {
