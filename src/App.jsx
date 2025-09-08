@@ -8,6 +8,7 @@ import Browse from "./pages/Browse"
 import ProjectDetails from "./pages/ProjectDetails"
 import Signing from "./pages/Signing";
 import Profile from "./pages/Profile";
+import ManageProfile from "./pages/ManageProfile";
 
 function App() {
   const [loadingComplete, setLoadingComplete] = useState(false);
@@ -24,6 +25,7 @@ function App() {
       <Route path="/browse" element={<Browse />} />
       <Route path="/project/:id" element={<ProjectDetails />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/manage-profile" element={<ManageProfile />} />
     </Routes>
   )
 }
