@@ -61,7 +61,7 @@ const Signing = () => {
     signupsetFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Firebase Sign Up
+
   const handleSignUp = async () => {
     if (loading) return;
 
@@ -89,12 +89,12 @@ const Signing = () => {
       );
       const user = userCredential.user;
 
-      // Create user doc in Firestore with roles array
+      
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         email: signupformData.email,
         username: signupformData.username,
-        roles: ["visitor"], // default role
+        roles: ["visitor"], 
         createdAt: new Date(),
         lastLogin: new Date(),
       });
@@ -108,7 +108,7 @@ const Signing = () => {
     }
 };
 
-  // Firebase Sign In
+  
   const handleSignIn = async () => {
     if (loading) return;
     setLoading(true);
@@ -128,7 +128,7 @@ const Signing = () => {
     }
   };
 
-  // GSAP animations
+  
   useEffect(() => {
     if (activePanel === "signup") {
       gsap.to(signupRef.current, { width: "80%", duration: 0.6, ease: "power2.out" });
