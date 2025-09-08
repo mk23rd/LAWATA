@@ -3,12 +3,14 @@ import { Routes, Route } from 'react-router-dom';
 import Registration from "./pages/registration"
 import Loading from "./pages/Loading";
 import Home from './pages/Home';
-import CreateProject from "./pages/CreateProject"
+import CreateProjectForm from "./pages/CreateProjectForm"
 import Browse from "./pages/Browse"
 import ProjectDetails from "./pages/ProjectDetails"
 import Signing from "./pages/Signing";
 import Profile from "./pages/Profile";
 import ManageProfile from "./pages/ManageProfile";
+import Projects from "./pages/Projects";
+import ViewMyProjects from "./pages/ViewMyProjects";
 
 function App() {
   const [loadingComplete, setLoadingComplete] = useState(false);
@@ -21,11 +23,13 @@ function App() {
     <Routes>
       <Route path="/*" element={<Signing />} />
       <Route path="/home" element={<Home />} />
-      <Route path="/create" element={<CreateProject />} />
+      <Route path="/create" element={<CreateProjectForm />} />
       <Route path="/browse" element={<Browse />} />
       <Route path="/project/:id" element={<ProjectDetails />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/manage-profile" element={<ManageProfile />} />
+      <Route path="/projects" element={<Projects />} />
+      <Route path="/view-my-projects" element={<ViewMyProjects />} />
     </Routes>
   )
 }
