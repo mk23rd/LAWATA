@@ -98,6 +98,7 @@ export default function CreateProjectForm() {
 
       await addDoc(collection(db, "projects"), projectData);
       setMessage("✅ Project submitted successfully!");
+
       
       // Reset form
       setStep(1);
