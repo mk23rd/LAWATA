@@ -23,10 +23,10 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/mk23rd/CrowdFundingproj.git
+git clone https://github.com/mk23rd/Risk_Integrated_Crowdfuding_and_Investment_Platform.git
 
 # Move into the project folder
-cd CrowdFundingproj
+cd Risk_Integrated_Crowdfuding_and_Investment_Platform
 
 # Install dependencies
 npm install gsap/react
