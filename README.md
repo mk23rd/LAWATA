@@ -23,7 +23,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/Korvowastaken/CrowdFundingproj.git
+git clone https://github.com/mk23rd/CrowdFundingproj.git
 
 # Move into the project folder
 cd CrowdFundingproj
