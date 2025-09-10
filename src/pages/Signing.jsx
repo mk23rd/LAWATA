@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase/firebase-config';
+import { updateProfile } from "firebase/auth"; 
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import InputField from '../components/InputField';
@@ -89,7 +90,9 @@ const Signing = () => {
       );
       const user = userCredential.user;
 
-      
+      await updateProfile(user, {
+        displayName: signupformData.username,
+      });
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         email: signupformData.email,
