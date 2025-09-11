@@ -214,7 +214,7 @@ const Browse = () => {
                     </div>
 
                     <button 
-                      onClick={() => navigate(`/project/${project.id}`)}
+                      onClick={() => navigate(`/projectDet/${project.id}`)}
                       className={`w-full py-2 px-4 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:scale-105 ${
                         isFullyFunded 
                           ? 'bg-green-500 hover:bg-green-600 text-white' 

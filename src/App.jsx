@@ -11,6 +11,8 @@ import Profile from "./pages/Profile";
 import ManageProfile from "./pages/ManageProfile";
 import Projects from "./pages/Projects";
 import ViewMyProjects from "./pages/ViewMyProjects";
+import Rewards from "./pages/Rewards";
+import Support from "./pages/Support";
 
 function App() {
   const [loadingComplete, setLoadingComplete] = useState(false);
@@ -25,11 +27,13 @@ function App() {
       <Route path="/home" element={<Home />} />
       <Route path="/create" element={<CreateProjectForm />} />
       <Route path="/browse" element={<Browse />} />
-      <Route path="/project/:id" element={<ProjectDetails />} />
+      <Route path="/projectDet/:id" element={<ProjectDetails />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/manage-profile" element={<ManageProfile />} />
       <Route path="/projects" element={<Projects />} />
       <Route path="/view-my-projects" element={<ViewMyProjects />} />
+      <Route path="/rewards/:id" element={<Rewards />} />
+      <Route path="/support/:id" element={<Support />} />
     </Routes>
   )
 }

@@ -3,12 +3,14 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const ProjectDetails = () => {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { id } = useParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -35,6 +37,15 @@ const ProjectDetails = () => {
 
     fetchProject();
   }, [id]);
+    
+
+  const handleClick = () => {
+    if (isFullyFunded) {
+      navigate(`/rewards/${id}`); // go to rewards page
+    } else {
+      navigate(`/support/${id}`); // go to support page
+    }
+  };
 
   const calculateFundingPercentage = (fundedMoney, fundingGoal) => {
     if (!fundedMoney || !fundingGoal || fundingGoal === 0) return 0;
@@ -195,12 +206,15 @@ const ProjectDetails = () => {
             {/* Support Button */}
             
             <div className="flex justify-center mt-6">
-              <button className={`py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 ${
-                isFullyFunded 
-                  ? 'bg-green-500 hover:bg-green-600 text-white' 
-                  : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
-              }`}>
-                {isFullyFunded ? 'View Rewards' : 'Support This Project'}
+              <button
+                  onClick={handleClick}
+                  className={`py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 ${
+                    isFullyFunded
+                      ? "bg-green-500 hover:bg-green-600 text-white"
+                      : "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
+                  }`}
+                >
+                  {isFullyFunded ? "View Rewards" : "Support This Project"}
               </button>
             </div>
 
