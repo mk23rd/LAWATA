@@ -134,12 +134,12 @@ const Signing = () => {
       gsap.to(signupRef.current, { width: "80%", duration: 0.6, ease: "power2.out" });
       gsap.to(signinRef.current, { width: "20%", duration: 0.6, ease: "power2.out" });
 
-      gsap.to(signinWid1.current, { height: "30%", duration: 0.6 });
+      gsap.to(signinWid1.current, { height: "20%", duration: 0.6 });
       gsap.to(signinWid2.current, { height: "20%", duration: 0.6 });
-      gsap.to(signinWid3.current, { height: "50%", duration: 0.6 });
-      gsap.to(signupWid1.current, { height: "10%", duration: 0.6 });
+      gsap.to(signinWid3.current, { height: "60%", duration: 0.6 });
+      gsap.to(signupWid1.current, { height: "0%", duration: 0.6 });
       gsap.to(signupWid2.current, { height: "20%", duration: 0.6 });
-      gsap.to(signupWid3.current, { height: "70%", duration: 0.6 });
+      gsap.to(signupWid3.current, { height: "80%", duration: 0.6 });
 
       gsap.to(signinLabel.current, { fontSize: "42px", y: 125, duration: 0.6 });
       gsap.to(signupLabel.current, { fontSize: "72px", y: 0, duration: 0.6 });
@@ -151,12 +151,12 @@ const Signing = () => {
       gsap.to(signupRef.current, { width: "20%", duration: 0.6 });
       gsap.to(signinRef.current, { width: "80%", duration: 0.6 });
 
-      gsap.to(signinWid1.current, { height: "70%", duration: 0.6 });
+      gsap.to(signinWid1.current, { height: "80%", duration: 0.6 });
       gsap.to(signinWid2.current, { height: "20%", duration: 0.6 });
-      gsap.to(signinWid3.current, { height: "10%", duration: 0.6 });
-      gsap.to(signupWid1.current, { height: "50%", duration: 0.6 });
+      gsap.to(signinWid3.current, { height: "0%", duration: 0.6 });
+      gsap.to(signupWid1.current, { height: "60%", duration: 0.6 });
       gsap.to(signupWid2.current, { height: "20%", duration: 0.6 });
-      gsap.to(signupWid3.current, { height: "30%", duration: 0.6 });
+      gsap.to(signupWid3.current, { height: "20%", duration: 0.6 });
 
       gsap.to(signinLabel.current, { fontSize: "72px", y: 0, duration: 0.6 });
       gsap.to(signupLabel.current, { fontSize: "42px", y: 175, duration: 0.6 });

@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { gsap } from "gsap";
 import { db } from "../firebase/firebase-config";
-import { collection, addDoc, Timestamp, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage } from "react-icons/fi";
+import imgLogo from '../assets/images/img-logo.svg'
 
 export default function CreateProjectForm() {
   const navigate = useNavigate();
-  const totalSteps = 6;
-  const [step, setStep] = useState(1);
+  const [activeStep, setActiveStep] = useState(1);
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -57,7 +58,6 @@ export default function CreateProjectForm() {
     setLoading(true);
     setMessage("");
 
-    // Step validation
     if (!formData.title) return setMessage("❌ Title is missing");
     if (!formData.category) return setMessage("❌ Category is missing");
     if (!formData.shortDescription) return setMessage("❌ Short description is missing");
@@ -72,7 +72,6 @@ export default function CreateProjectForm() {
       if (!user) throw new Error("You must be logged in");
 
       const imageUrl = await uploadImage(formData.imageFile);
-
       const today = new Date();
       const endDate = new Date(formData.endDate);
       const duration = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
@@ -98,9 +97,7 @@ export default function CreateProjectForm() {
 
       await addDoc(collection(db, "projects"), projectData);
       setMessage("✅ Project submitted successfully!");
-      
-      // Reset form
-      setStep(1);
+      setActiveStep(1);
       setFormData({
         title: "",
         category: "",
@@ -110,8 +107,6 @@ export default function CreateProjectForm() {
         endDate: "",
         imageFile: null,
       });
-
-      // Redirect to ViewMyProjects page
       navigate("/view-my-projects");
     } catch (error) {
       console.error(error);
@@ -121,104 +116,147 @@ export default function CreateProjectForm() {
     setLoading(false);
   };
 
-  // Steps (same as your existing code)
-  const Step1 = (
-    <div className="space-y-4">
-      <div className="relative">
-        <FiUser className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          name="title"
-          placeholder="Project Title"
-          value={formData.title || ""}
-          onChange={handleChange}
-          className="w-full pl-10 p-2 border rounded-lg"
-        />
-      </div>
-      <div className="relative">
-        <FiTag className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          name="category"
-          placeholder="Category"
-          value={formData.category || ""}
-          onChange={handleChange}
-          className="w-full pl-10 p-2 border rounded-lg"
-        />
-      </div>
-    </div>
-  );
+  // GSAP refs
+  const stepwrapperRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
+  const steplineRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
+  const stepboxRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
 
-  const Step2 = (
-    <div className="space-y-4">
-      <div className="relative">
-        <FiAlignLeft className="absolute top-2 left-3 text-gray-400" />
-        <textarea
-          name="shortDescription"
-          placeholder="Short Description"
-          value={formData.shortDescription || ""}
-          onChange={handleChange}
-          rows="2"
-          className="w-full pl-10 p-2 border rounded-lg"
-        />
-      </div>
-      <div className="relative">
-        <FiAlignLeft className="absolute top-2 left-3 text-gray-400" />
-        <textarea
-          name="longDescription"
-          placeholder="Long Description"
-          value={formData.longDescription || ""}
-          onChange={handleChange}
-          rows="5"
-          className="w-full pl-10 p-2 border rounded-lg"
-        />
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    stepwrapperRefs.forEach((step, idx) => {
+      if (idx + 1 === activeStep) {
+        gsap.to(step.current, { width: "75%", duration: 0.5, ease: "power2.out", y: 0 });
+      } else {
+        gsap.to(step.current, { width: "5%", duration: 0.5, ease: "power2.out", y: (idx + 1) * 20 });
+      }
+    });
 
-  const Step3 = (
-    <div className="relative">
-      <FiDollarSign className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
+    steplineRefs.forEach((step, idx) => {
+      if (idx + 1 === activeStep) {
+        gsap.to(step.current, { height: "90vh", y: 0, duration: 0.5, ease: "power2.out" });
+      } else {
+        gsap.to(step.current, { height: "50vh", duration: 0.5, ease: "power2.out" });
+      }
+    });
+
+    stepboxRefs.forEach((step, idx) => {
+      if (!step.current) return;
+      const isActive = idx + 1 === activeStep;
+
+      gsap.to(step.current, {
+        height: isActive ? "80vh" : "40vh",
+        padding: isActive ? "1rem" : "0.5rem",
+        duration: 0.5,
+        ease: "power2.out",
+      });
+
+      step.current.style.display = "flex";
+      step.current.style.flexDirection = "column";
+      step.current.style.justifyContent = "flex-start";
+      step.current.style.alignItems = "flex-start";
+
+      // Animate number position
+      const numberEl = step.current.querySelector("p");
+      if (numberEl) {
+        gsap.to(numberEl, {
+          top: isActive ? "1rem" : "50%",
+          left: isActive ? "1rem" : "50%",
+          x: isActive ? 0 : "-50%",
+          y: isActive ? 0 : "-50%",
+          duration: 0.5,
+          ease: "power2.out",
+        });
+      }
+
+      // Show/hide content except number
+      Array.from(step.current.children).forEach((child) => {
+        if (child.tagName !== "P") {
+          child.style.display = isActive ? "block" : "none";
+        }
+      });
+    });
+  }, [activeStep]);
+
+  const stepContents = [
+    <div className="space-y-4 w-full">
+      <div className="relative">
+        <FiUser className="absolute top-1/2 left-3 transform -translate-y-1/2 text-color-e" />
+        <input type="text" name="title" placeholder="Project Title" value={formData.title} onChange={handleChange} className="text-color-e w-full pl-10 p-2 border rounded-lg" />
+      </div>
+      <div className="relative">
+        <FiTag className="absolute top-1/2 left-3 transform -translate-y-1/2 text-color-e" />
+        <input type="text" name="category" placeholder="Category" value={formData.category} onChange={handleChange} className="text-color-e w-full pl-10 p-2 border rounded-lg" />
+      </div>
+    </div>,
+
+    <div className="space-y-4 w-full">
+      <div className="relative">
+        <FiAlignLeft className="absolute top-2 left-3 text-color-e" />
+        <textarea name="shortDescription" placeholder="Short Description" value={formData.shortDescription} onChange={handleChange} rows="2" className="w-full pl-10 p-2 border rounded-lg" />
+      </div>
+      <div className="relative">
+        <FiAlignLeft className="absolute top-2 left-3 text-color-e" />
+        <textarea name="longDescription" placeholder="Long Description" value={formData.longDescription} onChange={handleChange} rows="5" className="w-full pl-10 p-2 border rounded-lg" />
+      </div>
+    </div>,
+
+    <div className="relative w-full">
+      <FiDollarSign className="absolute top-1/2 left-3 transform -translate-y-1/2 text-color-e" />
+      <input type="number" name="fundingGoal" placeholder="Funding Goal (USD)" value={formData.fundingGoal} onChange={handleChange} className="w-full pl-10 p-2 border rounded-lg" />
+    </div>,
+
+    <div className="relative w-full">
+      <label className="block text-color-e font-medium mb-1">Campaign End Date</label>
+      <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} className="w-full pl-10 p-2 border rounded-lg" />
+    </div>,
+
+    // Step 5 (Image Upload)
+    <div
+      className="relative w-full h-100 flex flex-col items-center justify-center rounded-xl cursor-pointer p-6"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          setFormData((prev) => ({ ...prev, imageFile: e.dataTransfer.files[0] }));
+        }
+      }}
+      onClick={() => document.getElementById("imageInput").click()} // whole box still clickable
+    >
+      <img src={imgLogo} alt="" className="w-20 mb-4" />
+      <p className="text-color-e text-xl font-medium mb-2">Drag and Drop</p>
+      <p className="text-color-e text-xl font-medium mb-4">OR</p>
+
+      {/* Hidden file input */}
       <input
-        type="number"
-        name="fundingGoal"
-        placeholder="Funding Goal (USD)"
-        value={formData.fundingGoal || ""}
-        onChange={handleChange}
-        className="w-full pl-10 p-2 border rounded-lg"
-      />
-    </div>
-  );
-
-  const Step4 = (
-    <div className="relative">
-      <label className="block text-gray-700 font-medium mb-1">Milestone: End Date</label>
-      <FiCalendar className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
-      <input
-        type="date"
-        name="endDate"
-        value={formData.endDate || ""}
-        onChange={handleChange}
-        className="w-full pl-10 p-2 border rounded-lg"
-      />
-    </div>
-  );
-
-  const Step5 = (
-    <div className="relative">
-      <label className="block text-gray-700 font-medium mb-1">Upload Project Image</label>
-      <FiImage className="absolute top-3 left-3 text-gray-400" />
-      <input
+        id="imageInput"
         type="file"
         accept="image/*"
         onChange={handleFileChange}
-        className="w-full pl-10 p-2 border rounded-lg"
+        className="hidden"
       />
-    </div>
-  );
 
-  const Step6 = (
-    <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+      {/* Upload button */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation(); // prevent triggering the whole box click
+          document.getElementById("imageInput").click();
+        }}
+        className="px-6 py-2 bg-color-b text-color-d rounded-lg hover:bg-color-e"
+      >
+        Upload Image
+      </button>
+
+      {/* Preview */}
+      {formData.imageFile && (
+        <img
+          src={URL.createObjectURL(formData.imageFile)}
+          alt="Preview"
+          className="mt-4 w-48 rounded-lg border"
+        />
+      )}
+    </div>,
+
+    <div className="space-y-2 w-full">
       <h3 className="font-semibold text-lg">Preview</h3>
       <p><strong>Title:</strong> {formData.title}</p>
       <p><strong>Category:</strong> {formData.category}</p>
@@ -226,76 +264,66 @@ export default function CreateProjectForm() {
       <p><strong>Long Description:</strong> {formData.longDescription}</p>
       <p><strong>Funding Goal:</strong> ${formData.fundingGoal}</p>
       <p><strong>End Date:</strong> {formData.endDate}</p>
-      {formData.imageFile && (
-        <div>
-          <strong>Image Preview:</strong>
-          <img
-            src={URL.createObjectURL(formData.imageFile)}
-            alt="Preview"
-            className="mt-2 w-48 rounded-lg border"
-          />
-        </div>
+      {formData.imageFile && <img src={URL.createObjectURL(formData.imageFile)} alt="Preview" className="mt-2 w-48 rounded-lg border" />}
+      {activeStep === 6 && (
+        <button onClick={handleSubmit} disabled={loading} className="mt-4 px-6 py-3 bg-color-b text-color-d rounded-xl hover:bg-color-e">
+          {loading ? "Submitting..." : "Submit Project"}
+        </button>
       )}
-    </div>
-  );
-
-  const renderStep = () => {
-    switch (step) {
-      case 1: return Step1;
-      case 2: return Step2;
-      case 3: return Step3;
-      case 4: return Step4;
-      case 5: return Step5;
-      case 6: return Step6;
-      default: return Step1;
-    }
-  };
-
-  const stepsLabels = ["Title", "Description", "Funding", "Milestone", "Image", "Preview"];
-  const progressPercent = (step / totalSteps) * 100;
-
-  const isStepValid = () => {
-    switch (step) {
-      case 1: return formData.title && formData.category;
-      case 2: return formData.shortDescription && formData.longDescription;
-      case 3: return formData.fundingGoal;
-      case 4: return formData.endDate;
-      case 5: return formData.imageFile;
-      default: return true;
-    }
-  };
+    </div>,
+  ];
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-100 p-6 space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">Create a New Project</h1>
+    <div className="flex flex-col items-center min-h-screen p-6">
+      <h1 className="text-3xl font-titan text-gray-800 mb-6">Create a New Project</h1>
 
-      <div className="w-full max-w-2xl mb-4">
-        <div className="flex justify-between text-sm font-medium mb-1">
-          {stepsLabels.map((label, index) => (
-            <span key={label} className={step - 1 === index ? "text-blue-600 font-semibold" : "text-gray-700"}>
-              {label}
-            </span>
-          ))}
-        </div>
-        <div className="relative h-2 rounded-full bg-gray-300">
+      <div className="flex w-full justify-center items-center gap-10">
+        {stepboxRefs.map((ref, idx) => (
           <div
-            className="absolute h-2 rounded-full bg-blue-600 transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
+            key={idx}
+            ref={stepwrapperRefs[idx]}
+            className="w-1/25 flex items-center justify-center relative"
+            onClick={() => setActiveStep(idx + 1)}
+          >
+            {/* Step line */}
+            <div
+              ref={steplineRefs[idx]}
+              className={`w-0.5 absolute ${idx === 4 && activeStep === 5 ? "border-l-2 border-dashed border-color-e" : "bg-color-e"}`}
+              style={{ height: idx + 1 === activeStep ? "90vh" : "50vh" }}
+            ></div>
+
+            {/* Step box */}
+            <div
+              ref={ref}
+              className={`create border-3 bg-color-d h-60 w-full font-titan flex relative z-10 mx-auto flex-none cursor-pointer
+                ${idx === 4 && activeStep === 5 ? "border-dashed rounded-xl" : "border-solid rounded-none"}`}
+            >
+              {/* Number */}
+              <p
+                className="text-color-b font-titan sm:text-xl md:text-3xl lg:text-5xl absolute"
+                style={{
+                  top: activeStep === idx + 1 ? "flex-start" : "center",
+                  left: activeStep === idx + 1 ? "flex-start" : "center",
+                  transform: activeStep === idx + 1 ? "1rem" : "0rem",
+                }}
+              >
+                {idx + 1}
+              </p>
+
+              {/* Content visible only when expanded */}
+              {activeStep === idx + 1 && (
+                <div style={{ marginTop: "4rem", width: "100%" }}>
+                  {stepContents[idx]}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+
+
       </div>
 
-      <div className="w-full max-w-2xl bg-white border-4 border-blue-500 shadow-lg rounded-2xl p-6 space-y-6">
-        {renderStep()}
-
-        <div className="flex justify-between mt-4">
-          {step > 1 && <button onClick={() => setStep(step - 1)} className="px-4 py-2 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400">Previous</button>}
-          {step < 6 && <button onClick={() => setStep(step + 1)} disabled={!isStepValid()} className={`px-4 py-2 rounded-xl ml-auto ${isStepValid() ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}>Next</button>}
-          {step === 6 && <button onClick={handleSubmit} disabled={loading} className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 ml-auto">{loading ? "Submitting..." : "Submit Project"}</button>}
-        </div>
-
-        {message && <p className="text-center mt-4 font-semibold text-gray-700">{message}</p>}
-      </div>
+      {message && <p className="text-center mt-4 font-semibold text-gray-700">{message}</p>}
     </div>
   );
 }

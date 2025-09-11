@@ -10,10 +10,10 @@ const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-color-d">
       {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-blue-200 shadow-md flex flex-col">
-        <h2 className="text-2xl font-bold text-blue-700 p-6 border-b border-blue-200">
+      <div className="w-64 bg-color-d border-r-3 shadow-md flex flex-col border-color-b">
+        <h2 className="text-2xl font-bold text-color-b p-6 border-b-2 border-color-b">
           Projects
         </h2>
         <nav className="flex flex-col p-4 gap-4">
@@ -21,8 +21,8 @@ const Projects = () => {
             onClick={() => setActiveTab("view")}
             className={`px-4 py-2 rounded-lg font-semibold text-left ${
               activeTab === "view"
-                ? "bg-blue-600 text-white"
-                : "text-blue-700 hover:bg-blue-100"
+                ? "bg-color-b text-white"
+                : "text-color-b hover:bg-blue-100"
             }`}
           >
             View Projects
@@ -31,8 +31,8 @@ const Projects = () => {
             onClick={() => setActiveTab("create")}
             className={`px-4 py-2 rounded-lg font-semibold text-left ${
               activeTab === "create"
-                ? "bg-blue-600 text-white"
-                : "text-blue-700 hover:bg-blue-100"
+                ? " bg-color-b text-white"
+                : "text-color-b hover:bg-blue-100"
             }`}
           >
             Create Project
@@ -41,7 +41,7 @@ const Projects = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-8">
+      <div className="flex-1">
         {activeTab === "view" ? <ViewMyProjects /> : <CreateProjectForm />}
       </div>
     </div>
