@@ -3,7 +3,7 @@ import { auth, db } from "../firebase/firebase-config";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
-// import { MdEmail, MdLocationOn, MdDateRange } from "react-icons/md";
+import { MdEmail, MdLocationOn, MdDateRange } from "react-icons/md";
 
 const roleColors = {
   creator: "bg-yellow-200 text-black",
