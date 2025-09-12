@@ -68,7 +68,7 @@ const Home = () => {
     const st = ScrollTrigger.create({
       trigger: twoHundredRef.current,
       start: "top top",
-      end: "bottom+=190% top",
+      end: "bottom+=200% top",
       pin: true,
       pinSpacing: true,
       scrub: true,
