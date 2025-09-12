@@ -4,7 +4,7 @@ import { db } from "../firebase/firebase-config";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage } from "react-icons/fi";
+// import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage } from "react-icons/fi";
 import imgLogo from '../assets/images/img-logo.svg'
 
 export default function CreateProjectForm() {
