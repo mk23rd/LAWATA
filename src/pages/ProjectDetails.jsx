@@ -328,9 +328,6 @@ const ProjectDetails = () => {
             />
           ))
           }
-          {
-            console.log(project.comments[3].createdAt)
-          }
 
           <div className="flex items-center gap-2 mt-4">
             <input 
