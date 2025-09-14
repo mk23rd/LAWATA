@@ -49,95 +49,82 @@ const Support = () => {
   const handleTemplateClick = (value) => setAmount(value);
   const handleInputChange = (e) => setAmount(e.target.value);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!currentUser) {
-      alert("You must be logged in to support a project.");
+  if (!currentUser) {
+    alert("You must be logged in to support a project.");
+    return;
+  }
+
+  const numericAmount = parseFloat(amount);
+  const remainingAmount = project.fundingGoal - (project.fundedMoney ?? 0);
+
+  if (!numericAmount || numericAmount <= 0) {
+    alert("Please enter a valid amount.");
+    return;
+  }
+
+  if (numericAmount > remainingAmount) {
+    alert(`You can only fund up to $${remainingAmount}.`);
+    return;
+  }
+
+  try {
+    const now = new Date();
+
+    // 1️⃣ Update project fundedMoney
+    const projectRef = doc(db, "projects", id);
+    await updateDoc(projectRef, {
+      fundedMoney: (project.fundedMoney ?? 0) + numericAmount,
+    });
+
+    // 2️⃣ Update user roles, totalFunded, and fundings
+    const userRef = doc(db, "users", currentUser.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      alert("User not found in database.");
       return;
     }
 
-    const numericAmount = parseFloat(amount);
-    const remainingAmount = project.fundingGoal - (project.fundedMoney ?? 0);
+    let userData = userSnap.data();
+    let fundings = userData.fundings || {};
+    let totalFunded = userData.totalFunded ?? 0;
 
-    if (!numericAmount || numericAmount <= 0) {
-      alert("Please enter a valid amount.");
-      return;
-    }
-
-    if (numericAmount > remainingAmount) {
-      alert(`You can only fund up to $${remainingAmount}.`);
-      return;
-    }
-
-    try {
-      const now = new Date();
-
-      // 1️⃣ Update project fundedMoney
-      const projectRef = doc(db, "projects", id);
-      await updateDoc(projectRef, {
-        fundedMoney: (project.fundedMoney ?? 0) + numericAmount,
+    if (fundings[id]) {
+      // Already funded this project → append contribution
+      fundings[id].contributions.push({
+        amount: numericAmount,
+        date: now.toISOString(),
       });
-
-      // 2️⃣ Update user roles and totalFunded
-      const userRef = doc(db, "users", currentUser.uid);
-      await updateDoc(userRef, {
-        roles: arrayUnion("Funder"),
-        totalFunded: increment(numericAmount), // total across all projects
-      });
-
-      // 3️⃣ Update funders collection with map-based structure
-      const funderRef = doc(db, "funders", currentUser.uid);
-      const funderSnap = await getDoc(funderRef);
-
-      if (funderSnap.exists()) {
-        const funderData = funderSnap.data();
-        let projectsFunded = funderData.projectsFunded || {};
-        let totalFunded = funderData.totalFunded ?? 0;
-
-        if (projectsFunded[id]) {
-          // Project already exists
-          projectsFunded[id].contributions.push({
-            amount: numericAmount,
-            date: now.toISOString(),
-          });
-          projectsFunded[id].totalFundedPerProject =
-            (projectsFunded[id].totalFundedPerProject ?? 0) + numericAmount;
-        } else {
-          // New project entry
-          projectsFunded[id] = {
-            projectTitle: project.title,
-            totalFundedPerProject: numericAmount,
-            contributions: [{ amount: numericAmount, date: now.toISOString() }],
-          };
-        }
-
-        totalFunded += numericAmount;
-
-        await updateDoc(funderRef, { projectsFunded, totalFunded });
-      } else {
-        // First time funding
-        await setDoc(funderRef, {
-          userId: currentUser.uid,
-          username: currentUser.displayName ?? currentUser.email ?? "Anonymous",
-          totalFunded: numericAmount,
-          projectsFunded: {
-            [id]: {
-              projectTitle: project.title,
-              totalFundedPerProject: numericAmount,
-              contributions: [{ amount: numericAmount, date: now.toISOString() }],
-            },
-          },
-        });
-      }
-
-      alert(`🎉 You successfully supported with $${numericAmount}!`);
-      navigate(`/projects/${id}`);
-    } catch (err) {
-      console.error("Error processing support:", err);
-      alert("Something went wrong. Please try again.");
+      fundings[id].totalFundedPerProject =
+        (fundings[id].totalFundedPerProject ?? 0) + numericAmount;
+    } else {
+      // First time funding this project
+      fundings[id] = {
+        projectTitle: project.title,
+        totalFundedPerProject: numericAmount,
+        contributions: [{ amount: numericAmount, date: now.toISOString() }],
+      };
     }
-  };
+
+    totalFunded += numericAmount;
+
+    await updateDoc(userRef, {
+      roles: arrayUnion("Funder"),
+      totalFunded,
+      fundings,
+    });
+
+    alert(`🎉 You successfully supported with $${numericAmount}!`);
+    navigate(`/projects/${id}`);
+  } catch (err) {
+    console.error("Error processing support:", err);
+    alert("Something went wrong. Please try again.");
+  }
+};
+
 
   if (loading)
     return (
