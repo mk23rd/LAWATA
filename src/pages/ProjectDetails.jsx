@@ -1,49 +1,84 @@
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { getAuth } from 'firebase/auth';
+
+import Comment from '../components/comment';
 
 const ProjectDetails = () => {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [newComment, setNewComment] = useState("");
+  const [currentUserData, setCurrentUserData] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // Real-time project listener
   useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        setLoading(true);
-        const docRef = doc(db, 'projects', id);
-        const docSnap = await getDoc(docRef);
-        
+    const projectRef = doc(db, 'projects', id);
+
+    const unsubscribe = onSnapshot(
+      projectRef,
+      (docSnap) => {
         if (docSnap.exists()) {
-          setProject({
-            id: docSnap.id,
-            ...docSnap.data()
-          });
+          setProject({ id: docSnap.id, ...docSnap.data() });
+          setLoading(false);
         } else {
           setError('Project not found');
+          setLoading(false);
         }
-      } catch (err) {
+      },
+      (err) => {
         console.error('Error fetching project:', err);
         setError('Failed to load project');
-      } finally {
         setLoading(false);
+      }
+    );
+
+    return () => unsubscribe(); // cleanup on unmount
+  }, [id]);
+
+  // Fetch current user data
+  useEffect(() => {
+    const fetchCurrentUserData = async () => {
+      try {
+        const auth = getAuth();
+        const user = auth.currentUser;
+
+        if (user) {
+          const usersRef = collection(db, 'users');
+          const q = query(usersRef, where('uid', '==', user.uid));
+          const querySnapshot = await getDocs(q);
+
+          if (!querySnapshot.empty) {
+            querySnapshot.forEach((doc) => {
+              setCurrentUserData(doc.data());
+            });
+          } else {
+            setCurrentUserData({
+              displayName: user.displayName || user.email || "Anonymous",
+              profileImageUrl: user.photoURL || "https://via.placeholder.com/40",
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
       }
     };
 
-    fetchProject();
-  }, [id]);
-    
+    fetchCurrentUserData();
+  }, []);
 
   const handleClick = () => {
+    const fundedPercentage = calculateFundingPercentage(project.fundedMoney, project.fundingGoal);
+    const isFullyFunded = fundedPercentage >= 100;
     if (isFullyFunded) {
-      navigate(`/rewards/${id}`); // go to rewards page
+      navigate(`/rewards/${id}`);
     } else {
-      navigate(`/support/${id}`); // go to support page
+      navigate(`/support/${id}`);
     }
   };
 
@@ -51,6 +86,34 @@ const ProjectDetails = () => {
     if (!fundedMoney || !fundingGoal || fundingGoal === 0) return 0;
     const percentage = (fundedMoney / fundingGoal) * 100;
     return Math.min(percentage, 100);
+  };
+
+  const formatFirebaseTimestamp = (timestamp, includeTime = false) => {
+    if (!timestamp) return '-';    
+    try {
+      if (timestamp.seconds !== undefined && timestamp.nanoseconds !== undefined) {
+
+        const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+        
+        if (includeTime) {
+          return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          });
+        } else {
+          return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+        }
+      } 
+      return timestamp;
+    } catch (error) {
+      console.error('Error formatting timestamp:', error);
+      return 'Invalid date';
+    }
   };
 
   const formatFunding = (amount) => {
@@ -62,16 +125,47 @@ const ProjectDetails = () => {
     }) || '$0';
   };
 
+  const handleComment = async () => {
+    if (!newComment.trim()) return;
+
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+
+      if (!user) {
+        alert("You must be logged in to comment.");
+        return;
+      }
+
+      const username = currentUserData?.displayName || user.displayName || user.email || "Anonymous";
+      const commenterPfp = currentUserData?.profileImageUrl || user.photoURL || "https://via.placeholder.com/40";
+
+      const projectRef = doc(db, "projects", id);
+      const commentObj = {
+        username: username,
+        commenterPfp: commenterPfp,
+        comment: newComment,
+        createdAt: Timestamp.now(),
+        userId: user.uid
+      };
+
+      await updateDoc(projectRef, {
+        comments: arrayUnion(commentObj)
+      });
+
+      setNewComment(""); // clear input
+    } catch (err) {
+      console.error("Error adding comment:", err);
+      alert("Failed to add comment.");
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 pt-20">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-center items-center min-h-[60vh]">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600 text-lg">Loading project details...</p>
-            </div>
-          </div>
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading project details...</p>
         </div>
       </div>
     );
@@ -79,21 +173,17 @@ const ProjectDetails = () => {
 
   if (error || !project) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 pt-20">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-center items-center min-h-[60vh]">
-            <div className="text-center bg-white rounded-2xl p-8 shadow-lg max-w-md">
-              <div className="text-red-500 text-4xl mb-4">⚠️</div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Project Not Found</h2>
-              <p className="text-gray-600 mb-6">{error || 'The project you are looking for does not exist.'}</p>
-              <Link 
-                to="/browse"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-semibold transition-colors inline-block"
-              >
-                Back to Browse
-              </Link>
-            </div>
-          </div>
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-lg max-w-md">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Project Not Found</h2>
+          <p className="text-gray-600 mb-6">{error || 'The project you are looking for does not exist.'}</p>
+          <Link 
+            to="/browse"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-semibold transition-colors inline-block"
+          >
+            Back to Browse
+          </Link>
         </div>
       </div>
     );
@@ -122,7 +212,7 @@ const ProjectDetails = () => {
               alt={project.title}
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.target.src = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1000&q=80';
+                e.target.src = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
               }}
             />
             <div className="absolute top-4 left-4">
@@ -141,13 +231,8 @@ const ProjectDetails = () => {
           </div>
 
           <div className="p-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {project.title || 'Untitled Project'}
-            </h1>
-            
-            <p className="text-gray-600 text-lg mb-6">
-              {project.shortDescription}
-            </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{project.title || 'Untitled Project'}</h1>
+            <p className="text-gray-600 text-lg mb-6">{project.shortDescription}</p>
 
             {/* Funding Progress */}
             <div className="bg-blue-50 rounded-xl p-6 mb-6">
@@ -204,7 +289,6 @@ const ProjectDetails = () => {
             </div>
 
             {/* Support Button */}
-            
             <div className="flex justify-center mt-6">
               <button
                   onClick={handleClick}
@@ -229,25 +313,41 @@ const ProjectDetails = () => {
           </div>
         </div>
 
-        {/* Rewards Section */}
-        {/* {project.rewards && project.rewards.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Support Rewards</h2>
-            <div className="flex flex-wrap gap-6">
-              {project.rewards.map((reward, index) => (
-                <div key={index} className="border border-gray-200 rounded-xl p-4 md:p-6 hover:shadow-md transition-shadow flex-1 min-w-[250px] max-w-[320px] break-words">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{reward.title}</h3>
-                  <div className="text-2xl font-bold text-blue-600 mb-4">{formatFunding(reward.amount)}</div>
-                  <p className="text-gray-600 mb-4 whitespace-pre-wrap break-words">{reward.description}</p>
-                  <div className="text-sm text-gray-500 mb-4">{reward.backers || 0} backers</div>
-                  <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium">
-                    Select Reward
-                  </button>
-                </div>
-              ))}
-            </div>
+        {/* Comments Section */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8 p-6">
+          <h2 className="text-xl font-bold mb-4">Comments</h2>
+
+          
+          {(project.comments || []).map((instance) => (
+            <Comment 
+              key={crypto.randomUUID()}
+              username={instance.username}
+              createdAt={formatFirebaseTimestamp(instance.createdAt)}
+              pfpImage={instance.commenterPfp}
+              comment={instance.comment}
+            />
+          ))
+          }
+        
+
+          <div className="flex items-center gap-2 mt-4">
+            <input 
+              type="text" 
+              name="comment" 
+              placeholder="Write a comment..."  
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              className="flex-1 px-4 py-2 border rounded-lg"
+            />
+            <button 
+              type="button" 
+              onClick={handleComment}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Comment
+            </button>
           </div>
-        )} */}
+        </div>
       </div>
     </div>
   );

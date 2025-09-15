@@ -21,6 +21,7 @@ export default function CreateProjectForm() {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -91,15 +92,16 @@ export default function CreateProjectForm() {
         createdBy: {
           uid: user.uid,
           email: user.email,
-          name: user.displayName || "Anonymous",
+          name: user.displayName,
         },
       };
 
       await addDoc(collection(db, "projects"), projectData);
       setMessage("✅ Project submitted successfully!");
-      
+      console.log('submitted project successfully')
       // Reset form
-      setStep(1);
+      setActiveStep(1); 
+
       setFormData({
         title: "",
         category: "",
