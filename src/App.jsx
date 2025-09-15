@@ -17,9 +17,9 @@ import Support from "./pages/Support";
 function App() {
   const [loadingComplete, setLoadingComplete] = useState(false);
 
-  /*if (!loadingComplete) {
+  if (!loadingComplete) {
     return <Loading onComplete={() => setLoadingComplete(true)} />;
-  }*/
+  }
 
   return (
     <Routes>

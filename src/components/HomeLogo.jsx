@@ -143,7 +143,7 @@ const HomeLogo = () => {
       <div className="w-1/20 h-full flex items-center justify-center relative">
         <div className="bg-color-b w-0.5 h-115 absolute"></div>
         <div className="bg-color-b border-color-e border-3 w-full h-80 font-titan flex justify-center items-center z-10 mx-auto flex-none">
-          <p className="text-color-d sm:text-2xl md:text-4xl lg:text-6xl">&</p>
+          <p className="text-color-d sm:text-2xl md:text-4xl lg:text-6xl">OR</p>
         </div>
       </div>
 
