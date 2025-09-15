@@ -22,10 +22,10 @@ function App() {
   }*/
 
   return (
-    <Routes>
-      
-      <Route path="/*" element={<Signing />} />
+    <Routes> 
+      <Route path="/" element={<Home />} />
       <Route path="/home" element={<Home />} />
+      <Route path="/signing" element={<Signing />} />
       <Route path="/create" element={<CreateProjectForm />} />
       <Route path="/browse" element={<Browse />} />
       <Route path="/projectDet/:id" element={<ProjectDetails />} />

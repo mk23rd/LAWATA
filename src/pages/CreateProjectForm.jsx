@@ -13,6 +13,7 @@ export default function CreateProjectForm() {
   const [formData, setFormData] = useState({
     title: "",
     category: "",
+    country: "",   // ✅ new field
     shortDescription: "",
     longDescription: "",
     fundingGoal: "",
@@ -61,6 +62,7 @@ export default function CreateProjectForm() {
 
     if (!formData.title) return setMessage("❌ Title is missing");
     if (!formData.category) return setMessage("❌ Category is missing");
+    if (!formData.country) return setMessage("❌ Country is missing");
     if (!formData.shortDescription) return setMessage("❌ Short description is missing");
     if (!formData.longDescription) return setMessage("❌ Long description is missing");
     if (!formData.fundingGoal) return setMessage("❌ Funding goal is missing");
@@ -187,8 +189,38 @@ export default function CreateProjectForm() {
         <input type="text" name="title" placeholder="Project Title" value={formData.title} onChange={handleChange} className="text-color-e w-full pl-10 p-2 border rounded-lg" />
       </div>
       <div className="relative">
-        <FiTag className="absolute top-1/2 left-3 transform -translate-y-1/2 text-color-e" />
-        <input type="text" name="category" placeholder="Category" value={formData.category} onChange={handleChange} className="text-color-e w-full pl-10 p-2 border rounded-lg" />
+        <FiTag className="absolute top-1/2 left-3 transform -translate-y-1/2 text-color-e pointer-events-none" />
+        <select
+          name="category"
+          value={formData.category}
+          onChange={handleChange}
+          className="appearance-none text-color-e w-full pl-10 pr-8 p-2 border rounded-lg bg-color-d cursor-pointer focus:ring-2 focus:ring-color-b focus:border-color-b"
+        >
+          <option value="">Select Category</option>
+          <option value="cars">Cars</option>
+          <option value="cloth">Cloth</option>
+          <option value="books">Books</option>
+        </select>
+        {/* Custom arrow */}
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-color-e">▼</span>
+      </div>
+      <div className="relative">
+        <FiTag className="absolute top-1/2 left-3 transform -translate-y-1/2 text-color-e pointer-events-none" />
+        <select
+          name="country"
+          value={formData.country}
+          onChange={handleChange}
+          className="appearance-none text-color-e w-full pl-10 pr-8 p-2 border rounded-lg bg-color-d cursor-pointer focus:ring-2 focus:ring-color-b focus:border-color-b"
+        >
+          <option value="">Select Country</option>
+          <option value="Ethiopia">Ethiopia</option>
+          <option value="USA">USA</option>
+          <option value="Germany">Germany</option>
+          <option value="India">India</option>
+          <option value="Japan">Japan</option>
+        </select>
+        {/* Custom arrow */}
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-color-e">▼</span>
       </div>
     </div>,
 
@@ -264,6 +296,7 @@ export default function CreateProjectForm() {
       <h3 className="font-semibold text-lg">Preview</h3>
       <p><strong>Title:</strong> {formData.title}</p>
       <p><strong>Category:</strong> {formData.category}</p>
+      <p><strong>Country:</strong> {formData.country}</p>
       <p><strong>Short Description:</strong> {formData.shortDescription}</p>
       <p><strong>Long Description:</strong> {formData.longDescription}</p>
       <p><strong>Funding Goal:</strong> ${formData.fundingGoal}</p>

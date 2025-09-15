@@ -6,6 +6,7 @@ import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users } from 'luci
 import { getAuth } from 'firebase/auth';
 
 import Comment from '../components/comment';
+import Navbar from "../components/NavBar";
 
 const ProjectDetails = () => {
   const [project, setProject] = useState(null);
@@ -193,115 +194,135 @@ const ProjectDetails = () => {
   const isFullyFunded = fundedPercentage >= 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 pt-20">
+    <div className="min-h-screen bg-color-d pt-20">
+      <Navbar />
+
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Back Button */}
-        <Link 
+{/*         <Link 
           to="/"
           className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6 font-medium"
         >
           <ArrowLeft size={20} className="mr-2" />
           Back to Projects
-        </Link>
+        </Link> */}
 
         {/* Project Header */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
-          <div className="relative h-64 md:h-96">
-            <img
-              src={project.imageUrl}
-              alt={project.title}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.target.src = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
-              }}
-            />
-            <div className="absolute top-4 left-4">
-              <span className="bg-white/90 backdrop-blur-sm text-blue-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center">
-                <Tag size={14} className="mr-1" />
-                {project.category || 'General'}
-              </span>
-            </div>
-            {isFullyFunded && (
-              <div className="absolute top-4 right-4">
-                <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                  🎉 Fully Funded!
-                </span>
-              </div>
-            )}
+        <div className="mb-12">
+          {/* Title + Short Description */}
+          <div className="text-center px-4 mb-10">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              {project.title || 'Untitled Project'}
+            </h1>
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              {project.shortDescription}
+            </p>
           </div>
 
-          <div className="p-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{project.title || 'Untitled Project'}</h1>
-            <p className="text-gray-600 text-lg mb-6">{project.shortDescription}</p>
-
-            {/* Funding Progress */}
-            <div className="bg-blue-50 rounded-xl p-6 mb-6">
-              <div className="flex justify-between text-lg text-gray-700 mb-4">
-                <div className="flex items-center">
-                  <DollarSign size={20} className="mr-2 text-green-600" />
-                  <span className="font-semibold">{formatFunding(project.fundedMoney || 0)} raised</span>
+          {/* Image + Info Row */}
+          <div className="flex gap-10">
+            {/* Left: Image (3/4) */}
+            <div className="relative w-3/4 h-64 md:h-[32rem]">
+              <img
+                src={project.imageUrl}
+                alt={project.title}
+                className="w-full h-full object-cover rounded-xl"
+                onError={(e) => {
+                  e.target.src =
+                    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
+                }}
+              />
+              <div className="absolute top-4 left-4">
+                <span className="bg-white/90 backdrop-blur-sm text-blue-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center">
+                  <Tag size={14} className="mr-1" />
+                  {project.category || 'General'}
+                </span>
+              </div>
+              {isFullyFunded && (
+                <div className="absolute top-4 right-4">
+                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                    🎉 Fully Funded!
+                  </span>
                 </div>
-                <div className="flex items-center">
-                  <Target size={20} className="mr-2 text-blue-600" />
-                  <span className="font-semibold">of {formatFunding(project.fundingGoal)}</span>
-                </div>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
-                <div 
-                  className={`h-4 rounded-full transition-all duration-1000 ${
-                    isFullyFunded ? 'bg-green-500' : 'bg-gradient-to-r from-blue-500 to-cyan-500'
-                  }`}
-                  style={{ width: `${fundedPercentage}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>{Math.round(fundedPercentage)}% funded</span>
-                <span>{project.fundingGoal - (project.fundedMoney || 0) > 0 ? 
-                  formatFunding(project.fundingGoal - (project.fundedMoney || 0)) + ' to go' : 
-                  'Goal reached!'
-                }</span>
-              </div>
+              )}
             </div>
 
-            {/* Stats */}
-            <div className="flex flex-wrap gap-4 mb-6">
-              <div className="flex items-center text-gray-700 bg-gray-50 p-4 rounded-lg flex-1 min-w-[180px]">
-                <Clock size={20} className="mr-3 text-blue-600" />
-                <div>
-                  <div className="font-semibold">{project.duration || 'N/A'} days left</div>
-                  <div className="text-sm text-gray-500">Duration</div>
+            {/* Right: Info (1/4) */}
+            <div className="flex flex-col w-1/4 gap-10">
+              {/* Funding Progress */}
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between text-xl text-gray-700 mb-2">
+                  <span className="font-semibold">
+                    {formatFunding(project.fundedMoney || 0)} raised
+                  </span>
+                  <span>of {formatFunding(project.fundingGoal)}</span>
                 </div>
-              </div>
-              <div className="flex items-center text-gray-700 bg-gray-50 p-4 rounded-lg flex-1 min-w-[180px]">
-                <Calendar size={20} className="mr-3 text-cyan-600" />
-                <div>
-                  <div className="font-semibold">{project.endDate || 'TBD'}</div>
-                  <div className="text-sm text-gray-500">End Date</div>
-                </div>
-              </div>
-              <div className="flex items-center text-gray-700 bg-gray-50 p-4 rounded-lg flex-1 min-w-[180px]">
-                <Users size={20} className="mr-3 text-purple-600" />
-                <div>
-                  <div className="font-semibold">{project.backers || 0} supporters</div>
-                  <div className="text-sm text-gray-500">Backers</div>
-                </div>
-              </div>
-            </div>
 
-            {/* Support Button */}
-            <div className="flex justify-center mt-6">
-              <button
+                <div className="w-full bg-gray-200 rounded-full h-3 mb-1">
+                  <div
+                    className={`h-3 rounded-full transition-all duration-1000 ${
+                      isFullyFunded
+                        ? 'bg-green-500'
+                        : 'bg-gradient-to-r from-blue-500 to-cyan-500'
+                    }`}
+                    style={{ width: `${fundedPercentage}%` }}
+                  ></div>
+                </div>
+                
+                <div className="flex justify-between text-xl text-gray-600">
+                  <span>{Math.round(fundedPercentage)}% funded</span>
+                  <span>
+                    {project.fundingGoal - (project.fundedMoney || 0) > 0
+                      ? formatFunding(project.fundingGoal - (project.fundedMoney || 0)) +
+                        ' to go'
+                      : 'Goal reached!'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="flex flex-col gap-8">
+                <div className="flex items-center text-gray-700 text-2xl rounded-lg">
+                  <Clock size={25} className="mr-2 text-blue-600" />
+                  <div>
+                    <div className="font-semibold">
+                      {project.duration || 'N/A'} days left
+                    </div>
+                    <div className="text text-gray-500">Duration</div>
+                  </div>
+                </div>
+                {/* <div className="flex items-center text-gray-700 bg-gray-50 p-3 rounded-lg">
+                  <Calendar size={18} className="mr-2 text-cyan-600" />
+                  <div>
+                    <div className="font-semibold">{project.endDate || 'TBD'}</div>
+                    <div className="text-xs text-gray-500">End Date</div>
+                  </div>
+                </div> */}
+                <div className="flex items-center text-2xl text-gray-700 rounded-lg">
+                  <Users size={25} className="mr-2 text-purple-600" />
+                  <div>
+                    <div className="font-semibold">
+                      {project.backers || 0} supporters
+                    </div>
+                    <div className="text text-gray-500">Backers</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Support Button */}
+              <div className="">
+                <button
                   onClick={handleClick}
-                  className={`py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 ${
+                  className={`w-full py-3 rounded-xl font-semibold text-lg transition-all duration-300 ${
                     isFullyFunded
-                      ? "bg-green-500 hover:bg-green-600 text-white"
-                      : "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
                   }`}
                 >
-                  {isFullyFunded ? "View Rewards" : "Support This Project"}
-              </button>
+                  {isFullyFunded ? 'View Rewards' : 'Support This Project'}
+                </button>
+              </div>
             </div>
-
           </div>
         </div>
 
