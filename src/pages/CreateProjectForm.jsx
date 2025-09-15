@@ -292,22 +292,80 @@ export default function CreateProjectForm() {
       )}
     </div>,
 
-    <div className="space-y-2 w-full">
-      <h3 className="font-semibold text-lg">Preview</h3>
-      <p><strong>Title:</strong> {formData.title}</p>
-      <p><strong>Category:</strong> {formData.category}</p>
-      <p><strong>Country:</strong> {formData.country}</p>
-      <p><strong>Short Description:</strong> {formData.shortDescription}</p>
-      <p><strong>Long Description:</strong> {formData.longDescription}</p>
-      <p><strong>Funding Goal:</strong> ${formData.fundingGoal}</p>
-      <p><strong>End Date:</strong> {formData.endDate}</p>
-      {formData.imageFile && <img src={URL.createObjectURL(formData.imageFile)} alt="Preview" className="mt-2 w-48 rounded-lg border" />}
+    // Step 6 (Preview)
+<div className="mb-12 px-15 w-full h-[65vh] overflow-y-auto overflow-x-clip relative bottom-10">
+  {/* Title + Short Description */}
+  <div className="text-center px-4 mb-10">
+    <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+      {formData.title || 'Untitled Project'}
+    </h1>
+    <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+      {formData.shortDescription || 'No short description provided.'}
+    </p>
+  </div>
+
+  {/* Image + Info Row */}
+  <div className="flex flex-col md:flex-row gap-10">
+    {/* Left: Image */}
+    <div className="relative w-full md:w-3/4 h-64 md:h-[15rem] rounded-xl overflow-hidden flex-shrink-0">
+      {formData.imageFile ? (
+        <img
+          src={URL.createObjectURL(formData.imageFile)}
+          alt="Preview"
+          className="w-full h-full object-cover rounded-xl"
+        />
+      ) : (
+        <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded-xl text-gray-500">
+          No image selected
+        </div>
+      )}
+
+      {/* Category badge */}
+      <div className="absolute top-4 left-4">
+        <span className="bg-white/90 backdrop-blur-sm text-blue-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center">
+          <FiTag className="mr-1" />
+          {formData.category || 'General'}
+        </span>
+      </div>
+    </div>
+
+    {/* Right: Info */}
+    <div className="flex flex-col w-full md:w-1/4 gap-6 flex-shrink-0">
+      <div className="flex flex-col gap-2 text-gray-700">
+        <div>
+          <span className="font-semibold">Country:</span> {formData.country || 'N/A'}
+        </div>
+        <div>
+          <span className="font-semibold">Funding Goal:</span> ${formData.fundingGoal || 0}
+        </div>
+        <div>
+          <span className="font-semibold">End Date:</span> {formData.endDate || 'TBD'}
+        </div>
+      </div>
+
+      {/* Submit Button */}
       {activeStep === 6 && (
-        <button onClick={handleSubmit} disabled={loading} className="mt-4 px-6 py-3 bg-color-b text-color-d rounded-xl hover:bg-color-e">
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="mt-4 w-full py-3 rounded-xl font-semibold text-lg bg-color-b hover:to-cyan-700 text-white transition-all duration-300"
+        >
           {loading ? "Submitting..." : "Submit Project"}
         </button>
       )}
-    </div>,
+    </div>
+  </div>
+
+  {/* Long Description */}
+  <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mt-8 break-words">
+    <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-6">About This Project</h2>
+    <div className="text-gray-700 whitespace-pre-wrap break-words">
+      {formData.longDescription || 'No detailed description available.'}
+    </div>
+  </div>
+</div>
+
+
   ];
 
   return (

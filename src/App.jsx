@@ -13,6 +13,7 @@ import Projects from "./pages/Projects";
 import ViewMyProjects from "./pages/ViewMyProjects";
 import Rewards from "./pages/Rewards";
 import Support from "./pages/Support";
+import Community from "./pages/Community"
 
 function App() {
   const [loadingComplete, setLoadingComplete] = useState(false);
@@ -27,6 +28,7 @@ function App() {
       <Route path="/home" element={<Home />} />
       <Route path="/signing" element={<Signing />} />
       <Route path="/create" element={<CreateProjectForm />} />
+      <Route path="/community" element={<Community />} />
       <Route path="/browse" element={<Browse />} />
       <Route path="/projectDet/:id" element={<ProjectDetails />} />
       <Route path="/profile" element={<Profile />} />

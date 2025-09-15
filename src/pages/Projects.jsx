@@ -1,10 +1,7 @@
 import React, { useState } from "react";
 import CreateProjectForm from "./CreateProjectForm";
-import ViewMyProjects from "./ViewMyProjects"; // 🔹 Import your CreateProjectForm
-import { Link } from "react-router-dom";
-
-// Placeholder for View Projects (you can replace this with your actual view projects component)
-const ViewProjects = () => <div>Your projects will be displayed here</div>;
+import ViewMyProjects from "./ViewMyProjects";
+import Community from "./Community"; // 🔹 Import the Community component
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
@@ -31,18 +28,30 @@ const Projects = () => {
             onClick={() => setActiveTab("create")}
             className={`px-4 py-2 rounded-lg font-semibold text-left ${
               activeTab === "create"
-                ? " bg-color-b text-white"
+                ? "bg-color-b text-white"
                 : "text-color-b hover:bg-blue-100"
             }`}
           >
             Create Project
+          </button>
+          <button
+            onClick={() => setActiveTab("community")}
+            className={`px-4 py-2 rounded-lg font-semibold text-left ${
+              activeTab === "community"
+                ? "bg-color-b text-white"
+                : "text-color-b hover:bg-blue-100"
+            }`}
+          >
+            Community
           </button>
         </nav>
       </div>
 
       {/* Main Content */}
       <div className="flex-1">
-        {activeTab === "view" ? <ViewMyProjects /> : <CreateProjectForm />}
+        {activeTab === "view" && <ViewMyProjects />}
+        {activeTab === "create" && <CreateProjectForm />}
+        {activeTab === "community" && <Community />}
       </div>
     </div>
   );
