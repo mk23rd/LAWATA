@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDocs, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users } from 'lucide-react';
@@ -14,6 +14,7 @@ const ProjectDetails = () => {
   const [error, setError] = useState(null);
   const [newComment, setNewComment] = useState("");
   const [currentUserData, setCurrentUserData] = useState(null);
+  const [commentsWithProfileImages, setCommentsWithProfileImages] = useState([]);
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -23,9 +24,43 @@ const ProjectDetails = () => {
 
     const unsubscribe = onSnapshot(
       projectRef,
-      (docSnap) => {
+      async (docSnap) => {
         if (docSnap.exists()) {
-          setProject({ id: docSnap.id, ...docSnap.data() });
+          const projectData = { id: docSnap.id, ...docSnap.data() };
+          setProject(projectData);
+          
+          // Resolve profile images for comments
+          if (projectData.comments && projectData.comments.length > 0) {
+            const commentsWithImages = await Promise.all(
+              projectData.comments.map(async (comment) => {
+                let imageUrl = comment.commenterPfp || "https://via.placeholder.com/40";
+                
+                // If we have a reference to the user's profile, fetch the current image
+                if (comment.userId) {
+                  try {
+                    const userDocRef = doc(db, "users", comment.userId);
+                    const userDoc = await getDoc(userDocRef);
+                    
+                    if (userDoc.exists() && userDoc.data().profileImageUrl) {
+                      imageUrl = userDoc.data().profileImageUrl;
+                    }
+                  } catch (error) {
+                    console.error("Error fetching user profile:", error);
+                  }
+                }
+                
+                return {
+                  ...comment,
+                  resolvedPfp: imageUrl
+                };
+              })
+            );
+            
+            setCommentsWithProfileImages(commentsWithImages);
+          } else {
+            setCommentsWithProfileImages([]);
+          }
+          
           setLoading(false);
         } else {
           setError('Project not found');
@@ -93,7 +128,6 @@ const ProjectDetails = () => {
     if (!timestamp) return '-';    
     try {
       if (timestamp.seconds !== undefined && timestamp.nanoseconds !== undefined) {
-
         const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
         
         if (includeTime) {
@@ -198,15 +232,6 @@ const ProjectDetails = () => {
       <Navbar />
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Back Button */}
-{/*         <Link 
-          to="/"
-          className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6 font-medium"
-        >
-          <ArrowLeft size={20} className="mr-2" />
-          Back to Projects
-        </Link> */}
-
         {/* Project Header */}
         <div className="mb-12">
           {/* Title + Short Description */}
@@ -291,13 +316,6 @@ const ProjectDetails = () => {
                     <div className="text text-gray-500">Duration</div>
                   </div>
                 </div>
-                {/* <div className="flex items-center text-gray-700 bg-gray-50 p-3 rounded-lg">
-                  <Calendar size={18} className="mr-2 text-cyan-600" />
-                  <div>
-                    <div className="font-semibold">{project.endDate || 'TBD'}</div>
-                    <div className="text-xs text-gray-500">End Date</div>
-                  </div>
-                </div> */}
                 <div className="flex items-center text-2xl text-gray-700 rounded-lg">
                   <Users size={25} className="mr-2 text-purple-600" />
                   <div>
@@ -338,17 +356,15 @@ const ProjectDetails = () => {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8 p-6">
           <h2 className="text-xl font-bold mb-4">Comments</h2>
 
-          
-          {(project.comments || []).map((instance) => (
+          {commentsWithProfileImages.map((instance, index) => (
             <Comment 
-              key={crypto.randomUUID()}
+              key={`${instance.userId}-${instance.createdAt?.seconds || index}`}
               username={instance.username}
               createdAt={formatFirebaseTimestamp(instance.createdAt)}
-              pfpImage={instance.commenterPfp}
+              pfpImage={instance.resolvedPfp}
               comment={instance.comment}
             />
-          ))
-          }
+          ))}
         
 
           <div className="flex items-center gap-2 mt-4">
