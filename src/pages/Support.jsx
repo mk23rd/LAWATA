@@ -7,6 +7,8 @@ import {
   arrayUnion,
   serverTimestamp,
   increment,
+  addDoc,
+  Timestamp 
 } from "firebase/firestore";
 import { db } from "../firebase/firebase-config";
 import { useParams, useNavigate } from "react-router-dom";
@@ -138,7 +140,36 @@ const Support = () => {
     });
 
     alert(`🎉 You successfully supported with $${numericAmount}!`);
-    navigate(`/projects/${id}`);
+    // notification to the donated
+     try {
+        await addDoc(collection(db, "notifications"), {
+          userId: project.createdBy.uid,
+          projectId: project.id,
+          projectTitle: project.title,
+          message: `Your Project ${project.title} was funded ${numericAmount}$ by ${currentUser.displayName || "a supporter"}.`,
+          type: "Your_project_Funded",
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      } catch (notifErr) {
+        console.error("Failed to create notification:", notifErr);
+      }
+    //notification to the donatator
+      try {
+        await addDoc(collection(db, "notifications"), {
+          userId: currentUser.uid,
+          projectId: project.id,
+          projectTitle: project.title,
+          message: `You donated ${numericAmount}$ to a project called ${project.title}.`,
+          type: "You_Funded_a_project",
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      } catch (notifErr) {
+        console.error("Failed to create notification:", notifErr);
+      }
+
+      
   } catch (err) {
     console.error("Error processing support:", err);
     alert(err.message || "Something went wrong. Please try again.");
