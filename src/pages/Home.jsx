@@ -10,10 +10,9 @@ import { signOut } from 'firebase/auth'
 import { auth, db } from '../firebase/firebase-config'
 import { useNavigate } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, limit, where, Timestamp } from "firebase/firestore";
 import Navbar from '../components/NavBar';
 import { Draggable } from "gsap/Draggable";
-import { Timestamp } from 'firebase/firestore';
 
 import Arrow from "../assets/images/arrow-left.svg"
 
@@ -137,7 +136,7 @@ useEffect(() => {
   }
 }, []);
 
-useEffect(() => {
+/* useEffect(() => {
   const handleClickOutside = (event) => {
     // close user dropdown when clicking outside .user-dropdown
     if (!event.target.closest('.user-dropdown')) {
@@ -152,7 +151,7 @@ useEffect(() => {
 
   document.addEventListener('mousedown', handleClickOutside);
   return () => document.removeEventListener('mousedown', handleClickOutside);
-}, []);
+}, []); */
 
 
   
