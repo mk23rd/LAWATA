@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import { db } from "../firebase/firebase-config";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 export default function ViewMyProjects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const auth = getAuth();
   const user = auth.currentUser;
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -31,13 +33,26 @@ export default function ViewMyProjects() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map(project => (
-            <div key={project.id} className="border rounded-lg p-4 shadow hover:shadow-lg transition">
+            <button
+              key={project.id}
+              onClick={() => navigate(`/myProjectInfo/${project.id}`)}
+              className="text-left border rounded-lg p-4 shadow hover:shadow-lg transition hover:-translate-y-0.5 bg-white"
+            >
               <h2 className="font-semibold text-xl">{project.title}</h2>
               <p><strong>Category:</strong> {project.category}</p>
               <p><strong>Funding Goal:</strong> ${project.fundingGoal}</p>
               <p><strong>Status:</strong> {project.status}</p>
-              {project.imageUrl && <img src={project.imageUrl} alt={project.title} className="mt-2 rounded-lg w-full h-48 object-cover" />}
-            </div>
+              {project.imageUrl && (
+                <img
+                  src={project.imageUrl}
+                  alt={project.title}
+                  className="mt-2 rounded-lg w-full h-48 object-cover"
+                />
+              )}
+              <div className="mt-3">
+                <span className="inline-block text-sm text-blue-600 font-semibold">View details →</span>
+              </div>
+            </button>
           ))}
         </div>
       )}

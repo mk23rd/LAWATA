@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import CreateProjectForm from "./CreateProjectForm";
 import ViewMyProjects from "./ViewMyProjects";
-import Community from "./Community";
+import Community from "./Community"; // 🔹 Import the Community component
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // for mobile toggle
 
   return (
     <div className="flex min-h-screen bg-color-d">
+      <div className="fixed top-4 right-4 z-50">
+        <NotificationBell />
+      </div>
       {/* Sidebar */}
       <div
         className={`fixed md:relative z-50 top-0 left-0 h-full md:h-auto w-64 bg-color-d border-r-3 shadow-md border-color-b transform ${
@@ -30,7 +32,7 @@ const Projects = () => {
             View Projects
           </button>
           <button
-            onClick={() => { setActiveTab("create"); setIsSidebarOpen(false); }}
+            onClick={() => setActiveTab("create")}
             className={`px-4 py-2 rounded-lg font-semibold text-left ${
               activeTab === "create"
                 ? "bg-color-b text-white"
