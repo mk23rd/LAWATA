@@ -6,9 +6,11 @@ import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage } from "react-icons/fi";
 import imgLogo from '../assets/images/img-logo.svg'
+import { useAuth } from "../context/AuthContext";
 
 export default function CreateProjectForm() {
   const navigate = useNavigate();
+  const { currentUser, profileComplete } = useAuth();
   const [activeStep, setActiveStep] = useState(1);
   const [formData, setFormData] = useState({
     title: "",
@@ -57,6 +59,17 @@ export default function CreateProjectForm() {
   };
 
   const handleSubmit = async () => {
+    // Gate: must be logged in and have completed profile
+    if (!currentUser) {
+      alert("Please sign in to proceed.");
+      navigate(`/signing?redirectTo=/create`);
+      return;
+    }
+    if (!profileComplete) {
+      alert("Please complete your profile to proceed.");
+      navigate(`/manage-profile?redirectTo=/create`);
+      return;
+    }
     setLoading(true);
     setMessage("");
 

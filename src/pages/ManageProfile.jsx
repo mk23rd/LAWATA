@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebase/firebase-config";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Upload, X, Loader } from "lucide-react";
 
 const steps = [
@@ -14,6 +14,7 @@ const steps = [
 
 const ManageProfile = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = auth.currentUser;
 
   const [formData, setFormData] = useState({
@@ -186,7 +187,9 @@ const ManageProfile = () => {
       });
       
       alert("Profile updated successfully!");
-      navigate("/profile");
+      const params = new URLSearchParams(location.search);
+      const redirectTo = params.get("redirectTo");
+      navigate(redirectTo || "/profile");
     } catch (error) {
       console.error("Error updating profile:", error);
       alert("Failed to update profile");

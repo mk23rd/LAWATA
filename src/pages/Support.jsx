@@ -21,7 +21,7 @@ const Support = () => {
   const [error, setError] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, profileComplete } = useAuth();
 
   const templates = [100, 500, 1000, 3000, 5000, 10000];
 
@@ -53,12 +53,21 @@ const Support = () => {
   const handleInputChange = (e) => setAmount(e.target.value);
 
   const handleSubmit = async (e) => {
-    
-  e.preventDefault();
-  if (!currentUser) {
-    alert("You must be logged in to support a project.");
-    return;
-  }
+    e.preventDefault();
+    if (!currentUser) {
+      alert("Please sign in to proceed.");
+      navigate(`/signing?redirectTo=/support/${id}`);
+      return;
+    }
+    if (!profileComplete) {
+      alert("Please complete your profile to proceed.");
+      navigate(`/manage-profile?redirectTo=/support/${id}`);
+      return;
+    }
+    // Optional: check profile completeness server-side too, but here we gate UI
+    // Since AuthContext now provides profile state, we can fetch it on demand if needed.
+    // For simplicity, redirect to manage profile where missing.
+    // We'll lazily read user doc inside transaction anyway.
 
   const numericAmount = parseFloat(amount);
   if (!numericAmount || numericAmount <= 0) {
@@ -79,9 +88,22 @@ const Support = () => {
 
       if (!projectSnap.exists()) throw new Error("Project not found");
       if (!userSnap.exists()) throw new Error("User not found in database.");
+      // Gate: profile completeness check
+      const userData = userSnap.data();
+      const hasProfile = Boolean(
+        userData &&
+        userData.phoneNumber &&
+        userData.profileImageUrl &&
+        userData.bio &&
+        userData.location &&
+        userData.location.city &&
+        userData.location.country
+      );
+      if (!hasProfile) {
+        throw new Error("Please complete your profile before supporting a project.");
+      }
 
       const projectData = projectSnap.data();
-      const userData = userSnap.data();
 
       const currentFunded = projectData.fundedMoney ?? 0;
       const fundingGoal = projectData.fundingGoal ?? Infinity;

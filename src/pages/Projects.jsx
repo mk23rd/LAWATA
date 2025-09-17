@@ -3,9 +3,13 @@ import CreateProjectForm from "./CreateProjectForm";
 import ViewMyProjects from "./ViewMyProjects";
 import Community from "./Community"; // 🔹 Import the Community component
 import NotificationBell from "../components/NotificationBell";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
+  const navigate = useNavigate();
+  const { currentUser, profileComplete } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-color-d">
@@ -29,7 +33,19 @@ const Projects = () => {
             View Projects
           </button>
           <button
-            onClick={() => setActiveTab("create")}
+            onClick={() => {
+              if (!currentUser) {
+                alert("Please sign in to proceed.");
+                navigate(`/signing?redirectTo=/projects`);
+                return;
+              }
+              if (!profileComplete) {
+                alert("Please complete your profile to proceed.");
+                navigate(`/manage-profile?redirectTo=/projects`);
+                return;
+              }
+              setActiveTab("create");
+            }}
             className={`px-4 py-2 rounded-lg font-semibold text-left ${
               activeTab === "create"
                 ? "bg-color-b text-white"
