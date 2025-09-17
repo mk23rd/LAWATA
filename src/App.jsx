@@ -6,7 +6,6 @@ import Home from './pages/Home';
 import CreateProjectForm from "./pages/CreateProjectForm"
 import Browse from "./pages/Browse"
 import ProjectDetails from "./pages/ProjectDetails"
-import MyProjectInfo from "./pages/MyProjectInfo"
 import Signing from "./pages/Signing";
 import Profile from "./pages/Profile";
 import ManageProfile from "./pages/ManageProfile";
@@ -38,7 +37,6 @@ function App() {
       <Route path="/view-my-projects" element={<ViewMyProjects />} />
       <Route path="/rewards/:id" element={<Rewards />} />
       <Route path="/support/:id" element={<Support />} />
-      <Route path="/myProjectInfo/:id" element={<MyProjectInfo />} />
     </Routes>
   )
 }
