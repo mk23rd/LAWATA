@@ -173,6 +173,8 @@ const ManageProfile = () => {
       }
 
       await updateDoc(doc(db, "users", user.uid), {
+        
+        balance: 100000,
         phoneNumber: formData.phoneNumber,
         profileImageUrl: profileImageUrl,
         bio: formData.bio,
