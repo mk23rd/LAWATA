@@ -74,7 +74,8 @@ const NotificationBell = ({ containerClassName = '' }) => {
                   } finally {
                     setOpen(false)
                     if (n.projectId) {
-                      navigate(`/myProjectInfo/${n.projectId}`)
+                     // navigate(`/myProjectInfo/${n.projectId}`)
+                      navigate("/projects")
                     }
                   }
                 }}
