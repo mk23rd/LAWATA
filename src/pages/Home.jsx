@@ -11,6 +11,7 @@ import { auth, db } from '../firebase/firebase-config'
 import { useNavigate } from 'react-router-dom'
 import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { collection, getDocs, query, orderBy, limit, onSnapshot, where } from "firebase/firestore";
+import Navbar from '../components/NavBar';
 import NotificationBell from "../components/NotificationBell";
 import { Draggable } from "gsap/Draggable";
 import { Timestamp } from 'firebase/firestore';
@@ -141,86 +142,7 @@ useEffect(() => {
 
   return (
     <div className='bg-color-d overflow-x-clip'>
-      <nav className='fixed top-0 left-0 w-screen h-20 z-50 flex items-center'>
-        <div className='w-1/6 h-full flex justify-center items-center'>
-          <p className='font-titan text-5xl text-color-b pointer-events-none'>LAWATA</p>
-        </div>
-
-        <div className='w-4/6 h-full flex justify-center items-center'>
-          <div className='bg-color-e rounded-2xl w-2xl h-13 gap-40 flex items-center justify-evenly'>
-            <Link to="/projects" className='text-color-d text-2xl hover:underline'>Create</Link>
-            <Link to="/browse" className='text-color-d text-2xl hover:underline'>Browse Works</Link>
-            <Link to="/about" className='text-color-d text-2xl hover:underline'>About</Link>
-          </div>
-        </div>
-
-        <div className='w-1/6 h-full flex justify-end items-center gap-3 pr-4'>
-          <NotificationBell />
-
-          {/* User Profile Dropdown */}
-          <div className="relative user-dropdown">
-          {/* User Profile Dropdown */}
-  <button 
-    onClick={toggleDropdown}
-    className='bg-color-e rounded-2xl w-35 h-10 flex items-center justify-center text-color-d font-medium hover:bg-opacity-90 transition-colors px-4 truncate'
-  >
-    {userData?.username || user?.email || 'User'}
-  </button>
-  
-  {showDropdown && (
-    <div className="absolute right-0 mt-2 w-48 bg-color-e rounded-md shadow-lg z-10">
-      <div className="py-1">
-        {user ? (
-          <>
-            {/* If user IS logged in */}
-            <div className="px-4 py-2 text-sm text-color-d border-b border-color-d border-opacity-20">
-              <p className="font-medium truncate">{userData?.username || 'User'}</p>
-              <p className="truncate text-opacity-80">{user?.email}</p>
-            </div>
-            <button
-              onClick={() => navigate("/profile")}
-              className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
-            >
-              Profile
-            </button>
-            <button
-              onClick={() => navigate("/projects")}
-              className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
-            >
-              Projects
-            </button>
-            <button
-              onClick={handleLogout}
-              className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
-            >
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            {/* If user is NOT logged in */}
-<button
-  onClick={() => navigate("/signing", { state: { panel: "signup" } })}
-  className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
->
-  Sign Up
-</button>
-<button
-  onClick={() => navigate("/signing", { state: { panel: "login" } })}
-  className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
->
-  Login
-</button>
-
-          </>
-        )}
-      </div>
-    </div>
-  )}
-</div>
-
-        </div>
-      </nav>
+      <Navbar />
 
       <div ref={twoHundredRef} className='flex flex-col justify-center items-center w-screen h-screen pt-30'>
         <main className='w-full  h-3/5 gap-5 flex items-center justify-center'>
