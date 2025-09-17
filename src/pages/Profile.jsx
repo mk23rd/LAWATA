@@ -4,6 +4,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { MdEmail, MdLocationOn, MdDateRange } from "react-icons/md";
+import NotificationBell from "../components/NotificationBell";
 
 const roleColors = {
   creator: "bg-yellow-200 text-black",
@@ -47,6 +48,9 @@ const Profile = () => {
 
   return (
     <div className="bg-white min-h-screen flex flex-col items-center py-12 px-4">
+      <div className="fixed top-4 right-4 z-50">
+        <NotificationBell />
+      </div>
       <h1 className="text-4xl font-bold mb-8 text-black">My Profile</h1>
 
       <div

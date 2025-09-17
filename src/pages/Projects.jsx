@@ -2,12 +2,16 @@ import React, { useState } from "react";
 import CreateProjectForm from "./CreateProjectForm";
 import ViewMyProjects from "./ViewMyProjects";
 import Community from "./Community"; // 🔹 Import the Community component
+import NotificationBell from "../components/NotificationBell";
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
 
   return (
     <div className="flex min-h-screen bg-color-d">
+      <div className="fixed top-4 right-4 z-50">
+        <NotificationBell />
+      </div>
       {/* Sidebar */}
       <div className="w-64 bg-color-d border-r-3 shadow-md flex flex-col border-color-b">
         <h2 className="text-2xl font-bold text-color-b p-6 border-b-2 border-color-b">

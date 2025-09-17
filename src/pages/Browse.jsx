@@ -6,6 +6,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 
 import Arrow from "../assets/images/arrow-left.svg";
+import NotificationBell from "../components/NotificationBell";
 
 const Browse = () => {
   const navigate = useNavigate();
@@ -118,7 +119,8 @@ const Browse = () => {
           </div>
         </div>
 
-        <div className='w-1/6 h-full flex justify-center items-center user-dropdown'>
+        <div className='w-1/6 h-full flex justify-end items-center gap-3 pr-4 user-dropdown'>
+          <NotificationBell />
           <div className="relative">
             <button onClick={toggleDropdown} className='bg-color-e rounded-2xl w-35 h-10 flex items-center justify-center text-color-d font-medium hover:bg-opacity-90 transition-colors px-4 truncate'>
               {userData?.username || user?.email || 'User'}

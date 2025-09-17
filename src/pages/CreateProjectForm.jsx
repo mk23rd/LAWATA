@@ -98,8 +98,22 @@ export default function CreateProjectForm() {
         },
       };
 
-      await addDoc(collection(db, "projects"), projectData);
+      const projectRef = await addDoc(collection(db, "projects"), projectData);
       setMessage("✅ Project submitted successfully!");
+      // Create a notification for the submitting user
+      try {
+        await addDoc(collection(db, "notifications"), {
+          userId: user.uid,
+          projectId: projectRef.id,
+          projectTitle: projectData.title,
+          message: `You submitted a project called ${projectData.title}. The admins are reviewing it.`,
+          type: "project_submission",
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      } catch (notifErr) {
+        console.error("Failed to create notification:", notifErr);
+      }
       console.log('submitted project successfully')
       // Reset form
       setActiveStep(1); 
@@ -113,7 +127,7 @@ export default function CreateProjectForm() {
         endDate: "",
         imageFile: null,
       });
-      navigate("/view-my-projects");
+      navigate("/projects");
     } catch (error) {
       console.error(error);
       setMessage("❌ Failed to submit project.");

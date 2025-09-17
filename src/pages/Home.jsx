@@ -9,8 +9,9 @@ import HomeLogo from '../components/homeLogo'
 import { signOut } from 'firebase/auth'
 import { auth, db } from '../firebase/firebase-config'
 import { useNavigate } from 'react-router-dom'
-import { doc, getDoc } from 'firebase/firestore'
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy, limit, onSnapshot, where } from "firebase/firestore";
+import NotificationBell from "../components/NotificationBell";
 import { Draggable } from "gsap/Draggable";
 import { Timestamp } from 'firebase/firestore';
 
@@ -40,6 +41,7 @@ const Home = () => {
     fetchUserData()
   }, [user])
 
+
   const handleLogout = async () => {
     try {
       await signOut(auth)
@@ -53,12 +55,14 @@ const Home = () => {
     setShowDropdown(!showDropdown)
   }
 
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest('.user-dropdown')) {
         setShowDropdown(false)
       }
+      // notification dropdown handled in component
     }
 
     document.addEventListener('mousedown', handleClickOutside)
@@ -142,9 +146,12 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className='w-1/6 h-full flex justify-center items-center user-dropdown'>
+        <div className='w-1/6 h-full flex justify-end items-center gap-3 pr-4'>
+          <NotificationBell />
+
           {/* User Profile Dropdown */}
-          <div className="relative">
+          <div className="relative user-dropdown">
+          {/* User Profile Dropdown */}
   <button 
     onClick={toggleDropdown}
     className='bg-color-e rounded-2xl w-35 h-10 flex items-center justify-center text-color-d font-medium hover:bg-opacity-90 transition-colors px-4 truncate'
