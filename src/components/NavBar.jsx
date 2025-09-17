@@ -13,6 +13,9 @@ const Navbar = () => {
   const [userData, setUserData] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const toggleMenu = () => setMenuOpen(!menuOpen);
+
   // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {

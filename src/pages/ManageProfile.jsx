@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebase/firebase-config";
-import { doc, getDoc, updateDoc,addDoc,collection,Timestamp } from "firebase/firestore";
-import { useNavigate, useLocation } from "react-router-dom";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 import { Upload, X, Loader } from "lucide-react";
 
 const steps = [
@@ -14,7 +14,6 @@ const steps = [
 
 const ManageProfile = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const user = auth.currentUser;
 
   const [formData, setFormData] = useState({
@@ -32,7 +31,7 @@ const ManageProfile = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState("");
- 
+
   // Debug: Check if API key is loaded
   useEffect(() => {
     console.log('API Key:', import.meta.env.VITE_IMGBB_API_KEY ? 'Present' : 'Missing');
@@ -174,8 +173,6 @@ const ManageProfile = () => {
       }
 
       await updateDoc(doc(db, "users", user.uid), {
-        
-        balance: 100000,
         phoneNumber: formData.phoneNumber,
         profileImageUrl: profileImageUrl,
         bio: formData.bio,
@@ -187,20 +184,7 @@ const ManageProfile = () => {
       });
       
       alert("Profile updated successfully!");
-      try {
-          await addDoc(collection(db, "notifications"), {
-            userId: user.uid,
-            message: `You have successfully set up your profile.`,
-            type: "Profile_setup",
-            read: false,
-            createdAt: Timestamp.now()
-          });
-        } catch (notifErr) {
-          console.error("Failed to create notification:", notifErr);
-        }
-      const params = new URLSearchParams(location.search);
-      const redirectTo = params.get("redirectTo");
-      navigate(redirectTo || "/profile");
+      navigate("/profile");
     } catch (error) {
       console.error("Error updating profile:", error);
       alert("Failed to update profile");

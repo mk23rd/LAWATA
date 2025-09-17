@@ -1,29 +1,26 @@
 import React, { useState } from "react";
 import CreateProjectForm from "./CreateProjectForm";
 import ViewMyProjects from "./ViewMyProjects";
-import Community from "./Community"; // 🔹 Import the Community component
-import NotificationBell from "../components/NotificationBell";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import Community from "./Community";
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
-  const navigate = useNavigate();
-  const { currentUser, profileComplete } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // for mobile toggle
 
   return (
     <div className="flex min-h-screen bg-color-d">
-      <div className="fixed top-4 right-4 z-50">
-        <NotificationBell />
-      </div>
       {/* Sidebar */}
-      <div className="w-64 bg-color-d border-r-3 shadow-md flex flex-col border-color-b">
+      <div
+        className={`fixed md:relative z-50 top-0 left-0 h-full md:h-auto w-64 bg-color-d border-r-3 shadow-md border-color-b transform ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } transition-transform duration-300 md:translate-x-0`}
+      >
         <h2 className="text-2xl font-bold text-color-b p-6 border-b-2 border-color-b">
           Projects
         </h2>
         <nav className="flex flex-col p-4 gap-4">
           <button
-            onClick={() => setActiveTab("view")}
+            onClick={() => { setActiveTab("view"); setIsSidebarOpen(false); }}
             className={`px-4 py-2 rounded-lg font-semibold text-left ${
               activeTab === "view"
                 ? "bg-color-b text-white"
@@ -33,19 +30,7 @@ const Projects = () => {
             View Projects
           </button>
           <button
-            onClick={() => {
-              if (!currentUser) {
-                alert("Please sign in to proceed.");
-                navigate(`/signing?redirectTo=/projects`);
-                return;
-              }
-              if (!profileComplete) {
-                alert("Please complete your profile to proceed.");
-                navigate(`/manage-profile?redirectTo=/projects`);
-                return;
-              }
-              setActiveTab("create");
-            }}
+            onClick={() => { setActiveTab("create"); setIsSidebarOpen(false); }}
             className={`px-4 py-2 rounded-lg font-semibold text-left ${
               activeTab === "create"
                 ? "bg-color-b text-white"
@@ -55,7 +40,7 @@ const Projects = () => {
             Create Project
           </button>
           <button
-            onClick={() => setActiveTab("community")}
+            onClick={() => { setActiveTab("community"); setIsSidebarOpen(false); }}
             className={`px-4 py-2 rounded-lg font-semibold text-left ${
               activeTab === "community"
                 ? "bg-color-b text-white"
@@ -67,8 +52,16 @@ const Projects = () => {
         </nav>
       </div>
 
+      {/* Mobile menu button */}
+      <button
+        className="md:hidden fixed top-4 left-4 z-50 bg-color-b text-white p-2 rounded-md shadow-md"
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
+        ☰
+      </button>
+
       {/* Main Content */}
-      <div className="flex-1">
+      <div className="flex-1 p-4">
         {activeTab === "view" && <ViewMyProjects />}
         {activeTab === "create" && <CreateProjectForm />}
         {activeTab === "community" && <Community />}

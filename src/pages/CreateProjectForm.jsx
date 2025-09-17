@@ -6,11 +6,9 @@ import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage } from "react-icons/fi";
 import imgLogo from '../assets/images/img-logo.svg'
-import { useAuth } from "../context/AuthContext";
 
 export default function CreateProjectForm() {
   const navigate = useNavigate();
-  const { currentUser, profileComplete } = useAuth();
   const [activeStep, setActiveStep] = useState(1);
   const [formData, setFormData] = useState({
     title: "",
@@ -59,17 +57,6 @@ export default function CreateProjectForm() {
   };
 
   const handleSubmit = async () => {
-    // Gate: must be logged in and have completed profile
-    if (!currentUser) {
-      alert("Please sign in to proceed.");
-      navigate(`/signing?redirectTo=/create`);
-      return;
-    }
-    if (!profileComplete) {
-      alert("Please complete your profile to proceed.");
-      navigate(`/manage-profile?redirectTo=/create`);
-      return;
-    }
     setLoading(true);
     setMessage("");
 
@@ -111,22 +98,8 @@ export default function CreateProjectForm() {
         },
       };
 
-      const projectRef = await addDoc(collection(db, "projects"), projectData);
+      await addDoc(collection(db, "projects"), projectData);
       setMessage("✅ Project submitted successfully!");
-      // Create a notification for the submitting user
-      try {
-        await addDoc(collection(db, "notifications"), {
-          userId: user.uid,
-          projectId: projectRef.id,
-          projectTitle: projectData.title,
-          message: `You submitted a project called ${projectData.title}. The admins are reviewing it.`,
-          type: "project_submission",
-          read: false,
-          createdAt: Timestamp.now()
-        });
-      } catch (notifErr) {
-        console.error("Failed to create notification:", notifErr);
-      }
       console.log('submitted project successfully')
       // Reset form
       setActiveStep(1); 
@@ -140,7 +113,7 @@ export default function CreateProjectForm() {
         endDate: "",
         imageFile: null,
       });
-      navigate("/projects");
+      navigate("/view-my-projects");
     } catch (error) {
       console.error(error);
       setMessage("❌ Failed to submit project.");
@@ -396,6 +369,7 @@ export default function CreateProjectForm() {
   ];
 
   return (
+  <>
     <div className="flex flex-col items-center min-h-screen p-6">
       <h1 className="text-3xl font-titan text-gray-800 mb-6">Create a New Project</h1>
 
@@ -442,10 +416,11 @@ export default function CreateProjectForm() {
           </div>
         ))}
 
-
       </div>
 
       {message && <p className="text-center mt-4 font-semibold text-gray-700">{message}</p>}
     </div>
+  </>
   );
 }
+

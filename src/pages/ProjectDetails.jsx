@@ -241,160 +241,160 @@ const ProjectDetails = () => {
       <Navbar />
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Project Header */}
-        <div className="mb-12">
-          {/* Title + Short Description */}
-          <div className="text-center px-4 mb-10">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {project.title || 'Untitled Project'}
-            </h1>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              {project.shortDescription}
-            </p>
+  {/* Project Header */}
+  <div className="mb-12">
+    {/* Title + Short Description */}
+    <div className="text-center px-4 mb-10">
+      <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+        {project.title || 'Untitled Project'}
+      </h1>
+      <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+        {project.shortDescription}
+      </p>
+    </div>
+
+    {/* Image + Info Row */}
+    <div className="flex flex-col md:flex-row gap-10">
+      {/* Left: Image */}
+      <div className="relative w-full md:w-3/4 h-64 md:h-[32rem]">
+        <img
+          src={project.imageUrl}
+          alt={project.title}
+          className="w-full h-full object-cover rounded-xl"
+          onError={(e) => {
+            e.target.src =
+              'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
+          }}
+        />
+        <div className="absolute top-4 left-4">
+          <span className="bg-white/90 backdrop-blur-sm text-blue-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center">
+            <Tag size={14} className="mr-1" />
+            {project.category || 'General'}
+          </span>
+        </div>
+        {isFullyFunded && (
+          <div className="absolute top-4 right-4">
+            <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+              🎉 Fully Funded!
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Right: Info */}
+      <div className="flex flex-col w-full md:w-1/4 gap-10">
+        {/* Funding Progress */}
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between text-xl text-gray-700 mb-2">
+            <span className="font-semibold">
+              {formatFunding(project.fundedMoney || 0)} raised
+            </span>
+            <span>of {formatFunding(project.fundingGoal)}</span>
           </div>
 
-          {/* Image + Info Row */}
-          <div className="flex gap-10">
-            {/* Left: Image (3/4) */}
-            <div className="relative w-3/4 h-64 md:h-[32rem]">
-              <img
-                src={project.imageUrl}
-                alt={project.title}
-                className="w-full h-full object-cover rounded-xl"
-                onError={(e) => {
-                  e.target.src =
-                    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
-                }}
-              />
-              <div className="absolute top-4 left-4">
-                <span className="bg-white/90 backdrop-blur-sm text-blue-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center">
-                  <Tag size={14} className="mr-1" />
-                  {project.category || 'General'}
-                </span>
+          <div className="w-full bg-gray-200 rounded-full h-3 mb-1">
+            <div
+              className={`h-3 rounded-full transition-all duration-1000 ${
+                isFullyFunded
+                  ? 'bg-green-500'
+                  : 'bg-gradient-to-r from-blue-500 to-cyan-500'
+              }`}
+              style={{ width: `${fundedPercentage}%` }}
+            ></div>
+          </div>
+
+          <div className="flex justify-between text-xl text-gray-600">
+            <span>{Math.round(fundedPercentage)}% funded</span>
+            <span>
+              {project.fundingGoal - (project.fundedMoney || 0) > 0
+                ? formatFunding(project.fundingGoal - (project.fundedMoney || 0)) +
+                  ' to go'
+                : 'Goal reached!'}
+            </span>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="flex flex-col gap-8">
+          <div className="flex items-center text-gray-700 text-2xl rounded-lg">
+            <Clock size={25} className="mr-2 text-blue-600" />
+            <div>
+              <div className="font-semibold">
+                {project.duration || 'N/A'} days left
               </div>
-              {isFullyFunded && (
-                <div className="absolute top-4 right-4">
-                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                    🎉 Fully Funded!
-                  </span>
-                </div>
-              )}
+              <div className="text text-gray-500">Duration</div>
             </div>
-
-            {/* Right: Info (1/4) */}
-            <div className="flex flex-col w-1/4 gap-10">
-              {/* Funding Progress */}
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between text-xl text-gray-700 mb-2">
-                  <span className="font-semibold">
-                    {formatFunding(project.fundedMoney || 0)} raised
-                  </span>
-                  <span>of {formatFunding(project.fundingGoal)}</span>
-                </div>
-
-                <div className="w-full bg-gray-200 rounded-full h-3 mb-1">
-                  <div
-                    className={`h-3 rounded-full transition-all duration-1000 ${
-                      isFullyFunded
-                        ? 'bg-green-500'
-                        : 'bg-gradient-to-r from-blue-500 to-cyan-500'
-                    }`}
-                    style={{ width: `${fundedPercentage}%` }}
-                  ></div>
-                </div>
-                
-                <div className="flex justify-between text-xl text-gray-600">
-                  <span>{Math.round(fundedPercentage)}% funded</span>
-                  <span>
-                    {project.fundingGoal - (project.fundedMoney || 0) > 0
-                      ? formatFunding(project.fundingGoal - (project.fundedMoney || 0)) +
-                        ' to go'
-                      : 'Goal reached!'}
-                  </span>
-                </div>
+          </div>
+          <div className="flex items-center text-2xl text-gray-700 rounded-lg">
+            <Users size={25} className="mr-2 text-purple-600" />
+            <div>
+              <div className="font-semibold">
+                {project.backers || 0} supporters
               </div>
-
-              {/* Stats */}
-              <div className="flex flex-col gap-8">
-                <div className="flex items-center text-gray-700 text-2xl rounded-lg">
-                  <Clock size={25} className="mr-2 text-blue-600" />
-                  <div>
-                    <div className="font-semibold">
-                      {project.duration || 'N/A'} days left
-                    </div>
-                    <div className="text text-gray-500">Duration</div>
-                  </div>
-                </div>
-                <div className="flex items-center text-2xl text-gray-700 rounded-lg">
-                  <Users size={25} className="mr-2 text-purple-600" />
-                  <div>
-                    <div className="font-semibold">
-                      {project.backers || 0} supporters
-                    </div>
-                    <div className="text text-gray-500">Backers</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Support Button */}
-              <div className="">
-                <button
-                  onClick={handleClick}
-                  className={`w-full py-3 rounded-xl font-semibold text-lg transition-all duration-300 ${
-                    isFullyFunded
-                      ? 'bg-green-500 hover:bg-green-600 text-white'
-                      : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
-                  }`}
-                >
-                  {isFullyFunded ? 'View Rewards' : 'Support This Project'}
-                </button>
-              </div>
+              <div className="text text-gray-500">Backers</div>
             </div>
           </div>
         </div>
 
-        {/* Project Description */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 break-words">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-6">About This Project</h2>
-          <div className="text-gray-700 whitespace-pre-wrap break-words">
-            {project.longDescription || 'No detailed description available.'}
-          </div>
-        </div>
-
-        {/* Comments Section */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8 p-6">
-          <h2 className="text-xl font-bold mb-4">Comments</h2>
-
-          {commentsWithProfileImages.map((instance, index) => (
-            <Comment 
-              key={`${instance.userId}-${instance.createdAt?.seconds || index}`}
-              username={instance.username}
-              createdAt={formatFirebaseTimestamp(instance.createdAt)}
-              pfpImage={instance.resolvedPfp}
-              comment={instance.comment}
-            />
-          ))}
-        
-
-          <div className="flex items-center gap-2 mt-4">
-            <input 
-              type="text" 
-              name="comment" 
-              placeholder="Write a comment..."  
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              className="flex-1 px-4 py-2 border rounded-lg"
-            />
-            <button 
-              type="button" 
-              onClick={handleComment}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Comment
-            </button>
-          </div>
+        {/* Support Button */}
+        <div className="">
+          <button
+            onClick={handleClick}
+            className={`w-full py-3 rounded-xl font-semibold text-lg transition-all duration-300 ${
+              isFullyFunded
+                ? 'bg-green-500 hover:bg-green-600 text-white'
+                : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
+            }`}
+          >
+            {isFullyFunded ? 'View Rewards' : 'Support This Project'}
+          </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  {/* Project Description */}
+  <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 break-words">
+    <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-6">About This Project</h2>
+    <div className="text-gray-700 whitespace-pre-wrap break-words">
+      {project.longDescription || 'No detailed description available.'}
+    </div>
+  </div>
+
+  {/* Comments Section */}
+  <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8 p-6">
+    <h2 className="text-xl font-bold mb-4">Comments</h2>
+
+    {commentsWithProfileImages.map((instance, index) => (
+      <Comment 
+        key={`${instance.userId}-${instance.createdAt?.seconds || index}`}
+        username={instance.username}
+        createdAt={formatFirebaseTimestamp(instance.createdAt)}
+        pfpImage={instance.resolvedPfp}
+        comment={instance.comment}
+      />
+    ))}
+
+    <div className="flex flex-col sm:flex-row items-center gap-2 mt-4">
+      <input 
+        type="text" 
+        name="comment" 
+        placeholder="Write a comment..."  
+        value={newComment}
+        onChange={(e) => setNewComment(e.target.value)}
+        className="flex-1 px-4 py-2 border rounded-lg w-full"
+      />
+      <button 
+        type="button" 
+        onClick={handleComment}
+        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto"
+      >
+        Comment
+      </button>
+    </div>
+  </div>
+</div>
+
     </div>
   );
 };
