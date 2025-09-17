@@ -369,6 +369,7 @@ export default function CreateProjectForm() {
   ];
 
   return (
+  <>
     <div className="flex flex-col items-center min-h-screen p-6">
       <h1 className="text-3xl font-titan text-gray-800 mb-6">Create a New Project</h1>
 
@@ -415,10 +416,11 @@ export default function CreateProjectForm() {
           </div>
         ))}
 
-
       </div>
 
       {message && <p className="text-center mt-4 font-semibold text-gray-700">{message}</p>}
     </div>
+  </>
   );
 }
+

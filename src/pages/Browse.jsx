@@ -6,6 +6,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 
 import Arrow from "../assets/images/arrow-left.svg";
+import Navbar from "../components/NavBar";
 
 const Browse = () => {
   const navigate = useNavigate();
@@ -17,6 +18,9 @@ const Browse = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  const [menuOpen, setMenuOpen] = useState(false);
+  const toggleMenu = () => setMenuOpen(!menuOpen);
 
   // Fetch user data
   useEffect(() => {
@@ -105,49 +109,7 @@ const Browse = () => {
   return (
     <div className="min-h-screen bg-color-d">
       {/* Navbar (from Home) */}
-      <nav className='fixed top-0 left-0 w-screen h-20 z-50 flex items-center bg-color-d'>
-        <div className='w-1/6 h-full flex justify-center items-center'>
-          <Link to='/' className='font-titan text-5xl text-color-b'>LAWATA</Link>
-        </div>
-
-        <div className='w-4/6 h-full flex justify-center items-center'>
-          <div className='bg-color-e rounded-2xl w-2xl h-13 gap-40 flex items-center justify-evenly'>
-            <Link to="/projects" className='text-color-d text-2xl hover:underline'>Create</Link>
-            <Link to="/browse" className='text-color-d text-2xl hover:underline'>Browse Works</Link>
-            <Link to="/about" className='text-color-d text-2xl hover:underline'>About</Link>
-          </div>
-        </div>
-
-        <div className='w-1/6 h-full flex justify-center items-center user-dropdown'>
-          <div className="relative">
-            <button onClick={toggleDropdown} className='bg-color-e rounded-2xl w-35 h-10 flex items-center justify-center text-color-d font-medium hover:bg-opacity-90 transition-colors px-4 truncate'>
-              {userData?.username || user?.email || 'User'}
-            </button>
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-color-e rounded-md shadow-lg z-10">
-                <div className="py-1">
-                  {user ? (
-                    <>
-                      <div className="px-4 py-2 text-sm text-color-d border-b border-color-d border-opacity-20">
-                        <p className="font-medium truncate">{userData?.username || 'User'}</p>
-                        <p className="truncate text-opacity-80">{user?.email}</p>
-                      </div>
-                      <button onClick={() => navigate("/profile")} className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10">Profile</button>
-                      <button onClick={() => navigate("/projects")} className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10">Projects</button>
-                      <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10">Logout</button>
-                    </>
-                  ) : (
-                    <>
-                      <button onClick={() => navigate("/signing", { state: { panel: "signup" } })} className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10">Sign Up</button>
-                      <button onClick={() => navigate("/signing", { state: { panel: "login" } })} className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10">Login</button>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Page Header */}
       <div className="container mx-auto px-4 pt-28 pb-8 text-center">
