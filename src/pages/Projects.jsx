@@ -2,10 +2,14 @@ import React, { useState } from "react";
 import CreateProjectForm from "./CreateProjectForm";
 import ViewMyProjects from "./ViewMyProjects";
 import Community from "./Community";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // for mobile toggle
+  const navigate = useNavigate();
+  const { currentUser, profileComplete } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-color-d">
@@ -30,7 +34,20 @@ const Projects = () => {
             View Projects
           </button>
           <button
-            onClick={() => { setActiveTab("create"); setIsSidebarOpen(false); }}
+            onClick={() => {
+              if (!currentUser) {
+                alert("Please sign in to proceed.");
+                navigate(`/signing?redirectTo=/projects`);
+                return;
+              }
+              if (!profileComplete) {
+                alert("Please complete your profile to proceed.");
+                navigate(`/manage-profile?redirectTo=/projects`);
+                return;
+              }
+              setActiveTab("create");
+              setIsSidebarOpen(false);
+            }}
             className={`px-4 py-2 rounded-lg font-semibold text-left ${
               activeTab === "create"
                 ? "bg-color-b text-white"
