@@ -94,14 +94,22 @@ const Home = () => {
 useEffect(() => {
   const fetchFreshProjects = async () => {
     try {
-      const projectsRef = collection(db, "projects");
-      const q = query(projectsRef, orderBy("createdAt", "desc"), limit(7));
-      const querySnapshot = await getDocs(q);
-      const projectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setFreshProjects(projectsData);
-    } catch (error) {
-      console.error("Error fetching fresh projects:", error);
-    }
+  const projectsRef = collection(db, "projects");
+  const q = query(
+    projectsRef,
+    where("status", "==", "Approved"),
+    orderBy("createdAt", "desc"),
+    limit(7)
+  );
+  const querySnapshot = await getDocs(q);
+  const projectsData = querySnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+  setFreshProjects(projectsData);
+} catch (error) {
+  console.error("Error fetching fresh projects:", error);
+}
   };
 
   fetchFreshProjects();
