@@ -10,6 +10,7 @@ import {
   onSnapshot,
   orderBy
 } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 const Community = () => {
   const [activeTab, setActiveTab] = useState("dm"); // "dm" or "announcement"
@@ -26,6 +27,9 @@ const Community = () => {
   // Announcement State
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementContent, setAnnouncementContent] = useState("");
+  const [approvedProjects, setApprovedProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const auth = getAuth();
 
   // Fetch supporters once
   useEffect(() => {
@@ -99,32 +103,55 @@ const Community = () => {
 
   // Send Announcement
   const handleSendAnnouncement = async () => {
+    if (!selectedProjectId) {
+      alert("Please choose an approved project.");
+      return;
+    }
     if (!announcementTitle || !announcementContent) {
       alert("Please fill in both title and content.");
       return;
     }
 
     try {
-      const supportersSnapshot = await getDocs(collection(db, "supporters"));
-      const batchPromises = supportersSnapshot.docs.map((docSnap) =>
-        addDoc(collection(db, "announcements"), {
-          to: docSnap.id,
-          toName: docSnap.data().name,
-          title: announcementTitle,
-          content: announcementContent,
-          timestamp: serverTimestamp(),
-        })
-      );
-
-      await Promise.all(batchPromises);
-      alert("Announcement sent successfully!");
+      const user = auth.currentUser;
+      await addDoc(collection(db, "announcements"), {
+        projectId: selectedProjectId,
+        title: announcementTitle,
+        content: announcementContent,
+        createdAt: serverTimestamp(),
+        createdBy: user ? { uid: user.uid, email: user.email || null } : null,
+      });
+      alert("Announcement posted successfully!");
       setAnnouncementTitle("");
       setAnnouncementContent("");
+      setSelectedProjectId("");
     } catch (error) {
       console.error("Error sending announcement:", error);
       alert("Failed to send announcement");
     }
   };
+
+  // Load current user's approved projects for the dropdown
+  useEffect(() => {
+    const loadApproved = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      try {
+        const projectsQ = query(
+          collection(db, "projects"),
+          where("createdBy.uid", "==", user.uid),
+          // Support either 'approved' or 'Approved' just in case
+          where("status", "in", ["approved", "Approved"]) 
+        );
+        const snap = await getDocs(projectsQ);
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setApprovedProjects(list);
+      } catch (err) {
+        console.error("Failed to load approved projects:", err);
+      }
+    };
+    loadApproved();
+  }, [auth]);
 
   return (
     <div className="p-6">
@@ -239,6 +266,27 @@ const Community = () => {
       {activeTab === "announcement" && (
         <div className="max-w-2xl mx-auto p-6 mt-4 bg-white rounded-lg shadow-md space-y-4">
           <h3 className="text-xl font-semibold">Make Announcement</h3>
+
+          {/* Approved Projects Dropdown */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Choose Approved Project</label>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full p-2 border rounded bg-white"
+            >
+              <option value="">-- Select a project --</option>
+              {approvedProjects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title || "Untitled Project"}
+                </option>
+              ))}
+            </select>
+            {approvedProjects.length === 0 && (
+              <p className="text-xs text-gray-500 mt-1">No approved projects found.</p>
+            )}
+          </div>
+
           <input
             type="text"
             placeholder="Announcement Title"
@@ -255,6 +303,7 @@ const Community = () => {
           <button
             onClick={handleSendAnnouncement}
             className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            disabled={!selectedProjectId}
           >
             Send Announcement
           </button>
