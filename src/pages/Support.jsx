@@ -2,10 +2,13 @@ import { useState, useEffect } from "react";
 import {
   doc,
   getDoc,
-  updateDoc,
-  setDoc,
-  increment,
+  runTransaction,
+  collection,
   arrayUnion,
+  serverTimestamp,
+  increment,
+  addDoc,
+  Timestamp 
 } from "firebase/firestore";
 import { db } from "../firebase/firebase-config";
 import { useParams, useNavigate } from "react-router-dom";
@@ -18,7 +21,7 @@ const Support = () => {
   const [error, setError] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, profileComplete } = useAuth();
 
   const templates = [100, 500, 1000, 3000, 5000, 10000];
 
@@ -51,92 +54,149 @@ const Support = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!currentUser) {
-      alert("You must be logged in to support a project.");
+      alert("Please sign in to proceed.");
+      navigate(`/signing?redirectTo=/support/${id}`);
       return;
     }
-
-    const numericAmount = parseFloat(amount);
-    const remainingAmount = project.fundingGoal - (project.fundedMoney ?? 0);
-
-    if (!numericAmount || numericAmount <= 0) {
-      alert("Please enter a valid amount.");
+    if (!profileComplete) {
+      alert("Please complete your profile to proceed.");
+      navigate(`/manage-profile?redirectTo=/support/${id}`);
       return;
     }
+    // Optional: check profile completeness server-side too, but here we gate UI
+    // Since AuthContext now provides profile state, we can fetch it on demand if needed.
+    // For simplicity, redirect to manage profile where missing.
+    // We'll lazily read user doc inside transaction anyway.
 
-    if (numericAmount > remainingAmount) {
-      alert(`You can only fund up to $${remainingAmount}.`);
-      return;
-    }
+  const numericAmount = parseFloat(amount);
+  if (!numericAmount || numericAmount <= 0) {
+    alert("Please enter a valid amount.");
+    return;
+  }
 
-    try {
-      const now = new Date();
-
-      // 1️⃣ Update project fundedMoney
+  try {
+    await runTransaction(db, async (transaction) => {
+      // ---- ALL READS FIRST ----
       const projectRef = doc(db, "projects", id);
-      await updateDoc(projectRef, {
-        fundedMoney: (project.fundedMoney ?? 0) + numericAmount,
-      });
-
-      // 2️⃣ Update user roles and totalFunded
       const userRef = doc(db, "users", currentUser.uid);
-      await updateDoc(userRef, {
-        roles: arrayUnion("Funder"),
-        totalFunded: increment(numericAmount), // total across all projects
-      });
 
-      // 3️⃣ Update funders collection with map-based structure
-      const funderRef = doc(db, "funders", currentUser.uid);
-      const funderSnap = await getDoc(funderRef);
+      const [projectSnap, userSnap] = await Promise.all([
+        transaction.get(projectRef),
+        transaction.get(userRef),
+      ]);
 
-      if (funderSnap.exists()) {
-        const funderData = funderSnap.data();
-        let projectsFunded = funderData.projectsFunded || {};
-        let totalFunded = funderData.totalFunded ?? 0;
-
-        if (projectsFunded[id]) {
-          // Project already exists
-          projectsFunded[id].contributions.push({
-            amount: numericAmount,
-            date: now.toISOString(),
-          });
-          projectsFunded[id].totalFundedPerProject =
-            (projectsFunded[id].totalFundedPerProject ?? 0) + numericAmount;
-        } else {
-          // New project entry
-          projectsFunded[id] = {
-            projectTitle: project.title,
-            totalFundedPerProject: numericAmount,
-            contributions: [{ amount: numericAmount, date: now.toISOString() }],
-          };
-        }
-
-        totalFunded += numericAmount;
-
-        await updateDoc(funderRef, { projectsFunded, totalFunded });
-      } else {
-        // First time funding
-        await setDoc(funderRef, {
-          userId: currentUser.uid,
-          username: currentUser.displayName ?? currentUser.email ?? "Anonymous",
-          totalFunded: numericAmount,
-          projectsFunded: {
-            [id]: {
-              projectTitle: project.title,
-              totalFundedPerProject: numericAmount,
-              contributions: [{ amount: numericAmount, date: now.toISOString() }],
-            },
-          },
-        });
+      if (!projectSnap.exists()) throw new Error("Project not found");
+      if (!userSnap.exists()) throw new Error("User not found in database.");
+      // Gate: profile completeness check
+      const userData = userSnap.data();
+      const hasProfile = Boolean(
+        userData &&
+        userData.phoneNumber &&
+        userData.profileImageUrl &&
+        userData.bio &&
+        userData.location &&
+        userData.location.city &&
+        userData.location.country
+      );
+      if (!hasProfile) {
+        throw new Error("Please complete your profile before supporting a project.");
       }
 
-      alert(`🎉 You successfully supported with $${numericAmount}!`);
-      navigate(`/projects/${id}`);
-    } catch (err) {
-      console.error("Error processing support:", err);
-      alert("Something went wrong. Please try again.");
-    }
+      const projectData = projectSnap.data();
+
+      const currentFunded = projectData.fundedMoney ?? 0;
+      const fundingGoal = projectData.fundingGoal ?? Infinity;
+      const remaining = fundingGoal - currentFunded;
+
+      if (numericAmount > remaining) {
+        throw new Error(`You can only fund up to $${remaining}.`);
+      }
+
+      // ---- PREPARE DATA LOCALLY ----
+      const fundings = userData.fundings ? { ...userData.fundings } : {};
+      const nowISO = new Date().toISOString();
+
+
+      if (fundings[id]) {
+        fundings[id] = {
+          ...fundings[id],
+          contributions: [
+            ...(fundings[id].contributions || []),
+            { amount: numericAmount, date: nowISO },
+          ],
+          totalFundedPerProject:
+            (fundings[id].totalFundedPerProject ?? 0) + numericAmount,
+        };
+      } else {
+        fundings[id] = {
+          projectTitle: projectData.title || "Untitled",
+          totalFundedPerProject: numericAmount,
+          contributions: [{ amount: numericAmount, date: nowISO }],
+        };
+      }
+
+      const newTotalFunded = (userData.totalFunded ?? 0) + numericAmount;
+
+      // ---- ALL WRITES AFTER ----
+      transaction.update(projectRef, {
+        fundedMoney: increment(numericAmount),
+      });
+
+      transaction.update(userRef, {
+        roles: arrayUnion("Funder"),
+        totalFunded: newTotalFunded,
+        fundings,
+      });
+
+      const transactionsCol = collection(db, "transactions");
+      const newTransRef = doc(transactionsCol); // auto id
+      transaction.set(newTransRef, {
+        equityBought: 0,
+        fundedMoney: numericAmount,
+        funding: true,
+        investing: false,
+        projectId: id,
+        transactionTime: serverTimestamp(),
+        userId: currentUser.uid,
+      });
+    });
+
+    alert(`🎉 You successfully supported with $${numericAmount}!`);
+    // notification to the donated
+     try {
+        await addDoc(collection(db, "notifications"), {
+          userId: project.createdBy.uid,
+          projectId: project.id,
+          projectTitle: project.title,
+          message: `Your Project ${project.title} was funded ${numericAmount}$ by ${currentUser.displayName || "a supporter"}.`,
+          type: "Your_project_Funded",
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      } catch (notifErr) {
+        console.error("Failed to create notification:", notifErr);
+      }
+    //notification to the donatator
+      try {
+        await addDoc(collection(db, "notifications"), {
+          userId: currentUser.uid,
+          projectId: project.id,
+          projectTitle: project.title,
+          message: `You donated ${numericAmount}$ to a project called ${project.title}.`,
+          type: "You_Funded_a_project",
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      } catch (notifErr) {
+        console.error("Failed to create notification:", notifErr);
+      }
+
+      
+  } catch (err) {
+    console.error("Error processing support:", err);
+    alert(err.message || "Something went wrong. Please try again.");
+  }
   };
 
   if (loading)
@@ -173,6 +233,7 @@ const Support = () => {
         <p className="text-center text-gray-600 mb-6">
           Remaining Amount: ${project.fundingGoal - (project.fundedMoney ?? 0)}
         </p>
+
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>

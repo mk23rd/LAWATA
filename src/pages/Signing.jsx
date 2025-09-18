@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase/firebase-config';
 import { updateProfile } from "firebase/auth"; 
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
@@ -8,13 +8,16 @@ import InputField from '../components/InputField';
 import Button from '../components/Button';
 import { gsap } from "gsap";
 import '../App.css';
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 const Signing = () => {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
-  const [activePanel, setActivePanel] = useState("signup");
+  const location = useLocation();
+  const initialPanel = location.state?.panel || "login"; // default to login if nothing passed
+  const [activePanel, setActivePanel] = useState(initialPanel);
 
   // Firebase auth listener
   useEffect(() => {
@@ -44,6 +47,8 @@ const Signing = () => {
   const signupLabel = useRef(null);
   const signupInput = useRef(null);
   const signupBtn = useRef(null);
+  const googleinBtn = useRef(null);
+
 
   // Form state
   const [signinformData, signinsetFormData] = useState({ email: '', password: '' });
@@ -134,48 +139,78 @@ const Signing = () => {
   
   useEffect(() => {
     if (activePanel === "signup") {
-      gsap.to(signupRef.current, { width: "80%", duration: 0.6, ease: "power2.out" });
-      gsap.to(signinRef.current, { width: "20%", duration: 0.6, ease: "power2.out" });
+      gsap.to(signupRef.current, { width: "90%", duration: 0.6, ease: "power2.out" });
+      gsap.to(signinRef.current, { width: "10%", duration: 0.6, ease: "power2.out" });
 
-      gsap.to(signinWid1.current, { height: "20%", duration: 0.6 });
-      gsap.to(signinWid2.current, { height: "20%", duration: 0.6 });
-      gsap.to(signinWid3.current, { height: "60%", duration: 0.6 });
+      gsap.to(signinWid1.current, { height: "15%", duration: 0.6 });
+      gsap.to(signinWid2.current, { height: "15%", duration: 0.6 });
+      gsap.to(signinWid3.current, { height: "70%", duration: 0.6 });
       gsap.to(signupWid1.current, { height: "0%", duration: 0.6 });
-      gsap.to(signupWid2.current, { height: "20%", duration: 0.6 });
-      gsap.to(signupWid3.current, { height: "80%", duration: 0.6 });
+      gsap.to(signupWid2.current, { height: "15%", duration: 0.6 });
+      gsap.to(signupWid3.current, { height: "85%", duration: 0.6 });
 
-      gsap.to(signinLabel.current, { fontSize: "42px", y: 125, duration: 0.6 });
+      gsap.to(signinLabel.current, { fontSize: "32px", y: 145, duration: 0.6 });
       gsap.to(signupLabel.current, { fontSize: "72px", y: 0, duration: 0.6 });
       gsap.to(signinInput.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
       gsap.to(signinBtn.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
+      gsap.to(googleinBtn.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
       gsap.to(signupInput.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
       gsap.to(signupBtn.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
     } else {
-      gsap.to(signupRef.current, { width: "20%", duration: 0.6 });
-      gsap.to(signinRef.current, { width: "80%", duration: 0.6 });
+      gsap.to(signupRef.current, { width: "10%", duration: 0.6 });
+      gsap.to(signinRef.current, { width: "90%", duration: 0.6 });
 
-      gsap.to(signinWid1.current, { height: "80%", duration: 0.6 });
-      gsap.to(signinWid2.current, { height: "20%", duration: 0.6 });
+      gsap.to(signinWid1.current, { height: "85%", duration: 0.6 });
+      gsap.to(signinWid2.current, { height: "15%", duration: 0.6 });
       gsap.to(signinWid3.current, { height: "0%", duration: 0.6 });
-      gsap.to(signupWid1.current, { height: "60%", duration: 0.6 });
-      gsap.to(signupWid2.current, { height: "20%", duration: 0.6 });
-      gsap.to(signupWid3.current, { height: "20%", duration: 0.6 });
+      gsap.to(signupWid1.current, { height: "70%", duration: 0.6 });
+      gsap.to(signupWid2.current, { height: "15%", duration: 0.6 });
+      gsap.to(signupWid3.current, { height: "15%", duration: 0.6 });
 
       gsap.to(signinLabel.current, { fontSize: "72px", y: 0, duration: 0.6 });
-      gsap.to(signupLabel.current, { fontSize: "42px", y: 175, duration: 0.6 });
+      gsap.to(signupLabel.current, { fontSize: "32px", y: 175, duration: 0.6 });
       gsap.to(signinInput.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
       gsap.to(signinBtn.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
+      gsap.to(googleinBtn.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
       gsap.to(signupInput.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
       gsap.to(signupBtn.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
     }
   }, [activePanel]);
 
+  const handleGoogleSignIn = async () => {
+    if (loading) return;
+    setLoading(true);
+
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Save or update user info in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        username: user.displayName || "No Name",
+        photoURL: user.photoURL || "",
+        roles: ["visitor"],
+        lastLogin: new Date(),
+      }, { merge: true });
+
+      alert("Signed in with Google successfully!");
+    } catch (error) {
+      console.error("Google Sign-In error:", error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className='bg-color-d overflow-clip'>
       <nav className='w-screen h-1/5'> 
-        <div className='fixed flex w-screen'> 
+        <div className='fixed flex w-screen pointer-events-none'> 
           <div className='w-1/6 h-full flex justify-center items-center'> 
-            <p className='font-titan text-6xl text-color-e relative top-5'>LAWATA</p>
+            <p className='font-titan text-6xl text-color-e relative top-5 pointer-events-auto'>LAWATA</p>
           </div> 
 
           <div className='w-4/6 h-full flex justify-center items-center'> 
@@ -225,6 +260,13 @@ const Signing = () => {
               </div>
               <div ref={signinBtn} className='bg-color-e flex items-center rounded-xl text-2xl justify-center text-color-d w-40 h-10'>
                 <Button text="LOG IN" callfunc={handleSignIn} loading={loading}/>
+              </div>
+
+              <div ref={googleinBtn} className='bg-color-b flex items-center rounded-xl text-2xl justify-center text-color-d w-60 h-10 cursor-pointer'
+                  onClick={handleGoogleSignIn}>
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                    alt="Google" className="w-6 h-6 mr-2"/>
+                Sign in with Google
               </div>
             </div>
           </div>
