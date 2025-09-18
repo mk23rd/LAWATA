@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { doc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDocs, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users, Share2, Heart, Bookmark, MessageCircle, TrendingUp, Award, Shield, Star } from 'lucide-react';
 import { getAuth } from 'firebase/auth';
 import { useAuth } from "../context/AuthContext";
 
@@ -16,6 +16,9 @@ const ProjectDetails = () => {
   const [newComment, setNewComment] = useState("");
   const [currentUserData, setCurrentUserData] = useState(null);
   const [commentsWithProfileImages, setCommentsWithProfileImages] = useState([]);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, profileComplete } = useAuth();
@@ -206,10 +209,11 @@ const ProjectDetails = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex justify-center items-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex justify-center items-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading project details...</p>
+          <div className="w-16 h-16 border-4 border-color-b border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Loading Project</h2>
+          <p className="text-gray-600">Fetching project details...</p>
         </div>
       </div>
     );
@@ -217,14 +221,16 @@ const ProjectDetails = () => {
 
   if (error || !project) {
     return (
-      <div className="min-h-screen flex justify-center items-center">
-        <div className="text-center bg-white p-8 rounded-2xl shadow-lg max-w-md">
-          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex justify-center items-center">
+        <div className="text-center bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl max-w-md border border-white/20">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-500 text-2xl">⚠️</span>
+          </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Project Not Found</h2>
           <p className="text-gray-600 mb-6">{error || 'The project you are looking for does not exist.'}</p>
           <Link 
             to="/browse"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-semibold transition-colors inline-block"
+            className="bg-gradient-to-r from-color-b to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 inline-block"
           >
             Back to Browse
           </Link>
@@ -235,166 +241,227 @@ const ProjectDetails = () => {
 
   const fundedPercentage = calculateFundingPercentage(project.fundedMoney, project.fundingGoal);
   const isFullyFunded = fundedPercentage >= 100;
+  const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
 
   return (
-    <div className="min-h-screen bg-color-d pt-20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <Navbar />
 
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-  {/* Project Header */}
-  <div className="mb-12">
-    {/* Title + Short Description */}
-    <div className="text-center px-4 mb-10">
-      <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-        {project.title || 'Untitled Project'}
-      </h1>
-      <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-        {project.shortDescription}
-      </p>
-    </div>
-
-    {/* Image + Info Row */}
-    <div className="flex flex-col md:flex-row gap-10">
-      {/* Left: Image */}
-      <div className="relative w-full md:w-3/4 h-64 md:h-[32rem]">
-        <img
-          src={project.imageUrl}
-          alt={project.title}
-          className="w-full h-full object-cover rounded-xl"
-          onError={(e) => {
-            e.target.src =
-              'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
-          }}
-        />
-        <div className="absolute top-4 left-4">
-          <span className="bg-white/90 backdrop-blur-sm text-blue-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center">
-            <Tag size={14} className="mr-1" />
-            {project.category || 'General'}
-          </span>
-        </div>
-        {isFullyFunded && (
-          <div className="absolute top-4 right-4">
-            <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-              🎉 Fully Funded!
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Right: Info */}
-      <div className="flex flex-col w-full md:w-1/4 gap-10">
-        {/* Funding Progress */}
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-between text-xl text-gray-700 mb-2">
-            <span className="font-semibold">
-              {formatFunding(project.fundedMoney || 0)} raised
-            </span>
-            <span>of {formatFunding(project.fundingGoal)}</span>
-          </div>
-
-          <div className="w-full bg-gray-200 rounded-full h-3 mb-1">
-            <div
-              className={`h-3 rounded-full transition-all duration-1000 ${
-                isFullyFunded
-                  ? 'bg-green-500'
-                  : 'bg-gradient-to-r from-blue-500 to-cyan-500'
-              }`}
-              style={{ width: `${fundedPercentage}%` }}
-            ></div>
-          </div>
-
-          <div className="flex justify-between text-xl text-gray-600">
-            <span>{Math.round(fundedPercentage)}% funded</span>
-            <span>
-              {project.fundingGoal - (project.fundedMoney || 0) > 0
-                ? formatFunding(project.fundingGoal - (project.fundedMoney || 0)) +
-                  ' to go'
-                : 'Goal reached!'}
-            </span>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="flex flex-col gap-8">
-          <div className="flex items-center text-gray-700 text-2xl rounded-lg">
-            <Clock size={25} className="mr-2 text-blue-600" />
-            <div>
-              <div className="font-semibold">
-                {project.duration || 'N/A'} days left
-              </div>
-              <div className="text text-gray-500">Duration</div>
-            </div>
-          </div>
-          <div className="flex items-center text-2xl text-gray-700 rounded-lg">
-            <Users size={25} className="mr-2 text-purple-600" />
-            <div>
-              <div className="font-semibold">
-                {project.backers || 0} supporters
-              </div>
-              <div className="text text-gray-500">Backers</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Support Button */}
-        <div className="">
+      {/* Back Button */}
+      <div className="pt-20 pb-4">
+        <div className="container mx-auto px-4">
           <button
-            onClick={handleClick}
-            className={`w-full py-3 rounded-xl font-semibold text-lg transition-all duration-300 ${
-              isFullyFunded
-                ? 'bg-green-500 hover:bg-green-600 text-white'
-                : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
-            }`}
+            onClick={() => navigate(-1)}
+            className="flex items-center space-x-2 text-gray-600 hover:text-color-b transition-colors group"
           >
-            {isFullyFunded ? 'View Rewards' : 'Support This Project'}
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">Back to Browse</span>
           </button>
         </div>
       </div>
-    </div>
-  </div>
 
-  {/* Project Description */}
-  <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 break-words">
-    <h2 className="text-2xl font-bold text-gray-900 mb-4 md:mb-6">About This Project</h2>
-    <div className="text-gray-700 whitespace-pre-wrap break-words">
-      {project.longDescription || 'No detailed description available.'}
-    </div>
-  </div>
+      <div className="container mx-auto px-4 pb-16 max-w-7xl">
+        {/* Project Header */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden mb-8">
+          {/* Hero Image */}
+          <div className="relative h-64 md:h-96">
+            <img
+              src={project.imageUrl}
+              alt={project.title}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.src = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
+              }}
+            />
+            
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+            
+            {/* Badges */}
+            <div className="absolute top-6 left-6 flex flex-col gap-2">
+              <span className="bg-white/90 backdrop-blur-sm text-color-b px-4 py-2 rounded-full text-sm font-semibold flex items-center shadow-lg">
+                <Tag size={16} className="mr-2" />
+                {project.category || 'General'}
+              </span>
+              {isFullyFunded && (
+                <span className="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                  🎉 Fully Funded!
+                </span>
+              )}
+            </div>
 
-  {/* Comments Section */}
-  <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8 p-6">
-    <h2 className="text-xl font-bold mb-4">Comments</h2>
+            {/* Action Buttons */}
+            <div className="absolute top-6 right-6 flex gap-2">
+              <button
+                onClick={() => setIsLiked(!isLiked)}
+                className={`p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
+                  isLiked ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-600 hover:bg-red-50'
+                }`}
+              >
+                <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+              </button>
+              <button
+                onClick={() => setIsBookmarked(!isBookmarked)}
+                className={`p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
+                  isBookmarked ? 'bg-color-b text-white' : 'bg-white/90 text-gray-600 hover:bg-color-b/10'
+                }`}
+              >
+                <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
+              </button>
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="p-3 rounded-full bg-white/90 backdrop-blur-sm text-gray-600 hover:bg-gray-50 transition-all duration-300"
+              >
+                <Share2 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
 
-    {commentsWithProfileImages.map((instance, index) => (
-      <Comment 
-        key={`${instance.userId}-${instance.createdAt?.seconds || index}`}
-        username={instance.username}
-        createdAt={formatFirebaseTimestamp(instance.createdAt)}
-        pfpImage={instance.resolvedPfp}
-        comment={instance.comment}
-      />
-    ))}
+          {/* Project Info */}
+          <div className="p-8">
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* Left: Title and Description */}
+              <div className="flex-1">
+                <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                  {project.title || 'Untitled Project'}
+                </h1>
+                <p className="text-xl text-gray-600 mb-6 leading-relaxed">
+                  {project.shortDescription}
+                </p>
 
-    <div className="flex flex-col sm:flex-row items-center gap-2 mt-4">
-      <input 
-        type="text" 
-        name="comment" 
-        placeholder="Write a comment..."  
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        className="flex-1 px-4 py-2 border rounded-lg w-full"
-      />
-      <button 
-        type="button" 
-        onClick={handleComment}
-        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto"
-      >
-        Comment
-      </button>
-    </div>
-  </div>
-</div>
+                {/* Creator Info */}
+                <div className="flex items-center space-x-4 mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-r from-color-b to-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">
+                      {project.createdBy?.name?.charAt(0) || 'A'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800">Created by</p>
+                    <p className="text-gray-600">{project.createdBy?.name || 'Anonymous'}</p>
+                  </div>
+                </div>
+              </div>
 
+              {/* Right: Funding Stats */}
+              <div className="lg:w-96">
+                <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200">
+                  {/* Funding Progress */}
+                  <div className="mb-6">
+                    <div className="flex justify-between text-2xl font-bold text-gray-800 mb-2">
+                      <span>{formatFunding(project.fundedMoney || 0)}</span>
+                      <span className="text-gray-500">of {formatFunding(project.fundingGoal)}</span>
+                    </div>
+                    
+                    <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
+                      <div
+                        className={`h-3 rounded-full transition-all duration-1000 ${
+                          isFullyFunded
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                            : 'bg-gradient-to-r from-color-b to-blue-600'
+                        }`}
+                        style={{ width: `${fundedPercentage}%` }}
+                      />
+                    </div>
+
+                    <div className="flex justify-between text-lg text-gray-600">
+                      <span>{Math.round(fundedPercentage)}% funded</span>
+                      <span>
+                        {project.fundingGoal - (project.fundedMoney || 0) > 0
+                          ? formatFunding(project.fundingGoal - (project.fundedMoney || 0)) + ' to go'
+                          : 'Goal reached!'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="text-center p-4 bg-white rounded-xl">
+                      <Users className="w-6 h-6 text-color-b mx-auto mb-2" />
+                      <p className="text-2xl font-bold text-gray-800">{project.backers || 0}</p>
+                      <p className="text-sm text-gray-600">Backers</p>
+                    </div>
+                    <div className="text-center p-4 bg-white rounded-xl">
+                      <Clock className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                      <p className="text-2xl font-bold text-gray-800">{daysLeft || 'N/A'}</p>
+                      <p className="text-sm text-gray-600">Days Left</p>
+                    </div>
+                  </div>
+
+                  {/* Support Button */}
+                  <button
+                    onClick={handleClick}
+                    className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${
+                      isFullyFunded
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
+                        : 'bg-gradient-to-r from-color-b to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white'
+                    }`}
+                  >
+                    {isFullyFunded ? 'View Rewards' : 'Support This Project'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Project Description */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8 mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center">
+            <Award className="w-8 h-8 text-color-b mr-3" />
+            About This Project
+          </h2>
+          <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
+            {project.longDescription || 'No detailed description available.'}
+          </div>
+        </div>
+
+        {/* Comments Section */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+          <div className="p-8 border-b border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+              <MessageCircle className="w-6 h-6 text-color-b mr-3" />
+              Comments ({commentsWithProfileImages.length})
+            </h2>
+          </div>
+
+          <div className="p-8">
+            {/* Comments List */}
+            <div className="space-y-6 mb-8">
+              {commentsWithProfileImages.map((instance, index) => (
+                <Comment 
+                  key={`${instance.userId}-${instance.createdAt?.seconds || index}`}
+                  username={instance.username}
+                  createdAt={formatFirebaseTimestamp(instance.createdAt)}
+                  pfpImage={instance.resolvedPfp}
+                  comment={instance.comment}
+                />
+              ))}
+            </div>
+
+            {/* Add Comment */}
+            <div className="bg-gray-50 rounded-2xl p-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <input 
+                  type="text" 
+                  name="comment" 
+                  placeholder="Share your thoughts about this project..."  
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-4 focus:ring-color-b/20 transition-all duration-300 text-gray-800 placeholder-gray-400"
+                />
+                <button 
+                  type="button" 
+                  onClick={handleComment}
+                  className="px-8 py-3 bg-gradient-to-r from-color-b to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  Post Comment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
