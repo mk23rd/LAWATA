@@ -290,7 +290,6 @@ export default function CreateProjectForm() {
       <p className="text-color-e text-xl font-medium mb-2">Drag and Drop</p>
       <p className="text-color-e text-xl font-medium mb-4">OR</p>
 
-
       {/* Hidden file input */}
       <input
         id="imageInput"
@@ -398,12 +397,191 @@ export default function CreateProjectForm() {
 
   ];
 
+  // Mobile-specific step contents (separate from desktop)
+  const mobileStepContents = [
+    <div className="space-y-4 w-full">
+      <div className="relative">
+        <FiUser className="absolute top-1/2 left-3 transform -translate-y-1/2 text-color-e" />
+        <input type="text" name="title" placeholder="Project Title" value={formData.title} onChange={handleChange} className="text-color-e w-full pl-10 p-3 border rounded-lg text-sm" />
+      </div>
+      <div className="relative">
+        <FiTag className="absolute top-1/2 left-3 transform -translate-y-1/2 text-color-e pointer-events-none" />
+        <select
+          name="category"
+          value={formData.category}
+          onChange={handleChange}
+          className="appearance-none text-color-e w-full pl-10 pr-8 p-3 border rounded-lg bg-color-d cursor-pointer focus:ring-2 focus:ring-color-b focus:border-color-b text-sm"
+        >
+          <option value="">Select Category</option>
+          <option value="cars">Cars</option>
+          <option value="cloth">Cloth</option>
+          <option value="books">Books</option>
+        </select>
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-color-e">▼</span>
+      </div>
+      <div className="relative">
+        <FiTag className="absolute top-1/2 left-3 transform -translate-y-1/2 text-color-e pointer-events-none" />
+        <select
+          name="country"
+          value={formData.country}
+          onChange={handleChange}
+          className="appearance-none text-color-e w-full pl-10 pr-8 p-3 border rounded-lg bg-color-d cursor-pointer focus:ring-2 focus:ring-color-b focus:border-color-b text-sm"
+        >
+          <option value="">Select Country</option>
+          <option value="Ethiopia">Ethiopia</option>
+          <option value="USA">USA</option>
+          <option value="Germany">Germany</option>
+          <option value="India">India</option>
+          <option value="Japan">Japan</option>
+        </select>
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-color-e">▼</span>
+      </div>
+    </div>,
+
+    <div className="space-y-4 w-full">
+      <div className="relative">
+        <FiAlignLeft className="absolute top-2 left-3 text-color-e" />
+        <textarea name="shortDescription" placeholder="Short Description" value={formData.shortDescription} onChange={handleChange} rows="3" className="w-full pl-10 p-3 border rounded-lg text-sm resize-none" />
+      </div>
+      <div className="relative">
+        <FiAlignLeft className="absolute top-2 left-3 text-color-e" />
+        <textarea name="longDescription" placeholder="Long Description" value={formData.longDescription} onChange={handleChange} rows="6" className="w-full pl-10 p-3 border rounded-lg text-sm resize-none" />
+      </div>
+    </div>,
+
+    <div className="relative w-full">
+      <FiDollarSign className="absolute top-1/2 left-3 transform -translate-y-1/2 text-color-e" />
+      <input type="number" name="fundingGoal" placeholder="Funding Goal (USD)" value={formData.fundingGoal} onChange={handleChange} className="w-full pl-10 p-3 border rounded-lg text-sm" />
+    </div>,
+
+    <div className="relative w-full">
+      <label className="block text-color-e font-medium mb-2 text-sm">Campaign End Date</label>
+      <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} className="w-full p-3 border rounded-lg text-sm" />
+    </div>,
+
+    <div
+      className="relative w-full min-h-[200px] flex flex-col items-center justify-center rounded-xl cursor-pointer p-4 border-2 border-dashed border-color-e hover:border-color-b transition-colors"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          setFormData((prev) => ({ ...prev, imageFile: e.dataTransfer.files[0] }));
+        }
+      }}
+      onClick={() => document.getElementById("imageInput").click()}
+    >
+      <img src={imgLogo} alt="" className="w-12 mb-4" />
+      <p className="text-color-e text-sm font-medium mb-2 text-center">Drag and Drop</p>
+      <p className="text-color-e text-sm font-medium mb-4 text-center">OR</p>
+
+      <input
+        id="imageInput"
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          document.getElementById("imageInput").click();
+        }}
+        className="px-4 py-2 bg-color-b text-white rounded-lg hover:bg-opacity-90 transition-colors text-sm"
+      >
+        Upload Image
+      </button>
+
+      {formData.imageFile && (
+        <img
+          src={URL.createObjectURL(formData.imageFile)}
+          alt="Preview"
+          className="mt-4 w-full max-w-48 rounded-lg border"
+        />
+      )}
+    </div>,
+
+    <div className="w-full space-y-6">
+      <div className="text-center px-2">
+        <h1 className="text-xl font-bold text-gray-900 mb-2">
+          {formData.title || 'Untitled Project'}
+        </h1>
+        <p className="text-gray-600 text-sm">
+          {formData.shortDescription || 'No short description provided.'}
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div className="relative w-full h-48 rounded-xl overflow-hidden">
+          {formData.imageFile ? (
+            <img
+              src={URL.createObjectURL(formData.imageFile)}
+              alt="Preview"
+              className="w-full h-full object-cover rounded-xl"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded-xl text-gray-500">
+              No image selected
+            </div>
+          )}
+
+          <div className="absolute top-2 left-2">
+            <span className="bg-white/90 backdrop-blur-sm text-blue-800 px-2 py-1 rounded-full text-xs font-semibold flex items-center">
+              <FiTag className="mr-1" size={12} />
+              {formData.category || 'General'}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 text-gray-700 text-sm">
+          <div>
+            <span className="font-semibold">Country:</span> {formData.country || 'N/A'}
+          </div>
+          <div>
+            <span className="font-semibold">Funding Goal:</span> ${formData.fundingGoal || 0}
+          </div>
+          <div>
+            <span className="font-semibold">End Date:</span> {formData.endDate || 'TBD'}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-lg p-4 break-words">
+        <h2 className="text-lg font-bold text-gray-900 mb-2">About This Project</h2>
+        <div className="text-gray-700 whitespace-pre-wrap break-words text-sm">
+          {formData.longDescription || 'No detailed description available.'}
+        </div>
+      </div>
+    </div>
+  ];
+
   return (
-    <div className="flex flex-col items-center min-h-screen p-6">
-      <h1 className="text-3xl font-titan text-gray-800 mb-6">Create a New Project</h1>
+    <div className="flex flex-col items-center min-h-screen p-4 md:p-6">
+      <h1 className="text-2xl md:text-3xl font-titan text-gray-800 mb-4 md:mb-6 text-center">Create a New Project</h1>
 
+      {/* Mobile Step Navigation */}
+      <div className="md:hidden w-full mb-6">
+        <div className="flex justify-between items-center bg-color-e rounded-lg p-2">
+          {stepboxRefs.map((ref, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActiveStep(idx + 1)}
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                activeStep === idx + 1 
+                  ? "bg-color-b text-white" 
+                  : "bg-color-d text-color-b hover:bg-gray-200"
+              }`}
+            >
+              {idx + 1}
+            </button>
+          ))}
+        </div>
+        <p className="text-center text-sm text-gray-600 mt-2">Step {activeStep} of 6</p>
+      </div>
 
-      <div className="flex w-full justify-center items-center gap-10">
+      {/* Desktop Step Layout */}
+      <div className="hidden md:flex w-full justify-center items-center gap-10">
         {stepboxRefs.map((ref, idx) => (
           <div
             key={idx}
@@ -445,11 +623,59 @@ export default function CreateProjectForm() {
             </div>
           </div>
         ))}
-
-
       </div>
 
-      {message && <p className="text-center mt-4 font-semibold text-gray-700">{message}</p>}
+      {/* Mobile Step Content */}
+      <div className="md:hidden w-full max-w-md">
+        <div className="bg-color-d border-3 border-color-b rounded-xl p-6 min-h-[400px]">
+          <div className="mb-4">
+            <h2 className="text-xl font-bold text-color-b mb-2">Step {activeStep}</h2>
+            <div className="w-full bg-color-e h-2 rounded-full">
+              <div 
+                className="bg-color-b h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(activeStep / 6) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+          <div className="w-full">
+            {mobileStepContents[activeStep - 1]}
+          </div>
+          
+          {/* Mobile Navigation Buttons */}
+          <div className="flex justify-between mt-6">
+            <button
+              onClick={() => setActiveStep(Math.max(1, activeStep - 1))}
+              disabled={activeStep === 1}
+              className={`px-4 py-2 rounded-lg border border-color-b ${
+                activeStep === 1
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-color-b hover:text-white transition-colors"
+              }`}
+            >
+              Previous
+            </button>
+            
+            {activeStep < 6 ? (
+              <button
+                onClick={() => setActiveStep(Math.min(6, activeStep + 1))}
+                className="px-4 py-2 rounded-lg bg-color-b text-white hover:bg-opacity-90 transition-colors"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="px-4 py-2 rounded-lg bg-color-b text-white hover:bg-opacity-90 transition-colors disabled:opacity-50"
+              >
+                {loading ? "Submitting..." : "Submit Project"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {message && <p className="text-center mt-4 font-semibold text-gray-700 text-sm md:text-base">{message}</p>}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 gsap.registerPlugin(ScrollTrigger);
 
 import { Link } from 'react-router-dom' // Import Link
-import HomeLogo from '../components/homeLogo'
+import HomeLogo from '../components/HomeLogo'
 import { signOut } from 'firebase/auth'
 import { auth, db } from '../firebase/firebase-config'
 import { useNavigate } from 'react-router-dom'
@@ -124,17 +124,9 @@ const scrollRight = () => {
   freshContainerRef.current.scrollBy({ left: 300, behavior: "smooth" });
 };
 
-gsap.registerPlugin(Draggable);
 
-useEffect(() => {
-  if (freshContainerRef.current) {
-    Draggable.create(freshContainerRef.current, {
-      type: "x",
-      edgeResistance: 0.8,
-      inertia: true
-    });
-  }
-}, []);
+
+
 
 /* useEffect(() => {
   const handleClickOutside = (event) => {
