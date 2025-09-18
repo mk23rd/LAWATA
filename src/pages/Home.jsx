@@ -298,22 +298,178 @@ const scrollRight = () => {
 </div>
 
 
-      {/* <div className='h-screen w-screen'>
-        <nav className='h-1/7'></nav>
-        <main className='h-6/7'>
-          <div className='h-1/11 flex items-center justify-center'>
-            <div className='w-1/3 h-full'></div>
-            <div className='w-1/3 h-full flex items-center justify-center'>
-              <p className='text-color-e text-5xl underline'>Meet The Creators</p>
-            </div>
-            <div className='w-1/3 h-full flex justify-end items-center'>
-              <div className='bg-red-500 h-full w-60'></div>
-            </div>
+      {/* Statistics Section */}
+      <div className="h-screen w-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex flex-col justify-center items-center relative overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+          <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        </div>
+
+        <div className="relative z-10 text-center px-4">
+          <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 animate-fade-in-up">
+            Join the Future of
+            <span className="bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent"> Crowdfunding</span>
+          </h2>
+          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto animate-fade-in-up animation-delay-200">
+            Where innovative ideas meet intelligent investment decisions
+          </p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 relative z-10">
+          <div className="text-center animate-fade-in-up animation-delay-300">
+            <div className="text-4xl md:text-6xl font-bold text-white mb-2">500+</div>
+            <div className="text-gray-300 text-sm md:text-lg">Projects Funded</div>
           </div>
+          <div className="text-center animate-fade-in-up animation-delay-400">
+            <div className="text-4xl md:text-6xl font-bold text-white mb-2">$2M+</div>
+            <div className="text-gray-300 text-sm md:text-lg">Total Raised</div>
+          </div>
+          <div className="text-center animate-fade-in-up animation-delay-500">
+            <div className="text-4xl md:text-6xl font-bold text-white mb-2">10K+</div>
+            <div className="text-gray-300 text-sm md:text-lg">Active Users</div>
+          </div>
+          <div className="text-center animate-fade-in-up animation-delay-600">
+            <div className="text-4xl md:text-6xl font-bold text-white mb-2">95%</div>
+            <div className="text-gray-300 text-sm md:text-lg">Success Rate</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="h-screen w-screen bg-gradient-to-br from-green-400 via-blue-500 to-purple-600 flex flex-col justify-center items-center relative">
+        <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+        
+        <div className="relative z-10 text-center px-4 mb-16">
+          <h2 className="text-4xl md:text-6xl font-bold text-white mb-8">
+            Why Choose <span className="text-yellow-300">LAWATA</span>?
+          </h2>
+          <p className="text-xl text-gray-200 max-w-3xl mx-auto">
+            Experience the next generation of crowdfunding with AI-powered risk assessment
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative z-10 max-w-6xl mx-auto px-4">
+          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 text-center hover:bg-opacity-20 transition-all duration-300 hover:scale-105">
+            <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-4">Smart Risk Analysis</h3>
+            <p className="text-gray-200">AI-powered algorithms analyze project viability and provide intelligent risk assessments</p>
+          </div>
+
+          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 text-center hover:bg-opacity-20 transition-all duration-300 hover:scale-105">
+            <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-4">Lightning Fast</h3>
+            <p className="text-gray-200">Get instant funding decisions and real-time project updates with our advanced platform</p>
+          </div>
+
+          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 text-center hover:bg-opacity-20 transition-all duration-300 hover:scale-105">
+            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-4">Secure & Trusted</h3>
+            <p className="text-gray-200">Bank-level security with blockchain technology ensuring safe and transparent transactions</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Testimonials Section */}
+      <div className="h-screen w-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col justify-center items-center relative">
+        <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+        
+        <div className="relative z-10 text-center px-4 mb-16">
+          <h2 className="text-4xl md:text-6xl font-bold text-white mb-8">
+            What Our <span className="text-cyan-400">Community</span> Says
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10 max-w-6xl mx-auto px-4">
+          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 hover:bg-opacity-20 transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mr-4">
+                <span className="text-white font-bold text-lg">A</span>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold">Alex Chen</h4>
+                <p className="text-gray-300 text-sm">Project Creator</p>
+              </div>
+            </div>
+            <p className="text-gray-200 italic">"LAWATA helped me raise $50K for my tech startup in just 2 weeks. The risk analysis gave investors confidence in my project."</p>
+          </div>
+
+          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 hover:bg-opacity-20 transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center mr-4">
+                <span className="text-white font-bold text-lg">M</span>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold">Maria Rodriguez</h4>
+                <p className="text-gray-300 text-sm">Investor</p>
+              </div>
+            </div>
+            <p className="text-gray-200 italic">"The AI risk assessment is incredible. I've made 3 successful investments with 200% returns. LAWATA changed my investment game!"</p>
+          </div>
+
+          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 hover:bg-opacity-20 transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mr-4">
+                <span className="text-white font-bold text-lg">J</span>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold">James Wilson</h4>
+                <p className="text-gray-300 text-sm">Entrepreneur</p>
+              </div>
+            </div>
+            <p className="text-gray-200 italic">"The platform is intuitive and the community is amazing. I found both funding and mentorship here. Highly recommended!"</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Call to Action Section */}
+      <div className="h-screen w-screen bg-gradient-to-br from-yellow-400 via-red-500 to-pink-600 flex flex-col justify-center items-center relative">
+        <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+        
+        <div className="relative z-10 text-center px-4">
+          <h2 className="text-4xl md:text-7xl font-bold text-white mb-8">
+            Ready to <span className="text-black">Launch</span>?
+          </h2>
+          <p className="text-xl md:text-2xl text-gray-100 mb-12 max-w-3xl mx-auto">
+            Join thousands of creators and investors building the future together
+          </p>
           
-          <div className='bg-green-500 h-10/11'></div>
-        </main>
-      </div> */}
+          <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
+            <Link 
+              to="/projects" 
+              className="bg-white text-black px-8 py-4 rounded-full text-xl font-bold hover:bg-gray-100 transition-all duration-300 hover:scale-105 shadow-2xl"
+            >
+              Start Creating
+            </Link>
+            <Link 
+              to="/browse" 
+              className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-full text-xl font-bold hover:bg-white hover:text-black transition-all duration-300 hover:scale-105"
+            >
+              Explore Projects
+            </Link>
+          </div>
+        </div>
+
+        {/* Floating Elements */}
+        <div className="absolute top-20 left-20 w-4 h-4 bg-white rounded-full animate-pulse"></div>
+        <div className="absolute top-40 right-32 w-6 h-6 bg-yellow-300 rounded-full animate-bounce"></div>
+        <div className="absolute bottom-32 left-32 w-3 h-3 bg-pink-300 rounded-full animate-ping"></div>
+        <div className="absolute bottom-20 right-20 w-5 h-5 bg-cyan-300 rounded-full animate-pulse"></div>
+      </div>
     </div>
   )
 }
