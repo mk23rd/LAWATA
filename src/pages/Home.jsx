@@ -149,14 +149,14 @@ const scrollRight = () => {
   
 
   return (
-    <div className='bg-color-d overflow-x-clip'>
+    <div className='bg-white overflow-x-clip'>
       <Navbar />
 
       <div ref={twoHundredRef} className='flex flex-col justify-center items-center w-screen h-screen pt-30'>
         <main className='w-full  h-3/5 gap-5 flex items-center justify-center'>
-          <div className='bg-color-d w-2/20 h-full'></div>
+          <div className='bg-white w-2/20 h-full'></div>
             <HomeLogo />
-          <div className='bg-color-d w-2/20 h-full'></div>
+          <div className='bg-white w-2/20 h-full'></div>
         </main>
 
         <div className='w-screen h-1/5 flex items-center pt-25'>
@@ -291,8 +291,8 @@ const scrollRight = () => {
       </div>
 
       {/* Fade Effects */}
-      <div className="absolute top-0 left-0 h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-color-d pointer-events-none z-10"></div>
-      <div className="absolute top-0 right-0 h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-color-d pointer-events-none z-10"></div>
+      <div className="absolute top-0 left-0 h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
+      <div className="absolute top-0 right-0 h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
     </div>
   </main>
 </div>
