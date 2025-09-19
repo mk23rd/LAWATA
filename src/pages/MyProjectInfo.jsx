@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
 import { getAuth } from 'firebase/auth';
 import { 
@@ -29,6 +29,11 @@ export default function MyProjectInfo() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedFunders, setExpandedFunders] = useState({});
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
   const auth = getAuth();
   const user = auth.currentUser;
 
@@ -54,7 +59,6 @@ export default function MyProjectInfo() {
           setError('You do not have permission to view this project');
           return;
         }
-        
         setProject(projectData);
         
         // Fetch funders data from transactions
@@ -196,6 +200,123 @@ export default function MyProjectInfo() {
       ...prev,
       [funderId]: !prev[funderId],
     }));
+  };
+
+  // Announcements helpers
+  const getAnnouncementsArray = () => {
+    if (!project?.announcements || typeof project.announcements !== 'object') return [];
+    const items = Object.entries(project.announcements).map(([id, value]) => ({ id, ...(value || {}) }));
+    items.sort((a, b) => {
+      const da = a.date?.seconds ? a.date.seconds : (a.date ? new Date(a.date).getTime()/1000 : 0);
+      const dbt = b.date?.seconds ? b.date.seconds : (b.date ? new Date(b.date).getTime()/1000 : 0);
+      return dbt - da;
+    });
+    return items;
+  };
+
+  const startEditAnnouncement = (a) => {
+    setEditingAnnouncementId(a.id);
+    setEditTitle(a.title || "");
+    setEditContent(a.content || "");
+  };
+
+  const cancelEditAnnouncement = () => {
+    setEditingAnnouncementId(null);
+    setEditTitle("");
+    setEditContent("");
+  };
+
+  const saveEditAnnouncement = async () => {
+    if (!editingAnnouncementId || !project?.id) return;
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      await updateDoc(projectRef, {
+        [`announcements.${editingAnnouncementId}.title`]: editTitle,
+        [`announcements.${editingAnnouncementId}.content`]: editContent,
+      });
+      // Optimistic local update
+      setProject((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev };
+        updated.announcements = { ...(prev.announcements || {}) };
+        updated.announcements[editingAnnouncementId] = {
+          ...(updated.announcements[editingAnnouncementId] || {}),
+          title: editTitle,
+          content: editContent,
+        };
+        return updated;
+      });
+      cancelEditAnnouncement();
+    } catch (err) {
+      console.error('Failed to save announcement:', err);
+      alert('Failed to save announcement');
+    }
+  };
+
+  const deleteAnnouncement = async (announcementId) => {
+    if (!project?.id) return;
+    const confirmed = window.confirm('Delete this announcement? This cannot be undone.');
+    if (!confirmed) return;
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      await updateDoc(projectRef, {
+        [`announcements.${announcementId}`]: deleteField(),
+      });
+      // Optimistic local update
+      setProject((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev };
+        if (updated.announcements && updated.announcements[announcementId]) {
+          const { [announcementId]: _, ...rest } = updated.announcements;
+          updated.announcements = rest;
+        }
+        return updated;
+      });
+      if (editingAnnouncementId === announcementId) cancelEditAnnouncement();
+    } catch (err) {
+      console.error('Failed to delete announcement:', err);
+      alert('Failed to delete announcement');
+    }
+  };
+
+  // Create a new announcement in project's announcements map
+  const handleCreateAnnouncement = async () => {
+    if (!project?.id) return;
+    if (!newTitle.trim() || !newContent.trim()) {
+      alert('Please enter title and content');
+      return;
+    }
+    try {
+      const announcementId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+      const projectRef = doc(db, 'projects', project.id);
+      const data = {
+        title: newTitle.trim(),
+        content: newContent.trim(),
+        date: serverTimestamp(),
+        createdBy: user ? { uid: user.uid, email: user.email || null } : null,
+      };
+      await updateDoc(projectRef, {
+        [`announcements.${announcementId}`]: data,
+      });
+      // Optimistic local update
+      setProject((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev };
+        updated.announcements = { ...(updated.announcements || {}) };
+        updated.announcements[announcementId] = {
+          ...data,
+          date: new Date().toISOString(),
+        };
+        return updated;
+      });
+      setNewTitle("");
+      setNewContent("");
+    } catch (err) {
+      console.error('Failed to create announcement:', err);
+      alert('Failed to create announcement');
+    }
   };
 
   if (loading) {
@@ -350,6 +471,7 @@ export default function MyProjectInfo() {
           {[
             { id: 'overview', label: 'Overview' },
             { id: 'funders', label: `Funders (${funders.length})` },
+            { id: 'announcements', label: 'Announcements' },
             { id: 'analytics', label: 'Analytics' }
           ].map(tab => (
             <button
@@ -440,6 +562,82 @@ export default function MyProjectInfo() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'announcements' && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+            <div className="p-8 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-900">Announcements</h3>
+            </div>
+
+            <div className="p-8 space-y-6">
+              {/* Inline Composer */}
+              <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
+                <h4 className="text-lg font-semibold text-gray-900 mb-3">Create Announcement</h4>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder="Announcement Title"
+                  />
+                  <textarea
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                    className="w-full p-2 border rounded h-28"
+                    placeholder="Announcement Content"
+                  />
+                  <div className="flex justify-end">
+                    <button onClick={handleCreateAnnouncement} className="px-4 py-2 bg-color-b text-white rounded hover:bg-blue-600">Post</button>
+                  </div>
+                </div>
+              </div>
+              {getAnnouncementsArray().length === 0 ? (
+                <p className="text-gray-600">No announcements yet.</p>
+              ) : (
+                <div className="space-y-6">
+                  {getAnnouncementsArray().map((a) => (
+                    <div key={a.id} className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                      {editingAnnouncementId === a.id ? (
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className="w-full p-2 border rounded"
+                            placeholder="Announcement Title"
+                          />
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="w-full p-2 border rounded h-28"
+                            placeholder="Announcement Content"
+                          />
+                          <div className="flex gap-2">
+                            <button onClick={saveEditAnnouncement} className="px-4 py-2 bg-color-b text-white rounded hover:bg-blue-600">Save</button>
+                            <button onClick={cancelEditAnnouncement} className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-xl font-semibold text-gray-900">{a.title || 'Announcement'}</h4>
+                            <span className="text-sm text-gray-500">{formatDate(a.date)}</span>
+                          </div>
+                          <p className="text-gray-700 whitespace-pre-wrap mb-4">{a.content}</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => startEditAnnouncement(a)} className="px-4 py-2 bg-white border rounded hover:bg-gray-50">Edit</button>
+                            <button onClick={() => deleteAnnouncement(a.id)} className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200">Delete</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

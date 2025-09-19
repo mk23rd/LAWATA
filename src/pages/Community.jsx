@@ -8,7 +8,9 @@ import {
   query,
   where,
   onSnapshot,
-  orderBy
+  orderBy,
+  doc,
+  updateDoc
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
@@ -114,13 +116,22 @@ const Community = () => {
 
     try {
       const user = auth.currentUser;
-      await addDoc(collection(db, "announcements"), {
-        projectId: selectedProjectId,
+      const projectRef = doc(db, "projects", selectedProjectId);
+      const announcementId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+
+      const data = {
         title: announcementTitle,
         content: announcementContent,
-        createdAt: serverTimestamp(),
+        date: serverTimestamp(),
         createdBy: user ? { uid: user.uid, email: user.email || null } : null,
+      };
+
+      await updateDoc(projectRef, {
+        [`announcements.${announcementId}`]: data,
       });
+
       alert("Announcement posted successfully!");
       setAnnouncementTitle("");
       setAnnouncementContent("");

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDocs, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDocs, onSnapshot, getDoc, orderBy } from 'firebase/firestore';
+
 import { db } from '../firebase/firebase-config';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users, Share2, Heart, Bookmark, MessageCircle, TrendingUp, Award, Shield, Star } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users, Share2, Heart, Bookmark, MessageCircle, TrendingUp, Award, Shield, Star, ChevronDown } from 'lucide-react';
 import { getAuth } from 'firebase/auth';
 import { useAuth } from "../context/AuthContext";
 
@@ -16,14 +17,18 @@ const ProjectDetails = () => {
   const [newComment, setNewComment] = useState("");
   const [currentUserData, setCurrentUserData] = useState(null);
   const [commentsWithProfileImages, setCommentsWithProfileImages] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showAnnouncements, setShowAnnouncements] = useState(true);
+  const [showComments, setShowComments] = useState(true);
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, profileComplete } = useAuth();
 
-  // Real-time project listener
+  // Real-time project listener (also derives announcements from project doc)
   useEffect(() => {
     const projectRef = doc(db, 'projects', id);
 
@@ -33,6 +38,22 @@ const ProjectDetails = () => {
         if (docSnap.exists()) {
           const projectData = { id: docSnap.id, ...docSnap.data() };
           setProject(projectData);
+          // Build announcements array from map if present
+          if (projectData.announcements && typeof projectData.announcements === 'object') {
+            const items = Object.entries(projectData.announcements).map(([annId, value]) => ({
+              id: annId,
+              ...(value || {}),
+            }));
+            // Sort by date desc if available
+            items.sort((a, b) => {
+              const da = a.date?.seconds ? a.date.seconds : (a.date ? new Date(a.date).getTime()/1000 : 0);
+              const dbt = b.date?.seconds ? b.date.seconds : (b.date ? new Date(b.date).getTime()/1000 : 0);
+              return dbt - da;
+            });
+            setAnnouncements(items);
+          } else {
+            setAnnouncements([]);
+          }
           
           // Resolve profile images for comments
           if (projectData.comments && projectData.comments.length > 0) {
@@ -81,6 +102,7 @@ const ProjectDetails = () => {
 
     return () => unsubscribe(); // cleanup on unmount
   }, [id]);
+
 
   // Fetch current user data
   useEffect(() => {
@@ -406,7 +428,7 @@ const ProjectDetails = () => {
         </div>
 
         {/* Project Description */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8 mb-8">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8 mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center">
             <Award className="w-8 h-8 text-color-b mr-3" />
             About This Project
@@ -416,50 +438,95 @@ const ProjectDetails = () => {
           </div>
         </div>
 
+        {/* Announcements Section */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden mb-8">
+          <div className="p-8 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+              📢
+              <span className="ml-3">Announcements ({announcements.length})</span>
+            </h2>
+            <button
+              onClick={() => setShowAnnouncements((s) => !s)}
+              className="inline-flex items-center text-gray-600 hover:text-gray-800"
+              aria-expanded={showAnnouncements}
+            >
+              <ChevronDown className={`w-5 h-5 transition-transform ${showAnnouncements ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+          {showAnnouncements && (
+            <div className="p-8">
+              {announcements.length === 0 ? (
+                <p className="text-gray-600">No announcements yet.</p>
+              ) : (
+                <div className="space-y-6">
+                  {announcements.map((a) => (
+                    <div key={a.id} className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xl font-semibold text-gray-900">{a.title || 'Announcement'}</h3>
+                        <span className="text-sm text-gray-500">{formatFirebaseTimestamp(a.date, true)}</span>
+                      </div>
+                      <p className="text-gray-700 whitespace-pre-wrap">{a.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Comments Section */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
-          <div className="p-8 border-b border-gray-200">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+          <div className="p-8 border-b border-gray-200 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center">
               <MessageCircle className="w-6 h-6 text-color-b mr-3" />
               Comments ({commentsWithProfileImages.length})
             </h2>
+            <button
+              onClick={() => setShowComments((s) => !s)}
+              className="inline-flex items-center text-gray-600 hover:text-gray-800"
+              aria-expanded={showComments}
+            >
+              <ChevronDown className={`w-5 h-5 transition-transform ${showComments ? 'rotate-180' : ''}`} />
+            </button>
           </div>
 
-          <div className="p-8">
-            {/* Comments List */}
-            <div className="space-y-6 mb-8">
-              {commentsWithProfileImages.map((instance, index) => (
-                <Comment 
-                  key={`${instance.userId}-${instance.createdAt?.seconds || index}`}
-                  username={instance.username}
-                  createdAt={formatFirebaseTimestamp(instance.createdAt)}
-                  pfpImage={instance.resolvedPfp}
-                  comment={instance.comment}
-                />
-              ))}
-            </div>
+          {showComments && (
+            <div className="p-8">
+              {/* Comments List */}
+              <div className="space-y-6 mb-8">
+                {commentsWithProfileImages.map((instance, index) => (
+                  <Comment 
+                    key={`${instance.userId}-${instance.createdAt?.seconds || index}`}
+                    username={instance.username}
+                    createdAt={formatFirebaseTimestamp(instance.createdAt)}
+                    pfpImage={instance.resolvedPfp}
+                    comment={instance.comment}
+                  />
+                ))}
+              </div>
 
-            {/* Add Comment */}
-            <div className="bg-gray-50 rounded-2xl p-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <input 
-                  type="text" 
-                  name="comment" 
-                  placeholder="Share your thoughts about this project..."  
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-4 focus:ring-color-b/20 transition-all duration-300 text-gray-800 placeholder-gray-400"
-                />
-                <button 
-                  type="button" 
-                  onClick={handleComment}
-                  className="px-8 py-3 bg-gradient-to-r from-color-b to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  Post Comment
-                </button>
+              {/* Add Comment */}
+              <div className="bg-gray-50 rounded-2xl p-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <input 
+                    type="text" 
+                    name="comment" 
+                    placeholder="Share your thoughts about this project..."  
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-4 focus:ring-color-b/20 transition-all duration-300 text-gray-800 placeholder-gray-400"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleComment}
+                    className="px-8 py-3 bg-gradient-to-r from-color-b to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    Post Comment
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
