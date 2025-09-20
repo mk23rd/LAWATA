@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
   const [profileComplete, setProfileComplete] = useState(false);
+  const [isInvestor , setIsInvestor] = useState(false);
   const auth = getAuth();
 
   useEffect(() => {
@@ -41,6 +42,11 @@ export const AuthProvider = ({ children }) => {
                 data.location.city &&
                 data.location.country
             );
+            data.roles.forEach(e => {
+              if (e === 'Investor'){
+                setIsInvestor(true)
+              }
+            });
             setProfileComplete(hasAll);
             setLoading(false);
           },
@@ -65,7 +71,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, userProfile, profileComplete }}>
+    <AuthContext.Provider value={{ currentUser, userProfile, profileComplete , isInvestor}}>
       {children}
     </AuthContext.Provider>
   );

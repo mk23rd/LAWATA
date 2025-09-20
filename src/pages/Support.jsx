@@ -21,7 +21,7 @@ const Support = () => {
   const [error, setError] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentUser, profileComplete } = useAuth();
+  const { currentUser, profileComplete, isInvestor } = useAuth();
 
   const templates = [100, 500, 1000, 3000, 5000, 10000];
 
