@@ -11,6 +11,7 @@ import Profile from "./pages/Profile";
 import ManageProfile from "./pages/ManageProfile";
 import Projects from "./pages/Projects";
 import ViewMyProjects from "./pages/ViewMyProjects";
+import MyProjectInfo from "./pages/MyProjectInfo";
 import Rewards from "./pages/Rewards";
 import Support from "./pages/Support";
 import Community from "./pages/Community"
@@ -35,6 +36,7 @@ function App() {
       <Route path="/manage-profile" element={<ManageProfile />} />
       <Route path="/projects" element={<Projects />} />
       <Route path="/view-my-projects" element={<ViewMyProjects />} />
+      <Route path="/my-project-info/:id" element={<MyProjectInfo />} />
       <Route path="/rewards/:id" element={<Rewards />} />
       <Route path="/support/:id" element={<Support />} />
     </Routes>

@@ -454,7 +454,7 @@ export default function CreateProjectForm() {
       </div>
     </div>,
 
-    <div className="space-y-3 w-full h-full overflow-hidden flex flex-col">
+    <div className="space-y-3 w-full h-full overflow-hidden flex flex-col relative bottom-10">
       <div className="text-center mb-2">
         <h2 className="text-lg font-bold text-gray-800 mb-1">Project Preview</h2>
         <p className="text-xs text-gray-600">Review your project before submitting</p>

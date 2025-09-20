@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { db } from "../firebase/firebase-config";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 import { FiImage, FiDollarSign, FiCalendar, FiTag, FiEye, FiEdit, FiTrash2, FiPlus, FiTrendingUp, FiUsers, FiClock } from "react-icons/fi";
 
 export default function ViewMyProjects() {
@@ -10,6 +11,7 @@ export default function ViewMyProjects() {
   const [filter, setFilter] = useState("all");
   const auth = getAuth();
   const user = auth.currentUser;
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -189,8 +191,9 @@ export default function ViewMyProjects() {
               return (
                 <div
                   key={project.id}
-                  className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-500 group animate-fade-in-up"
+                  className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-500 group animate-fade-in-up cursor-pointer"
                   style={{ animationDelay: `${index * 0.1}s` }}
+                  onClick={() => navigate(`/my-project-info/${project.id}`)}
                 >
                   {/* Project Image */}
                   <div className="relative h-48 overflow-hidden">
@@ -268,14 +271,26 @@ export default function ViewMyProjects() {
 
                     {/* Action Buttons */}
                     <div className="flex space-x-2">
-                      <button className="flex-1 py-2 px-4 bg-color-b text-white rounded-xl hover:bg-blue-600 transition-colors text-sm font-medium flex items-center justify-center">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/my-project-info/${project.id}`);
+                        }}
+                        className="flex-1 py-2 px-4 bg-color-b text-white rounded-xl hover:bg-blue-600 transition-colors text-sm font-medium flex items-center justify-center"
+                      >
                         <FiEye className="w-4 h-4 mr-1" />
-                        View
+                        View Details
                       </button>
-                      <button className="py-2 px-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors">
+                      <button 
+                        onClick={(e) => e.stopPropagation()}
+                        className="py-2 px-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors"
+                      >
                         <FiEdit className="w-4 h-4" />
                       </button>
-                      <button className="py-2 px-4 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-colors">
+                      <button 
+                        onClick={(e) => e.stopPropagation()}
+                        className="py-2 px-4 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-colors"
+                      >
                         <FiTrash2 className="w-4 h-4" />
                       </button>
                     </div>
