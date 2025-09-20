@@ -40,7 +40,9 @@ npm install gsap/react
     react-router
     react-router-dom
     tailwindcss
-
+```
+### More dependencies might be used in the future so check [packages.json](https://github.com/mk23rd/Risk_Integrated_Crowdfuding_and_Investment_Platform/blob/main/package.json)
+```
 # Start development server
 npm run dev
 
