@@ -53,21 +53,17 @@ const Support = () => {
   const handleInputChange = (e) => setAmount(e.target.value);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!currentUser) {
-      alert("Please sign in to proceed.");
-      navigate(`/signing?redirectTo=/support/${id}`);
-      return;
-    }
-    if (!profileComplete) {
-      alert("Please complete your profile to proceed.");
-      navigate(`/manage-profile?redirectTo=/support/${id}`);
-      return;
-    }
-    // Optional: check profile completeness server-side too, but here we gate UI
-    // Since AuthContext now provides profile state, we can fetch it on demand if needed.
-    // For simplicity, redirect to manage profile where missing.
-    // We'll lazily read user doc inside transaction anyway.
+  e.preventDefault();
+  if (!currentUser) {
+    alert("Please sign in to proceed.");
+    navigate(`/signing?redirectTo=/support/${id}`);
+    return;
+  }
+  if (!profileComplete) {
+    alert("Please complete your profile to proceed.");
+    navigate(`/manage-profile?redirectTo=/support/${id}`);
+    return;
+  }
 
   const numericAmount = parseFloat(amount);
   if (!numericAmount || numericAmount <= 0) {
@@ -88,6 +84,7 @@ const Support = () => {
 
       if (!projectSnap.exists()) throw new Error("Project not found");
       if (!userSnap.exists()) throw new Error("User not found in database.");
+      
       // Gate: profile completeness check
       const userData = userSnap.data();
       const hasProfile = Boolean(
@@ -117,7 +114,6 @@ const Support = () => {
       const fundings = userData.fundings ? { ...userData.fundings } : {};
       const nowISO = new Date().toISOString();
 
-
       if (fundings[id]) {
         fundings[id] = {
           ...fundings[id],
@@ -137,20 +133,48 @@ const Support = () => {
       }
 
       const newTotalFunded = (userData.totalFunded ?? 0) + numericAmount;
+      const newFundingCounter = (userData.fundingCounter ?? 0) + 1;
+      
+      // Check if user should get Investor role
+      const shouldAddInvestorRole = 
+        (newFundingCounter >= 100 || newTotalFunded >= 750000) && 
+        !userData.roles?.includes("Investor");
+      
+      // Prepare update data
+      const updateData = {
+        totalFunded: newTotalFunded,
+        fundingCounter: newFundingCounter,
+        fundings,
+      };
+      
+      // Add Investor role if conditions are met
+      if (shouldAddInvestorRole) {
+        updateData.roles = arrayUnion("Investor", "Funder");
+        try {
+        await addDoc(collection(db, "notifications"), {
+          message: `Your Roles have been Promoted you now have access to Investment.`,
+          type: "Roles_update",
+          read: false,
+          userId: currentUser.uid,
+          createdAt: Timestamp.now()
+      });
+    } catch (notifErr) {
+      console.error("Failed to create notification:", notifErr);
+    }
+      } else if (!userData.roles?.includes("Funder")) {
+        // Add Funder role if not already present
+        updateData.roles = arrayUnion("Funder");
+      }
 
       // ---- ALL WRITES AFTER ----
       transaction.update(projectRef, {
         fundedMoney: increment(numericAmount),
       });
 
-      transaction.update(userRef, {
-        roles: arrayUnion("Funder"),
-        totalFunded: newTotalFunded,
-        fundings,
-      });
+      transaction.update(userRef, updateData);
 
       const transactionsCol = collection(db, "transactions");
-      const newTransRef = doc(transactionsCol); // auto id
+      const newTransRef = doc(transactionsCol);
       transaction.set(newTransRef, {
         equityBought: 0,
         fundedMoney: numericAmount,
@@ -163,41 +187,44 @@ const Support = () => {
     });
 
     alert(`🎉 You successfully supported with $${numericAmount}!`);
-    // notification to the donated
-     try {
-        await addDoc(collection(db, "notifications"), {
-          userId: project.createdBy.uid,
-          projectId: project.id,
-          projectTitle: project.title,
-          message: `Your Project ${project.title} was funded ${numericAmount}$ by ${currentUser.displayName || "a supporter"}.`,
-          type: "Your_project_Funded",
-          read: false,
-          createdAt: Timestamp.now()
-        });
-      } catch (notifErr) {
-        console.error("Failed to create notification:", notifErr);
-      }
-    //notification to the donatator
-      try {
-        await addDoc(collection(db, "notifications"), {
-          userId: currentUser.uid,
-          projectId: project.id,
-          projectTitle: project.title,
-          message: `You donated ${numericAmount}$ to a project called ${project.title}.`,
-          type: "You_Funded_a_project",
-          read: false,
-          createdAt: Timestamp.now()
-        });
-      } catch (notifErr) {
-        console.error("Failed to create notification:", notifErr);
-      }
+    
+    // Notification to the project creator
+    try {
+      await addDoc(collection(db, "notifications"), {
+        userId: project.createdBy.uid,
+        projectId: project.id,
+        projectTitle: project.title,
+        message: `Your Project ${project.title} was funded ${numericAmount}$ by ${currentUser.displayName || "a supporter"}.`,
+        type: "Your_project_Funded",
+        read: false,
+        createdAt: Timestamp.now()
+      });
+    } catch (notifErr) {
+      console.error("Failed to create notification:", notifErr);
+    }
+    
+    // Notification to the supporter
+    try {
+      await addDoc(collection(db, "notifications"), {
+        userId: currentUser.uid,
+        projectId: project.id,
+        projectTitle: project.title,
+        message: `You donated ${numericAmount}$ to a project called ${project.title}.`,
+        type: "You_Funded_a_project",
+        read: false,
+        createdAt: Timestamp.now()
+      });
+    } catch (notifErr) {
+      console.error("Failed to create notification:", notifErr);
+    }
 
-      
+    
+    
   } catch (err) {
     console.error("Error processing support:", err);
     alert(err.message || "Something went wrong. Please try again.");
   }
-  };
+};
 
   if (loading)
     return (
