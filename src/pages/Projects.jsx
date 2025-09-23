@@ -172,8 +172,9 @@ const tabs = isInvestor
           <div className="h-full">
             {activeTab === "view" && <ViewMyProjects />}
             {activeTab === "create" && <CreateProjectForm />}
+            {activeTab === "investments" && <Community />}
             {activeTab === "community" && <Community />}
-            {activeTab === "isInvestor" && <Community />}
+            
        
           </div>
         </div>
