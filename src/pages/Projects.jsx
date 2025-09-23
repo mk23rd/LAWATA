@@ -5,6 +5,7 @@ import Community from "./Community";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { FiMenu, FiX, FiPlus, FiEye, FiUsers, FiChevronRight } from "react-icons/fi";
+import MyInvestments from "./MyInvestments";
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
@@ -172,8 +173,8 @@ const tabs = isInvestor
           <div className="h-full">
             {activeTab === "view" && <ViewMyProjects />}
             {activeTab === "create" && <CreateProjectForm />}
-            {activeTab === "investments" && <Community />}
             {activeTab === "community" && <Community />}
+            {activeTab === "investments" && <MyInvestments />}
             
        
           </div>
