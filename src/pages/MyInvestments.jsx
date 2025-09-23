@@ -3,12 +3,13 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
 import { getAuth } from 'firebase/auth';
 import Navbar from '../components/NavBar';
-import { DollarSign, Calendar, TrendingUp, PieChart, Wallet } from 'lucide-react';
+import { DollarSign, Calendar, TrendingUp, PieChart, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
 
 const MyInvestments = () => {
   const [fundings, setFundings] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('funding');
+  const [expandedProjects, setExpandedProjects] = useState({});
   const auth = getAuth();
   const user = auth.currentUser;
 
@@ -33,6 +34,13 @@ const MyInvestments = () => {
 
     fetchFundings();
   }, [user]);
+
+  const toggleProject = (projectId) => {
+    setExpandedProjects(prev => ({
+      ...prev,
+      [projectId]: !prev[projectId]
+    }));
+  };
 
   const totalInvested = Object.values(fundings).reduce((sum, project) => 
     sum + (project.totalFundedPerProject || 0), 0
@@ -143,41 +151,90 @@ const MyInvestments = () => {
                     <p className="text-gray-500">You haven't invested in any projects yet.</p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {Object.entries(fundings).map(([projectId, projectData]) => (
-                      <div key={projectId} className="bg-gray-50 rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                              {projectData.projectTitle || "Unknown Project"}
-                            </h3>
-                            <p className="text-sm text-gray-500">Project ID: {projectId}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className="flex items-center gap-2 text-green-600 font-semibold text-lg">
-                              <TrendingUp className="h-5 w-5" />
-                              {projectData.totalFundedPerProject?.toLocaleString() || 0} birr
-                            </div>
-                            <p className="text-sm text-gray-500">Total Contribution</p>
-                          </div>
-                        </div>
-
-                        {projectData.contributions && projectData.contributions.length > 0 && (
-                          <div className="space-y-3">
-                            <h4 className="font-medium text-gray-900 text-sm">Contribution History</h4>
-                            <div className="space-y-2">
-                              {projectData.contributions.map((contrib, idx) => (
-                                <div key={idx} className="flex justify-between items-center bg-white rounded-md p-3 border border-gray-100">
-                                  <div className="flex items-center gap-2 text-gray-900 font-medium">
-                                    <DollarSign className="h-4 w-4 text-green-600" />
-                                    {contrib.amount?.toLocaleString() || 0} birr
+                      <div key={projectId} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
+                        {/* Project Header - Always Visible */}
+                        <button
+                          onClick={() => toggleProject(projectId)}
+                          className="w-full p-6 text-left hover:bg-gray-100 transition-colors duration-200"
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                                    {projectData.projectTitle || "Unknown Project"}
+                                  </h3>
+                                  <p className="text-sm text-gray-500">
+                                    {projectData.contributions?.length || 0} transactions • Project ID: {projectId}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                    <div className="flex items-center gap-2 text-green-600 font-semibold text-lg">
+                                      <TrendingUp className="h-5 w-5" />
+                                      {projectData.totalFundedPerProject?.toLocaleString() || 0} birr
+                                    </div>
+                                    <p className="text-sm text-gray-500">Total Contribution</p>
                                   </div>
-                                  <div className="flex items-center gap-2 text-gray-600 text-sm">
-                                    <Calendar className="h-4 w-4" />
-                                    {contrib.date ? new Date(contrib.date).toLocaleDateString() : 'Unknown date'}
+                                  <div className="ml-4">
+                                    {expandedProjects[projectId] ? (
+                                      <ChevronUp className="h-5 w-5 text-gray-400" />
+                                    ) : (
+                                      <ChevronDown className="h-5 w-5 text-gray-400" />
+                                    )}
                                   </div>
                                 </div>
-                              ))}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Expandable Transaction Details */}
+                        {expandedProjects[projectId] && projectData.contributions && projectData.contributions.length > 0 && (
+                          <div className="border-t border-gray-200 bg-white p-6">
+                            <div className="space-y-3">
+                              <h4 className="font-medium text-gray-900 text-sm flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                Transaction History
+                              </h4>
+                              <div className="space-y-2">
+                                {projectData.contributions.map((contrib, idx) => (
+                                  <div key={idx} className="flex justify-between items-center bg-gray-50 rounded-md p-4 border border-gray-100">
+                                    <div className="flex items-center gap-3">
+                                      <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                                        <DollarSign className="h-4 w-4 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <p className="font-medium text-gray-900">
+                                          {contrib.amount?.toLocaleString() || 0} birr
+                                        </p>
+                                        <p className="text-xs text-gray-500">Transaction #{idx + 1}</p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="flex items-center gap-2 text-gray-600 text-sm">
+                                        <Calendar className="h-4 w-4" />
+                                        {contrib.date ? new Date(contrib.date).toLocaleDateString() : 'Unknown date'}
+                                      </div>
+                                      <p className="text-xs text-gray-500">
+                                        {contrib.date ? new Date(contrib.date).toLocaleTimeString() : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Empty state for no transactions */}
+                        {expandedProjects[projectId] && (!projectData.contributions || projectData.contributions.length === 0) && (
+                          <div className="border-t border-gray-200 bg-white p-6">
+                            <div className="text-center py-4">
+                              <Calendar className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                              <p className="text-gray-500 text-sm">No transaction details available</p>
                             </div>
                           </div>
                         )}
