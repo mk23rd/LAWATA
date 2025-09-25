@@ -152,6 +152,20 @@ const ProjectDetails = () => {
     else navigate(`/support/${id}`);
   };
 
+  const handleInvestClick = () => {
+    if (!currentUser) {
+      alert("Please sign in to invest.");
+      navigate(`/signing?redirectTo=/invest/${id}`);
+      return;
+    }
+    if (!profileComplete) {
+      alert("Please complete your profile to invest.");
+      navigate(`/manage-profile?redirectTo=/invest/${id}`);
+      return;
+    }
+    navigate(`/invest/${id}`, { state: { project } });
+  };
+
   const calculateFundingPercentage = (fundedMoney, fundingGoal) => {
     if (!fundedMoney || !fundingGoal || fundingGoal === 0) return 0;
     const percentage = (fundedMoney / fundingGoal) * 100;
@@ -410,17 +424,38 @@ const ProjectDetails = () => {
                     </div>
                   </div>
 
-                  {/* Support Button */}
-                  <button
-                    onClick={handleClick}
-                    className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${
-                      isFullyFunded
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
-                        : 'bg-gradient-to-r from-color-b to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white'
-                    }`}
-                  >
-                    {isFullyFunded ? 'View Rewards' : 'Support This Project'}
-                  </button>
+                  {/* Action Buttons */}
+                  {project.equity?.equityStatus === 'Approved' && !isFullyFunded ? (
+                    <div className="space-y-3">
+                      {/* Support Button */}
+                      <button
+                        onClick={handleClick}
+                        className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg bg-gradient-to-r from-color-b to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white"
+                      >
+                        Support This Project
+                      </button>
+                      
+                      {/* Invest Button */}
+                      <button
+                        onClick={handleInvestClick}
+                        className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                      >
+                        💰 Invest for Equity ({project.equity?.equityPercentage || 0}%)
+                      </button>
+                    </div>
+                  ) : (
+                    /* Single Support/Rewards Button */
+                    <button
+                      onClick={handleClick}
+                      className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg ${
+                        isFullyFunded
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
+                          : 'bg-gradient-to-r from-color-b to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white'
+                      }`}
+                    >
+                      {isFullyFunded ? 'View Rewards' : 'Support This Project'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
