@@ -8,17 +8,20 @@ import {
   serverTimestamp,
   increment,
   addDoc,
-  Timestamp 
+  Timestamp
 } from "firebase/firestore";
 import { db } from "../firebase/firebase-config";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 const Support = () => {
   const [amount, setAmount] = useState("");
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [processing, setProcessing] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null); // 'success', 'error', or null
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, profileComplete } = useAuth();
@@ -54,6 +57,7 @@ const Support = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!currentUser) {
       alert("Please sign in to proceed.");
       navigate(`/signing?redirectTo=/support/${id}`);
@@ -64,107 +68,141 @@ const Support = () => {
       navigate(`/manage-profile?redirectTo=/support/${id}`);
       return;
     }
-    // Optional: check profile completeness server-side too, but here we gate UI
-    // Since AuthContext now provides profile state, we can fetch it on demand if needed.
-    // For simplicity, redirect to manage profile where missing.
-    // We'll lazily read user doc inside transaction anyway.
 
-  const numericAmount = parseFloat(amount);
-  if (!numericAmount || numericAmount <= 0) {
-    alert("Please enter a valid amount.");
-    return;
-  }
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
 
-  try {
-    await runTransaction(db, async (transaction) => {
-      // ---- ALL READS FIRST ----
-      const projectRef = doc(db, "projects", id);
-      const userRef = doc(db, "users", currentUser.uid);
+    setProcessing(true);
+    setPaymentStatus(null);
 
-      const [projectSnap, userSnap] = await Promise.all([
-        transaction.get(projectRef),
-        transaction.get(userRef),
-      ]);
+    try {
+      await runTransaction(db, async (transaction) => {
+        // ---- ALL READS FIRST ----
+        const projectRef = doc(db, "projects", id);
+        const userRef = doc(db, "users", currentUser.uid);
 
-      if (!projectSnap.exists()) throw new Error("Project not found");
-      if (!userSnap.exists()) throw new Error("User not found in database.");
-      // Gate: profile completeness check
-      const userData = userSnap.data();
-      const hasProfile = Boolean(
-        userData &&
-        userData.phoneNumber &&
-        userData.profileImageUrl &&
-        userData.bio &&
-        userData.location &&
-        userData.location.city &&
-        userData.location.country
-      );
-      if (!hasProfile) {
-        throw new Error("Please complete your profile before supporting a project.");
-      }
+        const [projectSnap, userSnap] = await Promise.all([
+          transaction.get(projectRef),
+          transaction.get(userRef),
+        ]);
 
-      const projectData = projectSnap.data();
+        if (!projectSnap.exists()) throw new Error("Project not found");
+        if (!userSnap.exists()) throw new Error("User not found in database.");
 
-      const currentFunded = projectData.fundedMoney ?? 0;
-      const fundingGoal = projectData.fundingGoal ?? Infinity;
-      const remaining = fundingGoal - currentFunded;
+        const projectData = projectSnap.data();
+        const userData = userSnap.data();
 
-      if (numericAmount > remaining) {
-        throw new Error(`You can only fund up to $${remaining}.`);
-      }
+        // 🚨 Prevent supporting own project
+        if (projectData.createdBy?.uid === currentUser.uid) {
+          throw new Error("You cannot support your own project.");
+        }
 
-      // ---- PREPARE DATA LOCALLY ----
-      const fundings = userData.fundings ? { ...userData.fundings } : {};
-      const nowISO = new Date().toISOString();
+        // Gate: profile completeness check
+        const hasProfile = Boolean(
+          userData &&
+          userData.phoneNumber &&
+          userData.profileImageUrl &&
+          userData.bio &&
+          userData.location &&
+          userData.location.city &&
+          userData.location.country
+        );
+        if (!hasProfile) {
+          throw new Error("Please complete your profile before supporting a project.");
+        }
 
+        const currentFunded = projectData.fundedMoney ?? 0;
+        const fundingGoal = projectData.fundingGoal ?? Infinity;
+        const remaining = fundingGoal - currentFunded;
 
-      if (fundings[id]) {
-        fundings[id] = {
-          ...fundings[id],
-          contributions: [
-            ...(fundings[id].contributions || []),
-            { amount: numericAmount, date: nowISO },
-          ],
-          totalFundedPerProject:
-            (fundings[id].totalFundedPerProject ?? 0) + numericAmount,
+        if (numericAmount > remaining) {
+          throw new Error(`You can only fund up to $${remaining}.`);
+        }
+
+        // ---- PREPARE DATA LOCALLY ----
+        const fundings = userData.fundings ? { ...userData.fundings } : {};
+        const nowISO = new Date().toISOString();
+
+        if (fundings[id]) {
+          fundings[id] = {
+            ...fundings[id],
+            contributions: [
+              ...(fundings[id].contributions || []),
+              { amount: numericAmount, date: nowISO },
+            ],
+            totalFundedPerProject:
+              (fundings[id].totalFundedPerProject ?? 0) + numericAmount,
+          };
+        } else {
+          fundings[id] = {
+            projectTitle: projectData.title || "Untitled",
+            totalFundedPerProject: numericAmount,
+            contributions: [{ amount: numericAmount, date: nowISO }],
+          };
+        }
+
+        const newTotalFunded = (userData.totalFunded ?? 0) + numericAmount;
+        const newFundingCounter = (userData.fundingCounter ?? 0) + 1;
+
+        // Check if user should get Investor role
+        const shouldAddInvestorRole =
+          (newFundingCounter >= 100 || newTotalFunded >= 750000) &&
+          !userData.roles?.includes("Investor");
+
+        // Prepare update data
+        const updateData = {
+          totalFunded: newTotalFunded,
+          fundingCounter: newFundingCounter,
+          fundings,
         };
-      } else {
-        fundings[id] = {
-          projectTitle: projectData.title || "Untitled",
-          totalFundedPerProject: numericAmount,
-          contributions: [{ amount: numericAmount, date: nowISO }],
-        };
-      }
 
-      const newTotalFunded = (userData.totalFunded ?? 0) + numericAmount;
+        // Add Investor role if conditions are met
+        if (shouldAddInvestorRole) {
+          updateData.roles = arrayUnion("Investor", "Funder");
+          try {
+            await addDoc(collection(db, "notifications"), {
+              message: `Your Roles have been Promoted you now have access to Investment.`,
+              type: "Roles_update",
+              read: false,
+              userId: currentUser.uid,
+              createdAt: Timestamp.now()
+            });
+          } catch (notifErr) {
+            console.error("Failed to create notification:", notifErr);
+          }
+        } else if (!userData.roles?.includes("Funder")) {
+          // Add Funder role if not already present
+          updateData.roles = arrayUnion("Funder");
+        }
 
-      // ---- ALL WRITES AFTER ----
-      transaction.update(projectRef, {
-        fundedMoney: increment(numericAmount),
+        // ---- ALL WRITES AFTER ----
+        transaction.update(projectRef, {
+          fundedMoney: increment(numericAmount),
+        });
+
+        transaction.update(userRef, updateData);
+
+        const transactionsCol = collection(db, "transactions");
+        const newTransRef = doc(transactionsCol);
+        transaction.set(newTransRef, {
+          equityBought: 0,
+          fundedMoney: numericAmount,
+          funding: true,
+          status: 'completed',
+          type: 'funding',
+          projectId: id,
+          transactionTime: serverTimestamp(),
+          userId: currentUser.uid,
+        });
       });
 
-      transaction.update(userRef, {
-        roles: arrayUnion("Funder"),
-        totalFunded: newTotalFunded,
-        fundings,
-      });
+      setPaymentStatus('success');
 
-      const transactionsCol = collection(db, "transactions");
-      const newTransRef = doc(transactionsCol); // auto id
-      transaction.set(newTransRef, {
-        equityBought: 0,
-        fundedMoney: numericAmount,
-        funding: true,
-        investing: false,
-        projectId: id,
-        transactionTime: serverTimestamp(),
-        userId: currentUser.uid,
-      });
-    });
-
-    alert(`🎉 You successfully supported with $${numericAmount}!`);
-    // notification to the donated
-     try {
+      // Notification to the project creator
+      try {
         await addDoc(collection(db, "notifications"), {
           userId: project.createdBy.uid,
           projectId: project.id,
@@ -177,7 +215,8 @@ const Support = () => {
       } catch (notifErr) {
         console.error("Failed to create notification:", notifErr);
       }
-    //notification to the donatator
+
+      // Notification to the supporter
       try {
         await addDoc(collection(db, "notifications"), {
           userId: currentUser.uid,
@@ -192,11 +231,72 @@ const Support = () => {
         console.error("Failed to create notification:", notifErr);
       }
 
+      // Show success message after a brief delay
+      setTimeout(() => {
+        alert(`🎉 You successfully supported with $${numericAmount}!`);
+        setAmount("");
+        setPaymentStatus(null);
+      }, 1500);
+
+    } catch (err) {
+      console.error("Error processing support:", err);
+      setPaymentStatus('error');
       
-  } catch (err) {
-    console.error("Error processing support:", err);
-    alert(err.message || "Something went wrong. Please try again.");
-  }
+      // Show error message after a brief delay
+      setTimeout(() => {
+        alert(err.message || "Something went wrong. Please try again.");
+        setPaymentStatus(null);
+      }, 1500);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const getButtonContent = () => {
+    if (processing) {
+      return (
+        <div className="flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+          Processing...
+        </div>
+      );
+    }
+    
+    if (paymentStatus === 'success') {
+      return (
+        <div className="flex items-center justify-center">
+          <CheckCircle className="w-5 h-5 mr-2" />
+          Payment Successful!
+        </div>
+      );
+    }
+    
+    if (paymentStatus === 'error') {
+      return (
+        <div className="flex items-center justify-center">
+          <XCircle className="w-5 h-5 mr-2" />
+          Payment Failed
+        </div>
+      );
+    }
+    
+    return "Confirm Support";
+  };
+
+  const getButtonStyles = () => {
+    if (processing) {
+      return "bg-blue-500 text-white cursor-wait";
+    }
+    
+    if (paymentStatus === 'success') {
+      return "bg-green-500 text-white";
+    }
+    
+    if (paymentStatus === 'error') {
+      return "bg-red-500 text-white";
+    }
+    
+    return "bg-green-500 hover:bg-green-600 text-white";
   };
 
   if (loading)
@@ -220,6 +320,8 @@ const Support = () => {
       </div>
     );
 
+  const isOwner = currentUser && project.createdBy?.uid === currentUser.uid;
+
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
       <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-md">
@@ -234,6 +336,11 @@ const Support = () => {
           Remaining Amount: ${project.fundingGoal - (project.fundedMoney ?? 0)}
         </p>
 
+        {isOwner && (
+          <p className="text-center text-red-500 font-medium mb-4">
+            You cannot support your own project.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -245,7 +352,10 @@ const Support = () => {
               min="1"
               value={amount}
               onChange={handleInputChange}
-              className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              disabled={isOwner || processing}
+              className={`w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                isOwner || processing ? "bg-gray-100 cursor-not-allowed" : ""
+              }`}
               placeholder="Enter amount (e.g. 100)"
             />
           </div>
@@ -258,7 +368,12 @@ const Support = () => {
                   key={value}
                   type="button"
                   onClick={() => handleTemplateClick(value)}
-                  className="py-2 px-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all"
+                  disabled={isOwner || processing}
+                  className={`py-2 px-3 rounded-xl font-semibold transition-all ${
+                    isOwner || processing
+                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                      : "bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700"
+                  }`}
                 >
                   ${value}
                 </button>
@@ -268,9 +383,14 @@ const Support = () => {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold text-lg transition-all"
+            disabled={isOwner || processing || paymentStatus === 'success'}
+            className={`w-full py-3 rounded-xl font-semibold text-lg transition-all ${
+              isOwner
+                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                : getButtonStyles()
+            }`}
           >
-            Confirm Support
+            {isOwner ? "Not Allowed" : getButtonContent()}
           </button>
         </form>
       </div>

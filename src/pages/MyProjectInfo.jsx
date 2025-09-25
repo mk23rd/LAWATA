@@ -34,6 +34,8 @@ export default function MyProjectInfo() {
   const [editContent, setEditContent] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
+  const [updatingEquity, setUpdatingEquity] = useState(false);
+  const [equityPercentage, setEquityPercentage] = useState('');
   const auth = getAuth();
   const user = auth.currentUser;
 
@@ -60,6 +62,11 @@ export default function MyProjectInfo() {
           return;
         }
         setProject(projectData);
+        
+        // Initialize equity percentage from project data
+        if (projectData.equity?.equityPercentage) {
+          setEquityPercentage(projectData.equity.equityPercentage.toString());
+        }
         
         // Fetch funders data from transactions
         const transactionsQuery = query(
@@ -319,6 +326,63 @@ export default function MyProjectInfo() {
     }
   };
 
+  // Toggle equity requested field
+  const toggleEquityRequested = async () => {
+    if (!project?.id || updatingEquity) return;
+    
+    // Validate percentage if enabling equity
+    const currentlyRequested = project.equity?.equityRequested || false;
+    if (!currentlyRequested) {
+      // Enabling equity - validate percentage
+      const percentage = parseFloat(equityPercentage);
+      if (!equityPercentage.trim() || isNaN(percentage) || percentage <= 0 || percentage > 100) {
+        alert('Please enter a valid equity percentage between 1% and 100%');
+        return;
+      }
+    }
+    
+    setUpdatingEquity(true);
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      const newEquityRequested = !currentlyRequested;
+      
+      const equityData = {
+        equityRequested: newEquityRequested,
+        equityPercentage: newEquityRequested ? parseFloat(equityPercentage) : (project.equity?.equityPercentage || 0)
+      };
+      
+      await updateDoc(projectRef, {
+        equity: equityData
+      });
+      
+      // Update local state
+      setProject(prev => ({
+        ...prev,
+        equity: equityData
+      }));
+      
+    } catch (err) {
+      console.error('Failed to update equity requested:', err);
+      alert('Failed to update equity setting');
+    } finally {
+      setUpdatingEquity(false);
+    }
+  };
+
+  // Handle percentage button clicks
+  const handlePercentageClick = (percentage) => {
+    setEquityPercentage(percentage.toString());
+  };
+
+  // Handle percentage input change
+  const handlePercentageChange = (e) => {
+    const value = e.target.value;
+    // Allow empty string or valid numbers
+    if (value === '' || (!isNaN(value) && parseFloat(value) >= 0 && parseFloat(value) <= 100)) {
+      setEquityPercentage(value);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -547,6 +611,96 @@ export default function MyProjectInfo() {
                         : 'Goal reached!'}
                     </span>
                   </div>
+                </div>
+
+                {/* Equity Requested Toggle */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="font-semibold text-gray-800">Equity Requested</h4>
+                      <p className="text-sm text-gray-600">
+                        {progress >= 85 
+                          ? "Set equity percentage and toggle request" 
+                          : "Project must be 85% or more funded to enable equity requests"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={progress < 85 || updatingEquity}
+                      onClick={toggleEquityRequested}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+                        progress < 85 
+                          ? 'bg-gray-300 cursor-not-allowed opacity-50' 
+                          : project.equity?.equityRequested 
+                            ? 'bg-green-500 hover:bg-green-600' 
+                            : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-200 ${
+                          project.equity?.equityRequested ? 'translate-x-5' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Equity Percentage Input */}
+                  {progress >= 85 && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Equity Percentage
+                      </label>
+                      
+                      {/* Percentage Buttons */}
+                      <div className="flex gap-2 mb-3">
+                        {[5, 10, 15, 20].map((percentage) => (
+                          <button
+                            key={percentage}
+                            type="button"
+                            onClick={() => handlePercentageClick(percentage)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              equityPercentage === percentage.toString()
+                                ? 'bg-color-b text-white'
+                                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                            }`}
+                          >
+                            {percentage}%
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Custom Input */}
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          step="0.1"
+                          value={equityPercentage}
+                          onChange={handlePercentageChange}
+                          placeholder="Enter percentage"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-color-b focus:border-color-b text-sm"
+                        />
+                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {progress < 85 && (
+                    <div className="flex items-center text-sm text-orange-600">
+                      <span className="mr-2">⚠️</span>
+                      <span>Current funding: {progress.toFixed(1)}% (Need 85% minimum)</span>
+                    </div>
+                  )}
+                  
+                  {project.equity?.equityRequested && (
+                    <div className="flex items-center text-sm text-green-600 mt-2">
+                      <span className="mr-2">✅</span>
+                      <span>Equity is currently being requested for this project ({project.equity?.equityPercentage || 0}%)</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

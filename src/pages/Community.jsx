@@ -33,18 +33,7 @@ const Community = () => {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const auth = getAuth();
 
-  // Fetch supporters once
-  useEffect(() => {
-    const fetchSupporters = async () => {
-      const snapshot = await getDocs(collection(db, "supporters"));
-      const supportersList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setSupporters(supportersList);
-    };
-    fetchSupporters();
-  }, []);
+
 
   // Update suggestions as user types
   useEffect(() => {
@@ -91,17 +80,17 @@ const Community = () => {
   };
 
   // Send DM
-  const handleSendDM = async () => {
-    if (!dmMessage || !selectedSupporter) return;
+  // const handleSendDM = async () => {
+  //   if (!dmMessage || !selectedSupporter) return;
 
-    await addDoc(collection(db, "directMessages"), {
-      to: selectedSupporter.id,
-      toName: selectedSupporter.name,
-      message: dmMessage,
-      timestamp: serverTimestamp(),
-    });
-    setDmMessage("");
-  };
+  //   await addDoc(collection(db, "directMessages"), {
+  //     to: selectedSupporter.id,
+  //     toName: selectedSupporter.name,
+  //     message: dmMessage,
+  //     timestamp: serverTimestamp(),
+  //   });
+  //   setDmMessage("");
+  // };
 
   // Send Announcement
   const handleSendAnnouncement = async () => {

@@ -1,7 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import { FiBell } from 'react-icons/fi'
 import { auth, db } from '../firebase/firebase-config'
-import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore'
+import {
+  collection,
+  doc,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  updateDoc,
+  where,
+  writeBatch,
+} from 'firebase/firestore'
 import { useNavigate } from 'react-router-dom'
 
 const NotificationBell = ({ containerClassName = '' }) => {
@@ -40,6 +50,20 @@ const NotificationBell = ({ containerClassName = '' }) => {
   }, [])
 
   const unreadCount = notifications.filter((n) => !n.read).length
+  const clearNotifications = async () => {
+    try {
+      const batch = writeBatch(db)
+      notifications.forEach((n) => {
+        if (!n.read) {
+          const ref = doc(db, 'notifications', n.id)
+          batch.update(ref, { read: true })
+        }
+      })
+      await batch.commit()
+    } catch (e) {
+      console.error('Failed to clear notifications', e)
+    }
+  }
 
   return (
     <div className={`relative notif-dropdown ${containerClassName}`}>
@@ -57,7 +81,17 @@ const NotificationBell = ({ containerClassName = '' }) => {
       )}
       {open && (
         <div className='absolute right-0 mt-2 w-80 bg-color-e rounded-md shadow-lg z-50 p-2'>
-          <p className='px-2 py-1 text-sm text-color-d opacity-80'>Notifications</p>
+          <div className='flex justify-between items-center px-2 py-1'>
+            <p className='text-sm text-color-d opacity-80'>Notifications</p>
+            {unreadCount > 0 && (
+              <button
+                onClick={clearNotifications}
+                className='text-xs text-blue-500 hover:underline'
+              >
+                Clear all
+              </button>
+            )}
+          </div>
           <div className='max-h-80 overflow-y-auto'>
             {notifications.length === 0 && (
               <p className='text-color-d text-sm px-2 py-3'>No notifications</p>
@@ -65,17 +99,19 @@ const NotificationBell = ({ containerClassName = '' }) => {
             {notifications.map((n) => (
               <button
                 key={n.id}
-                className={`w-full text-left px-3 py-2 rounded-md mb-1 ${n.read ? 'bg-transparent' : 'bg-color-b bg-opacity-10'}`}
+                className={`w-full text-left px-3 py-2 rounded-md mb-1 ${
+                  n.read ? 'bg-transparent' : 'bg-color-b bg-opacity-10'
+                }`}
                 onClick={async () => {
                   try {
-                    if (!n.read) await updateDoc(doc(db, 'notifications', n.id), { read: true })
+                    if (!n.read)
+                      await updateDoc(doc(db, 'notifications', n.id), { read: true })
                   } catch (e) {
                     console.error('Failed to mark notification read', e)
                   } finally {
                     setOpen(false)
                     if (n.projectId) {
-                     // navigate(`/myProjectInfo/${n.projectId}`)
-                      navigate("/projects")
+                      navigate('/projects')
                     }
                   }
                 }}
@@ -83,7 +119,9 @@ const NotificationBell = ({ containerClassName = '' }) => {
                 <div className='flex justify-between items-center'>
                   <span className='text-color-d text-sm'>{n.message}</span>
                   <span className='text-color-d text-xs opacity-60'>
-                    {n.createdAt?.toDate ? new Date(n.createdAt.toDate()).toLocaleDateString() : ''}
+                    {n.createdAt?.toDate
+                      ? new Date(n.createdAt.toDate()).toLocaleDateString()
+                      : ''}
                   </span>
                 </div>
               </button>

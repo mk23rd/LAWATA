@@ -5,34 +5,63 @@ import Community from "./Community";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { FiMenu, FiX, FiPlus, FiEye, FiUsers, FiChevronRight } from "react-icons/fi";
+import MyInvestments from "./MyInvestments";
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // for mobile toggle
   const navigate = useNavigate();
-  const { currentUser, profileComplete } = useAuth();
+  const { currentUser, profileComplete , isInvestor } = useAuth();
 
-  const tabs = [
-    {
-      id: "view",
-      label: "View Projects",
-      icon: FiEye,
-      description: "Browse all projects"
-    },
-    {
-      id: "create",
-      label: "Create Project",
-      icon: FiPlus,
-      description: "Start your own project",
-      requiresAuth: true
-    },
-    {
-      id: "community",
-      label: "Community",
-      icon: FiUsers,
-      description: "Connect with others"
-    }
-  ];
+const tabs = isInvestor 
+    ? [
+        {
+          id: "view",
+          label: "View Projects",
+          icon: FiEye,
+          description: "Browse all projects"
+        },
+        {
+          id: "create",
+          label: "Create Project",
+          icon: FiPlus,
+          description: "Start your own project",
+          requiresAuth: true
+        },
+        {
+          id: "community",
+          label: "Community",
+          icon: FiUsers,
+          description: "Connect with others"
+        },
+        {
+          id: "investments",
+          label: "Investments",
+          icon: FiEye,
+          description: "Check out your Investments"
+        },
+      ]
+    : [
+        {
+          id: "view",
+          label: "View Projects",
+          icon: FiEye,
+          description: "Browse all projects"
+        },
+        {
+          id: "create",
+          label: "Create Project",
+          icon: FiPlus,
+          description: "Start your own project",
+          requiresAuth: true
+        },
+        {
+          id: "community",
+          label: "Community",
+          icon: FiUsers,
+          description: "Connect with others"
+        },    
+      ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -145,6 +174,9 @@ const Projects = () => {
             {activeTab === "view" && <ViewMyProjects />}
             {activeTab === "create" && <CreateProjectForm />}
             {activeTab === "community" && <Community />}
+            {activeTab === "investments" && <MyInvestments />}
+            
+       
           </div>
         </div>
       </div>
