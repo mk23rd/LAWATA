@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
 import { getAuth } from 'firebase/auth';
 import { 
@@ -16,7 +16,9 @@ import {
   FiEye,
   FiUser,
   FiMapPin,
-  FiChevronDown
+  FiChevronDown,
+  FiSave,
+  FiX
 } from 'react-icons/fi';
 import Navbar from '../components/NavBar';
 
@@ -36,6 +38,8 @@ export default function MyProjectInfo() {
   const [newContent, setNewContent] = useState("");
   const [updatingEquity, setUpdatingEquity] = useState(false);
   const [equityPercentage, setEquityPercentage] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
   const auth = getAuth();
   const user = auth.currentUser;
 
@@ -62,6 +66,15 @@ export default function MyProjectInfo() {
           return;
         }
         setProject(projectData);
+        setEditForm({ 
+          ...projectData,
+          fundingGoal: projectData.fundingGoal || 0,
+          title: projectData.title || '',
+          shortDescription: projectData.shortDescription || '',
+          longDescription: projectData.longDescription || '',
+          category: projectData.category || '',
+          status: projectData.status || ''
+        });
         
         // Initialize equity percentage from project data
         if (projectData.equity?.equityPercentage) {
@@ -138,7 +151,7 @@ export default function MyProjectInfo() {
         setFunders(fundersArray);
         
       } catch (err) {
-        console.error('Error fetching project data:', err);
+        console.error('Error fetching project ', err);
         setError('Failed to load project information');
       } finally {
         setLoading(false);
@@ -147,6 +160,33 @@ export default function MyProjectInfo() {
 
     fetchProjectAndFunders();
   }, [id, user]);
+
+  useEffect(() => {
+    const checkPendingChanges = async () => {
+      if (!project?.id) return;
+      
+      try {
+        const pendingChangesQuery = query(
+          collection(db, 'changeRequests'),
+          where('projectId', '==', project.id),
+          where('status', '==', 'pending')
+        );
+        
+        const pendingChangesSnapshot = await getDocs(pendingChangesQuery);
+        const hasPending = !pendingChangesSnapshot.empty;
+        
+        // Update project state to indicate pending changes
+        setProject(prev => ({
+          ...prev,
+          hasPendingChanges: hasPending
+        }));
+      } catch (error) {
+        console.error('Error checking pending changes:', error);
+      }
+    };
+    
+    checkPendingChanges();
+  }, [project?.id]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -383,6 +423,70 @@ export default function MyProjectInfo() {
     }
   };
 
+  // Handle project edit form changes
+  const handleEditChange = (field, value) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Handle project edit save
+  const handleEditSave = async () => {
+    // Validate funding goal if changed
+    if (editForm.fundingGoal && editForm.fundingGoal < project.fundedMoney) {
+      alert(`Funding goal cannot be less than already funded amount (${formatCurrency(project.fundedMoney)})`);
+      return;
+    }
+
+    try {
+      // Create change request document
+      const changeRequestRef = collection(db, 'changeRequests');
+      const changeData = {
+        projectId: project.id,
+        userId: user.uid,
+        changes: {},
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        originalValues: {
+          title: project.title || '',
+          shortDescription: project.shortDescription || '',
+          longDescription: project.longDescription || '',
+          fundingGoal: project.fundingGoal || 0,
+          category: project.category || '',
+          status: project.status || '',
+          startDate: project.startDate || null,
+          endDate: project.endDate || null,
+        }
+      };
+
+      // Add only changed fields to the changes object (excluding createdAt)
+      Object.keys(editForm).forEach(key => {
+        if (key !== 'createdAt' && JSON.stringify(editForm[key]) !== JSON.stringify(project[key])) {
+          changeData.changes[key] = editForm[key];
+        }
+      });
+
+      // If no changes were made, return
+      if (Object.keys(changeData.changes).length === 0) {
+        alert('No changes detected');
+        setIsEditing(false);
+        return;
+      }
+
+      await addDoc(changeRequestRef, changeData);
+      
+      // Update local state with new values (optimistic update)
+      setProject(prev => ({ ...prev, ...editForm }));
+      setIsEditing(false);
+      
+      alert('Change request submitted successfully!');
+    } catch (error) {
+      console.error('Error submitting change request:', error);
+      alert('Failed to submit change request');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -441,25 +545,89 @@ export default function MyProjectInfo() {
           
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
-              <h1 className="text-4xl md:text-5xl font-titan bg-gradient-to-r from-color-b to-blue-600 bg-clip-text text-transparent mb-2">
-                {project.title}
-              </h1>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => handleEditChange('title', e.target.value)}
+                  className="text-4xl md:text-5xl font-titan bg-transparent border-b-2 border-color-b focus:outline-none w-full mb-2"
+                />
+              ) : (
+                <h1 className="text-4xl md:text-5xl font-titan bg-gradient-to-r from-color-b to-blue-600 bg-clip-text text-transparent mb-2">
+                  {project.title}
+                </h1>
+              )}
               <div className="flex items-center gap-4 text-gray-600">
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(project.status)}`}>
-                  {project.status || 'Unknown'}
-                </span>
-                <span className="flex items-center">
-                  <FiTag className="w-4 h-4 mr-1" />
-                  {project.category || 'General'}
-                </span>
+                {isEditing ? (
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => handleEditChange('status', e.target.value)}
+                    className="px-3 py-1 rounded-full text-sm font-semibold border border-gray-300 focus:ring-2 focus:ring-color-b"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="active">Active</option>
+                  </select>
+                ) : (
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(project.status)}`}>
+                    {project.status || 'Unknown'}
+                  </span>
+                )}
+                
+                {/* Visual cue for pending changes */}
+                {project.hasPendingChanges && (
+                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                    Pending Changes
+                  </span>
+                )}
+                
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.category}
+                    onChange={(e) => handleEditChange('category', e.target.value)}
+                    className="flex items-center px-3 py-1 rounded-full text-sm font-semibold border border-gray-300 focus:ring-2 focus:ring-color-b"
+                  />
+                ) : (
+                  <span className="flex items-center">
+                    <FiTag className="w-4 h-4 mr-1" />
+                    {project.category || 'General'}
+                  </span>
+                )}
               </div>
             </div>
             
             <div className="flex gap-3">
-              <button className="px-4 py-2 bg-white/80 text-gray-700 rounded-xl hover:bg-white transition-colors flex items-center">
-                <FiEdit className="w-4 h-4 mr-2" />
-                Edit
-              </button>
+              {isEditing ? (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleEditSave}
+                    className="px-4 py-2 bg-color-b text-white rounded-xl hover:bg-blue-600 transition-colors flex items-center"
+                  >
+                    <FiSave className="w-4 h-4 mr-2" />
+                    Submit Request
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditForm({ ...project });
+                      setIsEditing(false);
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition-colors flex items-center"
+                  >
+                    <FiX className="w-4 h-4 mr-2" />
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-white/80 text-gray-700 rounded-xl hover:bg-white transition-colors flex items-center"
+                >
+                  <FiEdit className="w-4 h-4 mr-2" />
+                  Edit
+                </button>
+              )}
               <button className="px-4 py-2 bg-white/80 text-gray-700 rounded-xl hover:bg-white transition-colors flex items-center">
                 <FiShare2 className="w-4 h-4 mr-2" />
                 Share
@@ -577,10 +745,29 @@ export default function MyProjectInfo() {
                 
                 <div className="p-8">
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">Project Description</h3>
-                  <p className="text-gray-600 mb-4">{project.shortDescription}</p>
-                  <div className="prose prose-gray max-w-none">
-                    <p className="whitespace-pre-wrap">{project.longDescription || 'No detailed description available.'}</p>
-                  </div>
+                  {isEditing ? (
+                    <>
+                      <textarea
+                        value={editForm.shortDescription}
+                        onChange={(e) => handleEditChange('shortDescription', e.target.value)}
+                        className="w-full p-3 border rounded-lg mb-4"
+                        rows="3"
+                      />
+                      <textarea
+                        value={editForm.longDescription}
+                        onChange={(e) => handleEditChange('longDescription', e.target.value)}
+                        className="w-full p-3 border rounded-lg"
+                        rows="6"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-gray-600 mb-4">{project.shortDescription}</p>
+                      <div className="prose prose-gray max-w-none">
+                        <p className="whitespace-pre-wrap">{project.longDescription || 'No detailed description available.'}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -593,7 +780,18 @@ export default function MyProjectInfo() {
                 <div className="mb-6">
                   <div className="flex justify-between text-lg font-semibold text-gray-800 mb-2">
                     <span>{formatCurrency(project.fundedMoney)}</span>
-                    <span className="text-gray-500">of {formatCurrency(project.fundingGoal)}</span>
+                    <span className="text-gray-500">
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          value={editForm.fundingGoal || 0}
+                          onChange={(e) => handleEditChange('fundingGoal', Number(e.target.value) || 0)}
+                          className="border-b border-gray-300 w-32"
+                        />
+                      ) : (
+                        formatCurrency(project.fundingGoal)
+                      )}
+                    </span>
                   </div>
                   
                   <div className="w-full bg-gray-200 rounded-full h-4 mb-3">
