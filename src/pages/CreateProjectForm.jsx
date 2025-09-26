@@ -129,7 +129,8 @@ export default function CreateProjectForm() {
       id: Date.now(),
       title: "",
       description: "",
-      date: ""
+      date: "",
+      milestoneStatus: "Incomplete"
     };
     setFormData((prev) => ({
       ...prev,

@@ -18,7 +18,11 @@ import {
   FiMapPin,
   FiChevronDown,
   FiSave,
-  FiX
+  FiX,
+  FiTarget,
+  FiFlag,
+  FiPlay,
+  FiStopCircle
 } from 'react-icons/fi';
 import Navbar from '../components/NavBar';
 
@@ -704,6 +708,7 @@ export default function MyProjectInfo() {
             { id: 'overview', label: 'Overview' },
             { id: 'funders', label: `Funders (${funders.length})` },
             { id: 'announcements', label: 'Announcements' },
+            { id: 'timeline', label: 'Timeline' },
             { id: 'analytics', label: 'Analytics' }
           ].map(tab => (
             <button
@@ -1067,6 +1072,189 @@ export default function MyProjectInfo() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'timeline' && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+            <div className="p-8 border-b border-gray-200">
+              <h3 className="text-2xl font-bold text-gray-900 flex items-center">
+                <FiClock className="w-6 h-6 text-color-b mr-3" />
+                Project Timeline
+              </h3>
+              <p className="text-gray-600 mt-2">Key dates and milestones for your project</p>
+            </div>
+            
+            <div className="p-8">
+              <div className="relative">
+                {/* Timeline Line */}
+                <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-color-b to-blue-300"></div>
+                
+                <div className="space-y-8">
+                  {/* Project Creation */}
+                  <div className="relative flex items-start">
+                    <div className="absolute left-6 w-4 h-4 bg-color-b rounded-full border-4 border-white shadow-lg"></div>
+                    <div className="ml-16">
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                        <div className="flex items-center mb-2">
+                          <FiFlag className="w-5 h-5 text-color-b mr-2" />
+                          <h4 className="text-lg font-semibold text-gray-900">Project Created</h4>
+                        </div>
+                        <p className="text-gray-600 mb-1">Your project was successfully created and submitted for review</p>
+                        <p className="text-sm font-medium text-color-b">
+                          {formatDate(project.createdAt) || 'Date not available'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Campaign Start Date */}
+                  {project.startDate && (
+                    <div className="relative flex items-start">
+                      <div className="absolute left-6 w-4 h-4 bg-green-500 rounded-full border-4 border-white shadow-lg"></div>
+                      <div className="ml-16">
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                          <div className="flex items-center mb-2">
+                            <FiPlay className="w-5 h-5 text-green-600 mr-2" />
+                            <h4 className="text-lg font-semibold text-gray-900">Campaign Started</h4>
+                          </div>
+                          <p className="text-gray-600 mb-1">Fundraising campaign officially began</p>
+                          <p className="text-sm font-medium text-green-600">
+                            {formatDate(project.startDate)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Project Launch (if different from campaign start) */}
+                  {project.launchDate && project.launchDate !== project.startDate && (
+                    <div className="relative flex items-start">
+                      <div className="absolute left-6 w-4 h-4 bg-purple-500 rounded-full border-4 border-white shadow-lg"></div>
+                      <div className="ml-16">
+                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+                          <div className="flex items-center mb-2">
+                            <FiTarget className="w-5 h-5 text-purple-600 mr-2" />
+                            <h4 className="text-lg font-semibold text-gray-900">Project Launched</h4>
+                          </div>
+                          <p className="text-gray-600 mb-1">Project officially launched to the public</p>
+                          <p className="text-sm font-medium text-purple-600">
+                            {formatDate(project.launchDate)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Milestones */}
+                  {project.milestones && project.milestones.length > 0 && (
+                    project.milestones.map((milestone, index) => (
+                      <div key={index} className="relative flex items-start">
+                        <div className="absolute left-6 w-4 h-4 bg-yellow-500 rounded-full border-4 border-white shadow-lg"></div>
+                        <div className="ml-16">
+                          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
+                            <div className="flex items-center mb-2">
+                              <FiTarget className="w-5 h-5 text-yellow-600 mr-2" />
+                              <h4 className="text-lg font-semibold text-gray-900">
+                                {milestone.title || `Milestone ${index + 1}`}
+                              </h4>
+                            </div>
+                            <p className="text-gray-600 mb-1">
+                              {milestone.description || 'No description provided'}
+                            </p>
+                            {milestone.date && (
+                              <p className="text-sm font-medium text-yellow-600">
+                                {formatDate(milestone.date)}
+                              </p>
+                            )}
+                            {milestone.targetAmount && (
+                              <p className="text-sm text-gray-500 mt-1">
+                                Target: {formatCurrency(milestone.targetAmount)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {/* Campaign End Date */}
+                  {project.endDate && (
+                    <div className="relative flex items-start">
+                      <div className={`absolute left-6 w-4 h-4 rounded-full border-4 border-white shadow-lg ${
+                        new Date(project.endDate) > new Date() ? 'bg-orange-500' : 'bg-red-500'
+                      }`}></div>
+                      <div className="ml-16">
+                        <div className={`bg-gradient-to-r rounded-xl p-6 border ${
+                          new Date(project.endDate) > new Date() 
+                            ? 'from-orange-50 to-red-50 border-orange-200' 
+                            : 'from-red-50 to-pink-50 border-red-200'
+                        }`}>
+                          <div className="flex items-center mb-2">
+                            <FiStopCircle className={`w-5 h-5 mr-2 ${
+                              new Date(project.endDate) > new Date() ? 'text-orange-600' : 'text-red-600'
+                            }`} />
+                            <h4 className="text-lg font-semibold text-gray-900">
+                              Campaign {new Date(project.endDate) > new Date() ? 'Ends' : 'Ended'}
+                            </h4>
+                          </div>
+                          <p className="text-gray-600 mb-1">
+                            {new Date(project.endDate) > new Date() 
+                              ? 'Fundraising campaign will end' 
+                              : 'Fundraising campaign has ended'
+                            }
+                          </p>
+                          <p className={`text-sm font-medium ${
+                            new Date(project.endDate) > new Date() ? 'text-orange-600' : 'text-red-600'
+                          }`}>
+                            {formatDate(project.endDate)}
+                          </p>
+                          {new Date(project.endDate) > new Date() && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              {Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24))} days remaining
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Project Launch End (if different from campaign end) */}
+                  {project.launchEndDate && project.launchEndDate !== project.endDate && (
+                    <div className="relative flex items-start">
+                      <div className="absolute left-6 w-4 h-4 bg-gray-500 rounded-full border-4 border-white shadow-lg"></div>
+                      <div className="ml-16">
+                        <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-6 border border-gray-200">
+                          <div className="flex items-center mb-2">
+                            <FiStopCircle className="w-5 h-5 text-gray-600 mr-2" />
+                            <h4 className="text-lg font-semibold text-gray-900">Project Launch Period Ends</h4>
+                          </div>
+                          <p className="text-gray-600 mb-1">Official project launch period concludes</p>
+                          <p className="text-sm font-medium text-gray-600">
+                            {formatDate(project.launchEndDate)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Current Status Indicator */}
+                <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Current Status</h4>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600">Funding Progress: {progress.toFixed(1)}%</p>
+                      <p className="text-gray-600">Status: {project.status || 'Unknown'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-color-b">{formatCurrency(project.fundedMoney)}</p>
+                      <p className="text-sm text-gray-600">of {formatCurrency(project.fundingGoal)} goal</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
