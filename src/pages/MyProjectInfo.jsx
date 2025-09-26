@@ -22,7 +22,8 @@ import {
   FiTarget,
   FiFlag,
   FiPlay,
-  FiStopCircle
+  FiStopCircle,
+  FiCheck
 } from 'react-icons/fi';
 import Navbar from '../components/NavBar';
 
@@ -424,6 +425,43 @@ export default function MyProjectInfo() {
     // Allow empty string or valid numbers
     if (value === '' || (!isNaN(value) && parseFloat(value) >= 0 && parseFloat(value) <= 100)) {
       setEquityPercentage(value);
+    }
+  };
+
+  // Toggle milestone status with confirmation
+  const toggleMilestoneStatus = async (milestoneIndex, currentStatus) => {
+    const newStatus = currentStatus === "Complete" ? "Incomplete" : "Complete";
+    const action = newStatus === "Complete" ? "mark as complete" : "mark as incomplete";
+    
+    const confirmed = window.confirm(
+      `Are you sure you want to ${action} this milestone?\n\nClick OK to continue or Cancel to abort.`
+    );
+    
+    if (confirmed) {
+      try {
+        // Create a copy of the current milestones array
+        const updatedMilestones = [...project.milestones];
+        // Update only the specific milestone's status
+        updatedMilestones[milestoneIndex] = {
+          ...updatedMilestones[milestoneIndex],
+          milestoneStatus: newStatus
+        };
+        
+        // Update the entire milestones array in the database
+        const projectRef = doc(db, 'projects', project.id);
+        await updateDoc(projectRef, {
+          milestones: updatedMilestones
+        });
+        
+        // Update local state
+        setProject(prev => ({
+          ...prev,
+          milestones: updatedMilestones
+        }));
+      } catch (error) {
+        console.error('Error updating milestone status:', error);
+        alert('Failed to update milestone status');
+      }
     }
   };
 
@@ -1147,24 +1185,55 @@ export default function MyProjectInfo() {
                     </div>
                   )}
 
-                  {/* Milestones */}
+                  {/* Milestones with Toggle Functionality */}
                   {project.milestones && project.milestones.length > 0 && (
                     project.milestones.map((milestone, index) => (
                       <div key={index} className="relative flex items-start">
-                        <div className="absolute left-6 w-4 h-4 bg-yellow-500 rounded-full border-4 border-white shadow-lg"></div>
+                        <div className={`absolute left-6 w-4 h-4 rounded-full border-4 border-white shadow-lg ${
+                          milestone.milestoneStatus === "Complete" ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}></div>
                         <div className="ml-16">
-                          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
-                            <div className="flex items-center mb-2">
-                              <FiTarget className="w-5 h-5 text-yellow-600 mr-2" />
-                              <h4 className="text-lg font-semibold text-gray-900">
-                                {milestone.title || `Milestone ${index + 1}`}
-                              </h4>
+                          <div className={`bg-gradient-to-r rounded-xl p-6 border ${
+                            milestone.milestoneStatus === "Complete" 
+                              ? 'from-green-50 to-emerald-50 border-green-200' 
+                              : 'from-yellow-50 to-orange-50 border-yellow-200'
+                          }`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center">
+                                <FiTarget className={`w-5 h-5 mr-2 ${
+                                  milestone.milestoneStatus === "Complete" ? 'text-green-600' : 'text-yellow-600'
+                                }`} />
+                                <h4 className="text-lg font-semibold text-gray-900">
+                                  {milestone.title || `Milestone ${index + 1}`}
+                                </h4>
+                                <span className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${
+                                  milestone.milestoneStatus === "Complete" 
+                                    ? "bg-green-100 text-green-700" 
+                                    : "bg-yellow-100 text-yellow-700"
+                                }`}>
+                                  {milestone.milestoneStatus || "Incomplete"}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => toggleMilestoneStatus(index, milestone.milestoneStatus || "Incomplete")}
+                                className={`p-2 rounded-lg transition-colors ${
+                                  milestone.milestoneStatus === "Complete"
+                                    ? "text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100"
+                                    : "text-gray-400 hover:text-green-600 bg-gray-100 hover:bg-green-50"
+                                }`}
+                                title={`Mark as ${milestone.milestoneStatus === "Complete" ? "Incomplete" : "Complete"}`}
+                              >
+                                <FiCheck className="w-5 h-5" />
+                              </button>
                             </div>
                             <p className="text-gray-600 mb-1">
                               {milestone.description || 'No description provided'}
                             </p>
                             {milestone.date && (
-                              <p className="text-sm font-medium text-yellow-600">
+                              <p className={`text-sm font-medium ${
+                                milestone.milestoneStatus === "Complete" ? 'text-green-600' : 'text-yellow-600'
+                              }`}>
                                 {formatDate(milestone.date)}
                               </p>
                             )}
