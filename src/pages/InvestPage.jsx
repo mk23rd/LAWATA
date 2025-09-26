@@ -73,18 +73,22 @@ const InvestPage = () => {
 
   // Calculate equity percentage based on investment amount
   useEffect(() => {
-    if (investmentAmount && project?.equity?.equityPercentage && project?.fundingGoal) {
+    if (investmentAmount && project?.fundingGoal) {
       const amount = parseFloat(investmentAmount);
       if (amount > 0 && project.fundingGoal > 0) {
-        // Calculate equity percentage based on the total equity offered, not the funding goal
-        const equityPercentage = (amount / project.fundingGoal) * (project.equity.equityPercentage || 0);
+        // Calculate equity percentage based on amount / total funding goal
+        const equityPercentage = (amount / project.fundingGoal) * 100;
         
         // Check if this would exceed available equity
-        if (equityPercentage > availableEquity) {
-          console.log("Calculated equity percentage:", equityPercentage);
-          console.log("Available equity:", availableEquity);
-          console.log("This investment would exceed available equity");
-          setEquityPercentage(availableEquity);
+        if (project.equity?.equityPercentageRemaining !== undefined) {
+          if (equityPercentage > project.equity.equityPercentageRemaining) {
+            console.log("Calculated equity percentage:", equityPercentage);
+            console.log("Available equity:", project.equity.equityPercentageRemaining);
+            console.log("This investment would exceed available equity");
+            setEquityPercentage(project.equity.equityPercentageRemaining);
+          } else {
+            setEquityPercentage(equityPercentage);
+          }
         } else {
           setEquityPercentage(equityPercentage);
         }
@@ -92,7 +96,7 @@ const InvestPage = () => {
         setEquityPercentage(0);
       }
     }
-  }, [investmentAmount, project, availableEquity]);
+  }, [investmentAmount, project]);
 
   const handleInvestment = async () => {
     if (!currentUser) {
@@ -118,31 +122,38 @@ const InvestPage = () => {
       return;
     }
 
-    // Check if investment amount exceeds project's funding goal
+    // Validate against funding goal
     if (amount > project.fundingGoal) {
       alert(`Investment amount cannot exceed project funding goal of ${formatCurrency(project.fundingGoal)}.`);
       return;
     }
 
-    // Check if investment would exceed total funding goal
-    const totalFunded = (project.fundedMoney || 0) + amount;
+    const currentFunded = project.fundedMoney || 0;
+    const totalFunded = currentFunded + amount;
     if (totalFunded > project.fundingGoal) {
-      alert(`Investment would exceed project funding goal. Maximum available: ${formatCurrency(project.fundingGoal - (project.fundedMoney || 0))}`);
+      const maxAvailable = project.fundingGoal - currentFunded;
+      alert(`Investment would exceed project funding goal. Maximum available: ${formatCurrency(maxAvailable)}`);
       return;
     }
 
-    // Calculate the equity percentage this investment would give
-    const investmentEquityPercentage = (amount / project.fundingGoal) * (project.equity.equityPercentage || 0);
-    
-    // Check if this investment would exceed available equity
-    if (investmentEquityPercentage > availableEquity) {
-      alert(`Investment would exceed available equity. Maximum available: ${availableEquity.toFixed(2)}%`);
+    // 🔑 CRITICAL: Get current remaining equity from project data (not stale state)
+    const totalEquityOffered = project.equity?.equityPercentage || 0;
+    const currentRemainingEquity = project.equity?.equityPercentageRemaining ?? totalEquityOffered;
+
+    // Calculate equity this investment would grant
+    const investmentEquityPercentage = (amount / project.fundingGoal) * 100;
+
+    // Validate against available equity using the logic from the screenshot
+    const maxAllowedByEquity = project.fundingGoal * (currentRemainingEquity / 100);
+
+    if (amount > maxAllowedByEquity) {
+      const maxAvailable = maxAllowedByEquity;
+      alert(`Investment exceeds available equity. Maximum allowed: ${formatCurrency(maxAvailable)}.`);
       return;
     }
 
     setProcessing(true);
     try {
-      // Create investment transaction
       const transactionData = {
         projectId: project.id,
         investorId: currentUser.uid,
@@ -150,12 +161,12 @@ const InvestPage = () => {
         investorEmail: currentUser.email,
         investorName: currentUser.displayName || currentUser.email || "Anonymous",
         amount: amount,
-        equityPercentage: investmentEquityPercentage, // Use the calculated equity percentage
+        equityPercentage: investmentEquityPercentage,
         type: 'investment',
         status: 'completed',
         transactionTime: Timestamp.now(),
         projectTitle: project.title,
-        projectCreatorId: project.createdBy?.id || project.createdBy?.uid || "unknown",
+        projectCreatorId: project.createdBy?.uid || project.createdBy?.id || "unknown",
         projectCategory: project.category || "General",
         fundedMoney: amount,
         transactionType: 'investment'
@@ -165,22 +176,24 @@ const InvestPage = () => {
       console.log("Transaction ", transactionData);
       console.log("=== TRANSACTION DEBUG END ===");
 
-      // Add to transactions collection
+      // Save transaction
       const transactionRef = collection(db, 'transactions');
       const transactionDocRef = await addDoc(transactionRef, transactionData);
-      console.log("Transaction document created with ID:", transactionDocRef.id);
+      console.log("Transaction created with ID:", transactionDocRef.id);
 
-      // Update project's funded money, equity percentage, and add investor
+      // Update project
       const projectRef = doc(db, 'projects', project.id);
+      const newRemainingEquity = currentRemainingEquity - investmentEquityPercentage;
+
       await updateDoc(projectRef, {
         fundedMoney: totalFunded,
         backers: (project.backers || 0) + 1,
-        // Update the equity percentage in the equity map
-        'equity.equityPercentage': availableEquity - investmentEquityPercentage, // Update remaining equity
+        // ✅ Update REMAINING equity (not total equity!)
+        'equity.equityPercentageRemaining': newRemainingEquity,
         investors: arrayUnion({
           userId: currentUser.uid,
           investmentAmount: amount,
-          equityPercentage: investmentEquityPercentage, // Use the calculated equity percentage
+          equityPercentage: investmentEquityPercentage,
           investedAt: Timestamp.now(),
           status: 'confirmed'
         })
@@ -188,34 +201,29 @@ const InvestPage = () => {
 
       console.log("Project updated successfully!");
       console.log("New funded money:", totalFunded);
-      console.log("New backers count:", (project.backers || 0) + 1);
-      console.log("New equity percentage:", availableEquity - investmentEquityPercentage);
+      console.log("New backers:", (project.backers || 0) + 1);
+      console.log("New remaining equity:", newRemainingEquity);
 
-      // Recalculate available equity after investment - this should be done after state update
-      setTimeout(() => {
-        calculateAvailableEquity({
-          ...project,
-          investors: [
-            ...(project.investors || []),
-            {
-              equityPercentage: investmentEquityPercentage
-            }
-          ],
-          fundedMoney: totalFunded,
-          equity: {
-            ...project.equity,
-            equityPercentage: availableEquity - investmentEquityPercentage
-          }
-        });
-      }, 100);
+      // 🔑 CRITICAL: Update local state to reflect new values
+      setProject(prevProject => ({
+        ...prevProject,
+        fundedMoney: totalFunded,
+        backers: (prevProject.backers || 0) + 1,
+        equity: {
+          ...prevProject.equity,
+          equityPercentageRemaining: newRemainingEquity
+        }
+      }));
+
+      // Also update available equity state
+      setAvailableEquity(newRemainingEquity);
 
       alert(`Investment of $${amount.toLocaleString()} submitted successfully! You will receive ${investmentEquityPercentage.toFixed(2)}% equity.`);
-      navigate('/myInvestments');
+      // navigate('/myInvestments');
+
     } catch (err) {
       console.error('Error processing investment:', err);
-      console.error('Error code:', err.code);
-      console.error('Error message:', err.message);
-      alert('Failed to process investment. Please try again. Error: ' + err.message);
+      alert('Failed to process investment. Please try again. Error: ' + (err.message || err));
     } finally {
       setProcessing(false);
     }
@@ -291,8 +299,8 @@ const InvestPage = () => {
   // Calculate available investment amount
   const availableInvestment = project.fundingGoal - (project.fundedMoney || 0);
 
-  // Calculate max investment amount based on available equity
-  const maxInvestmentBasedOnEquity = (availableEquity / (project.equity?.equityPercentage || 1)) * project.fundingGoal;
+  // Calculate max investment amount based on available equity (from screenshot logic)
+  const maxInvestmentBasedOnEquity = project.fundingGoal * (project.equity?.equityPercentageRemaining / 100);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -334,7 +342,7 @@ const InvestPage = () => {
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Available Equity</p>
-                  <p className="text-2xl font-bold text-gray-800">{project.equity.equityPercentage}%</p>
+                  <p className="text-2xl font-bold text-gray-800">{project.equity.equityPercentageRemaining}%</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Current Funding</p>
@@ -395,7 +403,7 @@ const InvestPage = () => {
                   <ul className="text-sm text-gray-700 space-y-1">
                     <li>• You will own {equityPercentage.toFixed(2)}% of the company</li>
                     <li>• Based on {project.equity?.equityPercentage || 0}% total equity offered</li>
-                    <li>• {availableEquity.toFixed(2)}% equity still available</li>
+                    <li>• {project.equity?.equityPercentageRemaining?.toFixed(2)}% equity still available</li>
                     <li>• Investment will be added to project funding</li>
                     <li>• Your investment is non-refundable</li>
                   </ul>
