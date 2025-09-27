@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp, addDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp, addDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
 import { db } from '../firebase/firebase-config';
 import { getAuth } from 'firebase/auth';
 import { 
@@ -44,26 +44,23 @@ export default function MyProjectInfo() {
   const [equityPercentage, setEquityPercentage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [checkingPending, setCheckingPending] = useState(false); // New state for checking
   const auth = getAuth();
   const user = auth.currentUser;
 
   useEffect(() => {
     const fetchProjectAndFunders = async () => {
       if (!user || !id) return;
-      
       setLoading(true);
       try {
         // Fetch project details
         const projectRef = doc(db, 'projects', id);
         const projectSnap = await getDoc(projectRef);
-        
         if (!projectSnap.exists()) {
           setError('Project not found');
           return;
         }
-        
         const projectData = { id: projectSnap.id, ...projectSnap.data() };
-        
         // Check if current user owns this project
         if (projectData.createdBy?.uid !== user.uid) {
           setError('You do not have permission to view this project');
@@ -76,36 +73,29 @@ export default function MyProjectInfo() {
           title: projectData.title || '',
           shortDescription: projectData.shortDescription || '',
           longDescription: projectData.longDescription || '',
-          category: projectData.category || '',
-          status: projectData.status || ''
+          category: projectData.category || ''
+          // status: projectData.status || '' // Removed from editForm
         });
-        
         // Initialize equity percentage from project data
         if (projectData.equity?.equityPercentage) {
           setEquityPercentage(projectData.equity.equityPercentage.toString());
         }
-        
         // Fetch funders data from transactions
         const transactionsQuery = query(
           collection(db, 'transactions'),
           where('projectId', '==', id),
           where('funding', '==', true)
         );
-        
         const transactionsSnap = await getDocs(transactionsQuery);
         const fundersData = [];
-        
         // Get unique funders and their contributions
         const funderMap = new Map();
-        
         for (const transactionDoc of transactionsSnap.docs) {
           const transaction = transactionDoc.data();
           const userId = transaction.userId;
-          
           // Fetch user details
           const userRef = doc(db, 'users', userId);
           const userSnap = await getDoc(userRef);
-          
           if (userSnap.exists()) {
             const userData = userSnap.data();
             // Build a safe display name and location
@@ -115,12 +105,10 @@ export default function MyProjectInfo() {
               || userData?.username
               || userData?.email
               || 'Anonymous';
-
             const hasCityOrCountry = !!(userData?.location && (userData.location.city || userData.location.country));
             const safeLocation = hasCityOrCountry
               ? [userData.location.city, userData.location.country].filter(Boolean).join(', ')
               : 'Unknown';
-            
             if (funderMap.has(userId)) {
               // Add to existing funder's contributions
               const existingFunder = funderMap.get(userId);
@@ -149,11 +137,9 @@ export default function MyProjectInfo() {
             }
           }
         }
-        
         // Convert map to array and sort by total amount
         const fundersArray = Array.from(funderMap.values()).sort((a, b) => b.totalAmount - a.totalAmount);
         setFunders(fundersArray);
-        
       } catch (err) {
         console.error('Error fetching project ', err);
         setError('Failed to load project information');
@@ -161,24 +147,20 @@ export default function MyProjectInfo() {
         setLoading(false);
       }
     };
-
     fetchProjectAndFunders();
   }, [id, user]);
 
   useEffect(() => {
     const checkPendingChanges = async () => {
       if (!project?.id) return;
-      
       try {
         const pendingChangesQuery = query(
           collection(db, 'changeRequests'),
           where('projectId', '==', project.id),
           where('status', '==', 'pending')
         );
-        
         const pendingChangesSnapshot = await getDocs(pendingChangesQuery);
         const hasPending = !pendingChangesSnapshot.empty;
-        
         // Update project state to indicate pending changes
         setProject(prev => ({
           ...prev,
@@ -188,7 +170,6 @@ export default function MyProjectInfo() {
         console.error('Error checking pending changes:', error);
       }
     };
-    
     checkPendingChanges();
   }, [project?.id]);
 
@@ -203,7 +184,6 @@ export default function MyProjectInfo() {
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Unknown';
-    
     try {
       let date;
       if (timestamp.seconds) {
@@ -212,7 +192,6 @@ export default function MyProjectInfo() {
       } else {
         date = new Date(timestamp);
       }
-      
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -373,7 +352,6 @@ export default function MyProjectInfo() {
   // Toggle equity requested field
   const toggleEquityRequested = async () => {
     if (!project?.id || updatingEquity) return;
-    
     // Validate percentage if enabling equity
     const currentlyRequested = project.equity?.equityRequested || false;
     if (!currentlyRequested) {
@@ -384,27 +362,22 @@ export default function MyProjectInfo() {
         return;
       }
     }
-    
     setUpdatingEquity(true);
     try {
       const projectRef = doc(db, 'projects', project.id);
       const newEquityRequested = !currentlyRequested;
-      
       const equityData = {
         equityRequested: newEquityRequested,
         equityPercentage: newEquityRequested ? parseFloat(equityPercentage) : (project.equity?.equityPercentage || 0)
       };
-      
       await updateDoc(projectRef, {
         equity: equityData
       });
-      
       // Update local state
       setProject(prev => ({
         ...prev,
         equity: equityData
       }));
-      
     } catch (err) {
       console.error('Failed to update equity requested:', err);
       alert('Failed to update equity setting');
@@ -427,12 +400,65 @@ export default function MyProjectInfo() {
     }
   };
 
-  // Handle project edit form changes
+  // Handle project edit form changes (excluding status)
   const handleEditChange = (field, value) => {
+    // Prevent editing status
+    if (field === 'status') {
+      console.warn("Status editing is disabled.");
+      return;
+    }
     setEditForm(prev => ({
       ...prev,
       [field]: value
     }));
+  };
+
+  // Check for pending requests and enable editing if allowed
+  const checkPendingAndEnableEditing = async () => {
+    if (!project?.id || checkingPending) return; // Prevent multiple clicks during check
+
+    setCheckingPending(true);
+    try {
+      const pendingChangesQuery = query(
+        collection(db, 'changeRequests'),
+        where('projectId', '==', project.id),
+        where('status', '==', 'pending')
+      );
+      const pendingChangesSnapshot = await getDocs(pendingChangesQuery);
+
+      if (!pendingChangesSnapshot.empty) {
+        const requestIds = pendingChangesSnapshot.docs.map(doc => doc.id);
+        const confirmDelete = window.confirm(
+          `You have a pending change request for this project. Do you want to delete it to start a new edit?`
+        );
+
+        if (confirmDelete) {
+          // Delete all pending requests for the project
+          const deletePromises = requestIds.map(reqId => {
+            const reqRef = doc(db, 'changeRequests', reqId);
+            return deleteDoc(reqRef);
+          });
+          await Promise.all(deletePromises);
+          console.log("Pending change request(s) deleted.");
+          // Update local state to reflect removal
+          setProject(prev => ({ ...prev, hasPendingChanges: false }));
+        } else {
+          console.log("Edit cancelled by user due to pending request.");
+          setCheckingPending(false);
+          return; // Exit if user doesn't confirm deletion
+        }
+      }
+
+      // If no pending requests existed or they were successfully deleted, enable editing
+      setIsEditing(true);
+      setEditForm({ ...project }); // Reset edit form to current project state
+
+    } catch (error) {
+      console.error('Error checking/deleting pending change request:', error);
+      alert('An error occurred while checking for pending changes. Please try again.');
+    } finally {
+      setCheckingPending(false);
+    }
   };
 
   // Handle project edit save
@@ -442,7 +468,6 @@ export default function MyProjectInfo() {
       alert(`Funding goal cannot be less than already funded amount (${formatCurrency(project.fundedMoney)})`);
       return;
     }
-
     try {
       // Create change request document
       const changeRequestRef = collection(db, 'changeRequests');
@@ -458,20 +483,19 @@ export default function MyProjectInfo() {
           longDescription: project.longDescription || '',
           fundingGoal: project.fundingGoal || 0,
           category: project.category || '',
-          status: project.status || '',
           startDate: project.startDate || null,
           endDate: project.endDate || null,
+          // status: project.status || '', // Excluded from change request
         }
       };
-
-      // Add only changed fields to the changes object (excluding createdAt)
+      // Add only changed fields to the changes object (excluding status and createdAt)
       Object.keys(editForm).forEach(key => {
-        if (key !== 'createdAt' && JSON.stringify(editForm[key]) !== JSON.stringify(project[key])) {
+        if (key !== 'status' && key !== 'createdAt' && JSON.stringify(editForm[key]) !== JSON.stringify(project[key])) {
           changeData.changes[key] = editForm[key];
         }
       });
 
-      // If no changes were made, return
+      // If no changes were made (excluding status), return
       if (Object.keys(changeData.changes).length === 0) {
         alert('No changes detected');
         setIsEditing(false);
@@ -479,11 +503,9 @@ export default function MyProjectInfo() {
       }
 
       await addDoc(changeRequestRef, changeData);
-      
       // Update local state with new values (optimistic update)
       setProject(prev => ({ ...prev, ...editForm }));
       setIsEditing(false);
-      
       alert('Change request submitted successfully!');
     } catch (error) {
       console.error('Error submitting change request:', error);
@@ -535,7 +557,6 @@ export default function MyProjectInfo() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <Navbar />
-      
       {/* Header */}
       <div className="pt-20 pb-4">
         <div className="max-w-7xl mx-auto px-4">
@@ -546,7 +567,6 @@ export default function MyProjectInfo() {
             <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             <span className="font-medium">Back to My Projects</span>
           </button>
-          
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
               {isEditing ? (
@@ -562,30 +582,16 @@ export default function MyProjectInfo() {
                 </h1>
               )}
               <div className="flex items-center gap-4 text-gray-600">
-                {isEditing ? (
-                  <select
-                    value={editForm.status}
-                    onChange={(e) => handleEditChange('status', e.target.value)}
-                    className="px-3 py-1 rounded-full text-sm font-semibold border border-gray-300 focus:ring-2 focus:ring-color-b"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="active">Active</option>
-                  </select>
-                ) : (
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(project.status)}`}>
-                    {project.status || 'Unknown'}
-                  </span>
-                )}
-                
+                {/* Status is no longer editable */}
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(project.status)}`}>
+                  {project.status || 'Unknown'}
+                </span>
                 {/* Visual cue for pending changes */}
                 {project.hasPendingChanges && (
                   <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
                     Pending Changes
                   </span>
                 )}
-                
                 {isEditing ? (
                   <input
                     type="text"
@@ -601,7 +607,6 @@ export default function MyProjectInfo() {
                 )}
               </div>
             </div>
-            
             <div className="flex gap-3">
               {isEditing ? (
                 <div className="flex gap-3">
@@ -625,11 +630,22 @@ export default function MyProjectInfo() {
                 </div>
               ) : (
                 <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-white/80 text-gray-700 rounded-xl hover:bg-white transition-colors flex items-center"
+                  onClick={checkPendingAndEnableEditing} // Changed onClick handler
+                  disabled={checkingPending} // Disable button while checking
+                  className={`px-4 py-2 rounded-xl hover:transition-colors flex items-center ${
+                    checkingPending
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' // Style when checking
+                      : 'bg-white/80 text-gray-700 hover:bg-white' // Style when ready
+                  }`}
                 >
-                  <FiEdit className="w-4 h-4 mr-2" />
-                  Edit
+                  {checkingPending ? (
+                    <>Checking...</> // Show loading text
+                  ) : (
+                    <>
+                      <FiEdit className="w-4 h-4 mr-2" />
+                      Edit
+                    </>
+                  )}
                 </button>
               )}
               <button className="px-4 py-2 bg-white/80 text-gray-700 rounded-xl hover:bg-white transition-colors flex items-center">
@@ -647,7 +663,6 @@ export default function MyProjectInfo() {
           </div>
         </div>
       </div>
-
       {/* Stats Cards */}
       <div className="max-w-7xl mx-auto px-4 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -662,7 +677,6 @@ export default function MyProjectInfo() {
               </div>
             </div>
           </div>
-
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
@@ -674,7 +688,6 @@ export default function MyProjectInfo() {
               </div>
             </div>
           </div>
-
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
@@ -686,7 +699,6 @@ export default function MyProjectInfo() {
               </div>
             </div>
           </div>
-
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
@@ -700,7 +712,6 @@ export default function MyProjectInfo() {
           </div>
         </div>
       </div>
-
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 mb-8">
         <div className="flex space-x-1 bg-white/50 backdrop-blur-sm rounded-2xl p-1">
@@ -725,7 +736,6 @@ export default function MyProjectInfo() {
           ))}
         </div>
       </div>
-
       {/* Tab Content */}
       <div className="max-w-7xl mx-auto px-4 pb-16">
         {activeTab === 'overview' && (
@@ -747,7 +757,6 @@ export default function MyProjectInfo() {
                     </div>
                   )}
                 </div>
-                
                 <div className="p-8">
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">Project Description</h3>
                   {isEditing ? (
@@ -776,12 +785,10 @@ export default function MyProjectInfo() {
                 </div>
               </div>
             </div>
-
             {/* Funding Progress */}
             <div className="space-y-6">
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6">Funding Progress</h3>
-                
                 <div className="mb-6">
                   <div className="flex justify-between text-lg font-semibold text-gray-800 mb-2">
                     <span>{formatCurrency(project.fundedMoney)}</span>
@@ -798,14 +805,12 @@ export default function MyProjectInfo() {
                       )}
                     </span>
                   </div>
-                  
                   <div className="w-full bg-gray-200 rounded-full h-4 mb-3">
                     <div
                       className="bg-gradient-to-r from-color-b to-blue-600 h-4 rounded-full transition-all duration-1000"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>{progress.toFixed(1)}% funded</span>
                     <span>
@@ -815,7 +820,6 @@ export default function MyProjectInfo() {
                     </span>
                   </div>
                 </div>
-
                 {/* Equity Requested Toggle */}
                 <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
                   <div className="flex items-center justify-between mb-4">
@@ -846,14 +850,12 @@ export default function MyProjectInfo() {
                       />
                     </button>
                   </div>
-
                   {/* Equity Percentage Input */}
                   {progress >= 85 && (
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Equity Percentage
                       </label>
-                      
                       {/* Percentage Buttons */}
                       <div className="flex gap-2 mb-3">
                         {[5, 10, 15, 20].map((percentage) => (
@@ -871,7 +873,6 @@ export default function MyProjectInfo() {
                           </button>
                         ))}
                       </div>
-
                       {/* Custom Input */}
                       <div className="relative">
                         <input
@@ -890,14 +891,12 @@ export default function MyProjectInfo() {
                       </div>
                     </div>
                   )}
-                  
                   {progress < 85 && (
                     <div className="flex items-center text-sm text-orange-600">
                       <span className="mr-2">⚠️</span>
                       <span>Current funding: {progress.toFixed(1)}% (Need 85% minimum)</span>
                     </div>
                   )}
-                  
                   {project.equity?.equityRequested && (
                     <div className="flex items-center text-sm text-green-600 mt-2">
                       <span className="mr-2">✅</span>
@@ -905,7 +904,6 @@ export default function MyProjectInfo() {
                     </div>
                   )}
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-gray-50 rounded-xl">
                     <FiUsers className="w-6 h-6 text-color-b mx-auto mb-2" />
@@ -922,13 +920,11 @@ export default function MyProjectInfo() {
             </div>
           </div>
         )}
-
         {activeTab === 'announcements' && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
             <div className="p-8 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-2xl font-bold text-gray-900">Announcements</h3>
             </div>
-
             <div className="p-8 space-y-6">
               {/* Inline Composer */}
               <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
@@ -998,7 +994,6 @@ export default function MyProjectInfo() {
             </div>
           </div>
         )}
-
         {activeTab === 'funders' && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
             <div className="p-8 border-b border-gray-200">
@@ -1008,7 +1003,6 @@ export default function MyProjectInfo() {
               </h3>
               <p className="text-gray-600 mt-2">People who have supported your project</p>
             </div>
-            
             <div className="p-8">
               {funders.length === 0 ? (
                 <div className="text-center py-12">
@@ -1038,7 +1032,6 @@ export default function MyProjectInfo() {
                             </div>
                           </div>
                         </div>
-                        
                         <div className="text-right">
                           <p className="text-2xl font-bold text-color-b">{formatCurrency(funder.totalAmount)}</p>
                           <p className="text-sm text-gray-600">{funder.contributions.length} contribution{funder.contributions.length > 1 ? 's' : ''}</p>
@@ -1053,7 +1046,6 @@ export default function MyProjectInfo() {
                           </button>
                         </div>
                       </div>
-                      
                       {/* Contributions Details */}
                       {expandedFunders[funder.id] && (
                         <div id={`contrib-${funder.id}`} className="mt-4 pt-4 border-t border-gray-200">
@@ -1075,7 +1067,6 @@ export default function MyProjectInfo() {
             </div>
           </div>
         )}
-
         {activeTab === 'timeline' && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
             <div className="p-8 border-b border-gray-200">
@@ -1085,12 +1076,10 @@ export default function MyProjectInfo() {
               </h3>
               <p className="text-gray-600 mt-2">Key dates and milestones for your project</p>
             </div>
-            
             <div className="p-8">
               <div className="relative">
                 {/* Timeline Line */}
                 <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-color-b to-blue-300"></div>
-                
                 <div className="space-y-8">
                   {/* Project Creation */}
                   <div className="relative flex items-start">
@@ -1108,7 +1097,6 @@ export default function MyProjectInfo() {
                       </div>
                     </div>
                   </div>
-
                   {/* Campaign Start Date */}
                   {project.startDate && (
                     <div className="relative flex items-start">
@@ -1127,7 +1115,6 @@ export default function MyProjectInfo() {
                       </div>
                     </div>
                   )}
-
                   {/* Project Launch (if different from campaign start) */}
                   {project.launchDate && project.launchDate !== project.startDate && (
                     <div className="relative flex items-start">
@@ -1146,7 +1133,6 @@ export default function MyProjectInfo() {
                       </div>
                     </div>
                   )}
-
                   {/* Milestones */}
                   {project.milestones && project.milestones.length > 0 && (
                     project.milestones.map((milestone, index) => (
@@ -1178,7 +1164,6 @@ export default function MyProjectInfo() {
                       </div>
                     ))
                   )}
-
                   {/* Campaign End Date */}
                   {project.endDate && (
                     <div className="relative flex items-start">
@@ -1219,7 +1204,6 @@ export default function MyProjectInfo() {
                       </div>
                     </div>
                   )}
-
                   {/* Project Launch End (if different from campaign end) */}
                   {project.launchEndDate && project.launchEndDate !== project.endDate && (
                     <div className="relative flex items-start">
@@ -1239,7 +1223,6 @@ export default function MyProjectInfo() {
                     </div>
                   )}
                 </div>
-
                 {/* Current Status Indicator */}
                 <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
                   <h4 className="text-lg font-semibold text-gray-900 mb-2">Current Status</h4>
@@ -1258,14 +1241,12 @@ export default function MyProjectInfo() {
             </div>
           </div>
         )}
-
         {activeTab === 'analytics' && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
               <FiTrendingUp className="w-6 h-6 text-color-b mr-3" />
               Project Analytics
             </h3>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6">
                 <h4 className="font-semibold text-gray-800 mb-2">Average Contribution</h4>
@@ -1273,12 +1254,10 @@ export default function MyProjectInfo() {
                   {funders.length > 0 ? formatCurrency((project.fundedMoney || 0) / funders.length) : '$0'}
                 </p>
               </div>
-              
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6">
                 <h4 className="font-semibold text-gray-800 mb-2">Funding Rate</h4>
                 <p className="text-3xl font-bold text-green-600">{progress.toFixed(1)}%</p>
               </div>
-              
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6">
                 <h4 className="font-semibold text-gray-800 mb-2">Total Contributions</h4>
                 <p className="text-3xl font-bold text-purple-600">
