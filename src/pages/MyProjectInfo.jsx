@@ -41,8 +41,6 @@ export default function MyProjectInfo() {
   const [editContent, setEditContent] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
-  const [updatingEquity, setUpdatingEquity] = useState(false);
-  const [equityPercentage, setEquityPercentage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [checkingPending, setCheckingPending] = useState(false); // New state for checking
@@ -74,13 +72,9 @@ export default function MyProjectInfo() {
           title: projectData.title || '',
           shortDescription: projectData.shortDescription || '',
           longDescription: projectData.longDescription || '',
-          category: projectData.category || ''
-          // status: projectData.status || '' // Removed from editForm
+          category: projectData.category || '',
+          endDate: projectData.endDate ? new Date(projectData.endDate.seconds * 1000).toISOString().split('T')[0] : '' // Format for date input
         });
-        // Initialize equity percentage from project data
-        if (projectData.equity?.equityPercentage) {
-          setEquityPercentage(projectData.equity.equityPercentage.toString());
-        }
         // Fetch funders data from transactions
         const transactionsQuery = query(
           collection(db, 'transactions'),
@@ -350,57 +344,6 @@ export default function MyProjectInfo() {
     }
   };
 
-  // Toggle equity requested field
-  const toggleEquityRequested = async () => {
-    if (!project?.id || updatingEquity) return;
-    // Validate percentage if enabling equity
-    const currentlyRequested = project.equity?.equityRequested || false;
-    if (!currentlyRequested) {
-      // Enabling equity - validate percentage
-      const percentage = parseFloat(equityPercentage);
-      if (!equityPercentage.trim() || isNaN(percentage) || percentage <= 0 || percentage > 100) {
-        alert('Please enter a valid equity percentage between 1% and 100%');
-        return;
-      }
-    }
-    setUpdatingEquity(true);
-    try {
-      const projectRef = doc(db, 'projects', project.id);
-      const newEquityRequested = !currentlyRequested;
-      const equityData = {
-        equityRequested: newEquityRequested,
-        equityPercentage: newEquityRequested ? parseFloat(equityPercentage) : (project.equity?.equityPercentage || 0)
-      };
-      await updateDoc(projectRef, {
-        equity: equityData
-      });
-      // Update local state
-      setProject(prev => ({
-        ...prev,
-        equity: equityData
-      }));
-    } catch (err) {
-      console.error('Failed to update equity requested:', err);
-      alert('Failed to update equity setting');
-    } finally {
-      setUpdatingEquity(false);
-    }
-  };
-
-  // Handle percentage button clicks
-  const handlePercentageClick = (percentage) => {
-    setEquityPercentage(percentage.toString());
-  };
-
-  // Handle percentage input change
-  const handlePercentageChange = (e) => {
-    const value = e.target.value;
-    // Allow empty string or valid numbers
-    if (value === '' || (!isNaN(value) && parseFloat(value) >= 0 && parseFloat(value) <= 100)) {
-      setEquityPercentage(value);
-    }
-  };
-
   // Handle project edit form changes (excluding status)
   const handleEditChange = (field, value) => {
     // Prevent editing status
@@ -452,7 +395,7 @@ export default function MyProjectInfo() {
 
       // If no pending requests existed or they were successfully deleted, enable editing
       setIsEditing(true);
-      setEditForm({ ...project }); // Reset edit form to current project state
+      setEditForm({ ...project, endDate: project.endDate ? new Date(project.endDate.seconds * 1000).toISOString().split('T')[0] : '' }); // Reset edit form to current project state, formatting endDate
 
     } catch (error) {
       console.error('Error checking/deleting pending change request:', error);
@@ -485,13 +428,17 @@ export default function MyProjectInfo() {
           fundingGoal: project.fundingGoal || 0,
           category: project.category || '',
           startDate: project.startDate || null,
-          endDate: project.endDate || null,
+          endDate: project.endDate ? new Date(project.endDate.seconds * 1000).toISOString() : null, // Store original as ISO string
           // status: project.status || '', // Excluded from change request
         }
       };
       // Add only changed fields to the changes object (excluding status and createdAt)
       Object.keys(editForm).forEach(key => {
-        if (key !== 'status' && key !== 'createdAt' && JSON.stringify(editForm[key]) !== JSON.stringify(project[key])) {
+        let originalValue = project[key];
+        if (originalValue && originalValue.seconds) { // Convert Firestore timestamp to ISO string for comparison
+          originalValue = new Date(originalValue.seconds * 1000).toISOString();
+        }
+        if (key !== 'status' && key !== 'createdAt' && JSON.stringify(editForm[key]) !== JSON.stringify(originalValue)) {
           changeData.changes[key] = editForm[key];
         }
       });
@@ -505,7 +452,7 @@ export default function MyProjectInfo() {
 
       await addDoc(changeRequestRef, changeData);
       // Update local state with new values (optimistic update)
-      setProject(prev => ({ ...prev, ...editForm }));
+      setProject(prev => ({ ...prev, ...editForm, endDate: editForm.endDate ? new Date(editForm.endDate) : null })); // Convert back to Date object for display
       setIsEditing(false);
       alert('Change request submitted successfully!');
     } catch (error) {
@@ -620,7 +567,7 @@ export default function MyProjectInfo() {
                   </button>
                   <button
                     onClick={() => {
-                      setEditForm({ ...project });
+                      setEditForm({ ...project, endDate: project.endDate ? new Date(project.endDate.seconds * 1000).toISOString().split('T')[0] : '' });
                       setIsEditing(false);
                     }}
                     className="px-4 py-2 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition-colors flex items-center"
@@ -783,6 +730,22 @@ export default function MyProjectInfo() {
                       </div>
                     </>
                   )}
+                  {/* Editable End Date */}
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Project Due Date
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={editForm.endDate}
+                        onChange={(e) => handleEditChange('endDate', e.target.value)}
+                        className="w-full p-2 border rounded"
+                      />
+                    ) : (
+                      <p className="text-gray-600">{project.endDate ? formatDate(project.endDate) : 'Not set'}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -820,90 +783,6 @@ export default function MyProjectInfo() {
                         : 'Goal reached!'}
                     </span>
                   </div>
-                </div>
-                {/* Equity Requested Toggle */}
-                <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="font-semibold text-gray-800">Equity Requested</h4>
-                      <p className="text-sm text-gray-600">
-                        {progress >= 85 
-                          ? "Set equity percentage and toggle request" 
-                          : "Project must be 85% or more funded to enable equity requests"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={progress < 85 || updatingEquity}
-                      onClick={toggleEquityRequested}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-                        progress < 85 
-                          ? 'bg-gray-300 cursor-not-allowed opacity-50' 
-                          : project.equity?.equityRequested 
-                            ? 'bg-green-500 hover:bg-green-600' 
-                            : 'bg-gray-300 hover:bg-gray-400'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-200 ${
-                          project.equity?.equityRequested ? 'translate-x-5' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                  {/* Equity Percentage Input */}
-                  {progress >= 85 && (
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Equity Percentage
-                      </label>
-                      {/* Percentage Buttons */}
-                      <div className="flex gap-2 mb-3">
-                        {[5, 10, 15, 20].map((percentage) => (
-                          <button
-                            key={percentage}
-                            type="button"
-                            onClick={() => handlePercentageClick(percentage)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              equityPercentage === percentage.toString()
-                                ? 'bg-color-b text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                            }`}
-                          >
-                            {percentage}%
-                          </button>
-                        ))}
-                      </div>
-                      {/* Custom Input */}
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="1"
-                          max="100"
-                          step="0.1"
-                          value={equityPercentage}
-                          onChange={handlePercentageChange}
-                          placeholder="Enter percentage"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-color-b focus:border-color-b text-sm"
-                        />
-                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                          %
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  {progress < 85 && (
-                    <div className="flex items-center text-sm text-orange-600">
-                      <span className="mr-2">⚠️</span>
-                      <span>Current funding: {progress.toFixed(1)}% (Need 85% minimum)</span>
-                    </div>
-                  )}
-                  {project.equity?.equityRequested && (
-                    <div className="flex items-center text-sm text-green-600 mt-2">
-                      <span className="mr-2">✅</span>
-                      <span>Equity is currently being requested for this project ({project.equity?.equityPercentage || 0}%)</span>
-                    </div>
-                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-gray-50 rounded-xl">
