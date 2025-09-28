@@ -47,6 +47,56 @@ export default function MyProjectInfo() {
   const auth = getAuth();
   const user = auth.currentUser;
 
+  // Safe date formatting helper
+  const safeFormatDateForInput = (dateValue) => {
+    if (!dateValue) return '';
+    
+    try {
+      let date;
+      if (dateValue.seconds) {
+        date = new Date(dateValue.seconds * 1000);
+      } else if (dateValue instanceof Date) {
+        date = dateValue;
+      } else {
+        date = new Date(dateValue);
+      }
+      
+      if (isNaN(date.getTime())) {
+        return '';
+      }
+      
+      return date.toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Error formatting date for input:', error);
+      return '';
+    }
+  };
+
+  // Safe date conversion to ISO string
+  const safeConvertToISOString = (dateValue) => {
+    if (!dateValue) return null;
+    
+    try {
+      let date;
+      if (dateValue.seconds) {
+        date = new Date(dateValue.seconds * 1000);
+      } else if (dateValue instanceof Date) {
+        date = dateValue;
+      } else {
+        date = new Date(dateValue);
+      }
+      
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      
+      return date.toISOString();
+    } catch (error) {
+      console.error('Error converting date to ISO string:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchProjectAndFunders = async () => {
       if (!user || !id) return;
@@ -73,7 +123,7 @@ export default function MyProjectInfo() {
           shortDescription: projectData.shortDescription || '',
           longDescription: projectData.longDescription || '',
           category: projectData.category || '',
-          endDate: projectData.endDate ? new Date(projectData.endDate.seconds * 1000).toISOString().split('T')[0] : '' // Format for date input
+          endDate: safeFormatDateForInput(projectData.endDate)
         });
         // Fetch funders data from transactions
         const transactionsQuery = query(
@@ -179,14 +229,32 @@ export default function MyProjectInfo() {
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Unknown';
+    
     try {
       let date;
-      if (timestamp.seconds) {
-        // Firestore timestamp
+      
+      // Handle Firestore timestamp
+      if (timestamp.seconds !== undefined) {
         date = new Date(timestamp.seconds * 1000);
-      } else {
+      } 
+      // Handle JavaScript Date object
+      else if (timestamp instanceof Date) {
+        date = timestamp;
+      }
+      // Handle ISO string or numeric timestamp
+      else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
         date = new Date(timestamp);
       }
+      // If it's already a valid date, use it directly
+      else {
+        date = timestamp;
+      }
+
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -195,6 +263,7 @@ export default function MyProjectInfo() {
         minute: '2-digit'
       });
     } catch (error) {
+      console.error('Error formatting date:', error, timestamp);
       return 'Invalid date';
     }
   };
@@ -210,7 +279,7 @@ export default function MyProjectInfo() {
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'approved':
         return 'bg-green-100 text-green-800 border-green-200';
-      case 'declined':
+      case 'rejected':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'active':
         return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -395,7 +464,10 @@ export default function MyProjectInfo() {
 
       // If no pending requests existed or they were successfully deleted, enable editing
       setIsEditing(true);
-      setEditForm({ ...project, endDate: project.endDate ? new Date(project.endDate.seconds * 1000).toISOString().split('T')[0] : '' }); // Reset edit form to current project state, formatting endDate
+      setEditForm({ 
+        ...project, 
+        endDate: safeFormatDateForInput(project.endDate) 
+      });
 
     } catch (error) {
       console.error('Error checking/deleting pending change request:', error);
@@ -428,7 +500,7 @@ export default function MyProjectInfo() {
           fundingGoal: project.fundingGoal || 0,
           category: project.category || '',
           startDate: project.startDate || null,
-          endDate: project.endDate ? new Date(project.endDate.seconds * 1000).toISOString() : null, // Store original as ISO string
+          endDate: safeConvertToISOString(project.endDate),
           // status: project.status || '', // Excluded from change request
         }
       };
@@ -436,7 +508,7 @@ export default function MyProjectInfo() {
       Object.keys(editForm).forEach(key => {
         let originalValue = project[key];
         if (originalValue && originalValue.seconds) { // Convert Firestore timestamp to ISO string for comparison
-          originalValue = new Date(originalValue.seconds * 1000).toISOString();
+          originalValue = safeConvertToISOString(originalValue);
         }
         if (key !== 'status' && key !== 'createdAt' && JSON.stringify(editForm[key]) !== JSON.stringify(originalValue)) {
           changeData.changes[key] = editForm[key];
@@ -452,7 +524,11 @@ export default function MyProjectInfo() {
 
       await addDoc(changeRequestRef, changeData);
       // Update local state with new values (optimistic update)
-      setProject(prev => ({ ...prev, ...editForm, endDate: editForm.endDate ? new Date(editForm.endDate) : null })); // Convert back to Date object for display
+      setProject(prev => ({ 
+        ...prev, 
+        ...editForm, 
+        endDate: editForm.endDate ? new Date(editForm.endDate) : null 
+      }));
       setIsEditing(false);
       alert('Change request submitted successfully!');
     } catch (error) {
@@ -567,7 +643,10 @@ export default function MyProjectInfo() {
                   </button>
                   <button
                     onClick={() => {
-                      setEditForm({ ...project, endDate: project.endDate ? new Date(project.endDate.seconds * 1000).toISOString().split('T')[0] : '' });
+                      setEditForm({ 
+                        ...project, 
+                        endDate: safeFormatDateForInput(project.endDate) 
+                      });
                       setIsEditing(false);
                     }}
                     className="px-4 py-2 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition-colors flex items-center"
@@ -578,16 +657,16 @@ export default function MyProjectInfo() {
                 </div>
               ) : (
                 <button
-                  onClick={checkPendingAndEnableEditing} // Changed onClick handler
-                  disabled={checkingPending} // Disable button while checking
+                  onClick={checkPendingAndEnableEditing}
+                  disabled={checkingPending}
                   className={`px-4 py-2 rounded-xl hover:transition-colors flex items-center ${
                     checkingPending
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' // Style when checking
-                      : 'bg-white/80 text-gray-700 hover:bg-white' // Style when ready
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-white/80 text-gray-700 hover:bg-white'
                   }`}
                 >
                   {checkingPending ? (
-                    <>Checking...</> // Show loading text
+                    <>Checking...</>
                   ) : (
                     <>
                       <FiEdit className="w-4 h-4 mr-2" />
@@ -971,14 +1050,16 @@ export default function MyProjectInfo() {
                           <h4 className="text-lg font-semibold text-gray-900">Project Created</h4>
                         </div>
                         <p className="text-gray-600 mb-1">Your project was successfully created and submitted for review</p>
-                        <p className="text-sm font-medium text-color-b">
-                          {formatDate(project.createdAt) || 'Date not available'}
-                        </p>
+                        {project.createdAt && !isNaN(new Date(project.createdAt).getTime()) && (
+                          <p className="text-sm font-medium text-color-b">
+                            {formatDate(project.createdAt)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
                   {/* Campaign Start Date */}
-                  {project.startDate && (
+                  {project.startDate && !isNaN(new Date(project.startDate).getTime()) && (
                     <div className="relative flex items-start">
                       <div className="absolute left-6 w-4 h-4 bg-green-500 rounded-full border-4 border-white shadow-lg"></div>
                       <div className="ml-16">
@@ -996,7 +1077,7 @@ export default function MyProjectInfo() {
                     </div>
                   )}
                   {/* Project Launch (if different from campaign start) */}
-                  {project.launchDate && project.launchDate !== project.startDate && (
+                  {project.launchDate && project.launchDate !== project.startDate && !isNaN(new Date(project.launchDate).getTime()) && (
                     <div className="relative flex items-start">
                       <div className="absolute left-6 w-4 h-4 bg-purple-500 rounded-full border-4 border-white shadow-lg"></div>
                       <div className="ml-16">
@@ -1029,7 +1110,7 @@ export default function MyProjectInfo() {
                             <p className="text-gray-600 mb-1">
                               {milestone.description || 'No description provided'}
                             </p>
-                            {milestone.date && (
+                            {milestone.date && !isNaN(new Date(milestone.date).getTime()) && (
                               <p className="text-sm font-medium text-yellow-600">
                                 {formatDate(milestone.date)}
                               </p>
@@ -1045,7 +1126,7 @@ export default function MyProjectInfo() {
                     ))
                   )}
                   {/* Campaign End Date */}
-                  {project.endDate && (
+                  {project.endDate && !isNaN(new Date(project.endDate).getTime()) && (
                     <div className="relative flex items-start">
                       <div className={`absolute left-6 w-4 h-4 rounded-full border-4 border-white shadow-lg ${
                         new Date(project.endDate) > new Date() ? 'bg-orange-500' : 'bg-red-500'
@@ -1085,7 +1166,7 @@ export default function MyProjectInfo() {
                     </div>
                   )}
                   {/* Project Launch End (if different from campaign end) */}
-                  {project.launchEndDate && project.launchEndDate !== project.endDate && (
+                  {project.launchEndDate && project.launchEndDate !== project.endDate && !isNaN(new Date(project.launchEndDate).getTime()) && (
                     <div className="relative flex items-start">
                       <div className="absolute left-6 w-4 h-4 bg-gray-500 rounded-full border-4 border-white shadow-lg"></div>
                       <div className="ml-16">
