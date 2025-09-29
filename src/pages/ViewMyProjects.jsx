@@ -145,7 +145,7 @@ export default function ViewMyProjects() {
             { id: "pending", label: "Pending", count: projects.filter(p => p.status?.toLowerCase() === 'pending').length },
             { id: "active", label: "Active", count: projects.filter(p => p.status?.toLowerCase() === 'active').length },
             { id: "approved", label: "Approved", count: projects.filter(p => p.status?.toLowerCase() === 'approved').length },
-            { id: "rejected", label: "Rejected", count: projects.filter(p => p.status?.toLowerCase() === 'rejected').length }
+            { id: "declined", label: "Declined", count: projects.filter(p => p.status?.toLowerCase() === 'declined').length }
           ].map(tab => (
             <button
               key={tab.id}

@@ -1,6 +1,7 @@
+// MyProjectInfo.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp, addDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp, addDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
 import { db } from '../firebase/firebase-config';
 import { getAuth } from 'firebase/auth';
 import { 
@@ -22,8 +23,7 @@ import {
   FiTarget,
   FiFlag,
   FiPlay,
-  FiStopCircle,
-  FiCheck
+  FiStopCircle
 } from 'react-icons/fi';
 import Navbar from '../components/NavBar';
 
@@ -41,30 +41,75 @@ export default function MyProjectInfo() {
   const [editContent, setEditContent] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
-  const [updatingEquity, setUpdatingEquity] = useState(false);
-  const [equityPercentage, setEquityPercentage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [checkingPending, setCheckingPending] = useState(false); // New state for checking
   const auth = getAuth();
   const user = auth.currentUser;
+
+  // Safe date formatting helper
+  const safeFormatDateForInput = (dateValue) => {
+    if (!dateValue) return '';
+    
+    try {
+      let date;
+      if (dateValue.seconds) {
+        date = new Date(dateValue.seconds * 1000);
+      } else if (dateValue instanceof Date) {
+        date = dateValue;
+      } else {
+        date = new Date(dateValue);
+      }
+      
+      if (isNaN(date.getTime())) {
+        return '';
+      }
+      
+      return date.toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Error formatting date for input:', error);
+      return '';
+    }
+  };
+
+  // Safe date conversion to ISO string
+  const safeConvertToISOString = (dateValue) => {
+    if (!dateValue) return null;
+    
+    try {
+      let date;
+      if (dateValue.seconds) {
+        date = new Date(dateValue.seconds * 1000);
+      } else if (dateValue instanceof Date) {
+        date = dateValue;
+      } else {
+        date = new Date(dateValue);
+      }
+      
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      
+      return date.toISOString();
+    } catch (error) {
+      console.error('Error converting date to ISO string:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const fetchProjectAndFunders = async () => {
       if (!user || !id) return;
-      
       setLoading(true);
       try {
         // Fetch project details
         const projectRef = doc(db, 'projects', id);
         const projectSnap = await getDoc(projectRef);
-        
         if (!projectSnap.exists()) {
           setError('Project not found');
           return;
         }
-        
         const projectData = { id: projectSnap.id, ...projectSnap.data() };
-        
         // Check if current user owns this project
         if (projectData.createdBy?.uid !== user.uid) {
           setError('You do not have permission to view this project');
@@ -78,35 +123,24 @@ export default function MyProjectInfo() {
           shortDescription: projectData.shortDescription || '',
           longDescription: projectData.longDescription || '',
           category: projectData.category || '',
-          status: projectData.status || ''
+          endDate: safeFormatDateForInput(projectData.endDate)
         });
-        
-        // Initialize equity percentage from project data
-        if (projectData.equity?.equityPercentage) {
-          setEquityPercentage(projectData.equity.equityPercentage.toString());
-        }
-        
         // Fetch funders data from transactions
         const transactionsQuery = query(
           collection(db, 'transactions'),
           where('projectId', '==', id),
           where('funding', '==', true)
         );
-        
         const transactionsSnap = await getDocs(transactionsQuery);
         const fundersData = [];
-        
         // Get unique funders and their contributions
         const funderMap = new Map();
-        
         for (const transactionDoc of transactionsSnap.docs) {
           const transaction = transactionDoc.data();
           const userId = transaction.userId;
-          
           // Fetch user details
           const userRef = doc(db, 'users', userId);
           const userSnap = await getDoc(userRef);
-          
           if (userSnap.exists()) {
             const userData = userSnap.data();
             // Build a safe display name and location
@@ -116,12 +150,10 @@ export default function MyProjectInfo() {
               || userData?.username
               || userData?.email
               || 'Anonymous';
-
             const hasCityOrCountry = !!(userData?.location && (userData.location.city || userData.location.country));
             const safeLocation = hasCityOrCountry
               ? [userData.location.city, userData.location.country].filter(Boolean).join(', ')
               : 'Unknown';
-            
             if (funderMap.has(userId)) {
               // Add to existing funder's contributions
               const existingFunder = funderMap.get(userId);
@@ -150,11 +182,9 @@ export default function MyProjectInfo() {
             }
           }
         }
-        
         // Convert map to array and sort by total amount
         const fundersArray = Array.from(funderMap.values()).sort((a, b) => b.totalAmount - a.totalAmount);
         setFunders(fundersArray);
-        
       } catch (err) {
         console.error('Error fetching project ', err);
         setError('Failed to load project information');
@@ -162,24 +192,20 @@ export default function MyProjectInfo() {
         setLoading(false);
       }
     };
-
     fetchProjectAndFunders();
   }, [id, user]);
 
   useEffect(() => {
     const checkPendingChanges = async () => {
       if (!project?.id) return;
-      
       try {
         const pendingChangesQuery = query(
           collection(db, 'changeRequests'),
           where('projectId', '==', project.id),
           where('status', '==', 'pending')
         );
-        
         const pendingChangesSnapshot = await getDocs(pendingChangesQuery);
         const hasPending = !pendingChangesSnapshot.empty;
-        
         // Update project state to indicate pending changes
         setProject(prev => ({
           ...prev,
@@ -189,7 +215,6 @@ export default function MyProjectInfo() {
         console.error('Error checking pending changes:', error);
       }
     };
-    
     checkPendingChanges();
   }, [project?.id]);
 
@@ -207,13 +232,29 @@ export default function MyProjectInfo() {
     
     try {
       let date;
-      if (timestamp.seconds) {
-        // Firestore timestamp
+      
+      // Handle Firestore timestamp
+      if (timestamp.seconds !== undefined) {
         date = new Date(timestamp.seconds * 1000);
-      } else {
+      } 
+      // Handle JavaScript Date object
+      else if (timestamp instanceof Date) {
+        date = timestamp;
+      }
+      // Handle ISO string or numeric timestamp
+      else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
         date = new Date(timestamp);
       }
-      
+      // If it's already a valid date, use it directly
+      else {
+        date = timestamp;
+      }
+
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -222,6 +263,7 @@ export default function MyProjectInfo() {
         minute: '2-digit'
       });
     } catch (error) {
+      console.error('Error formatting date:', error, timestamp);
       return 'Invalid date';
     }
   };
@@ -371,106 +413,68 @@ export default function MyProjectInfo() {
     }
   };
 
-  // Toggle equity requested field
-  const toggleEquityRequested = async () => {
-    if (!project?.id || updatingEquity) return;
-    
-    // Validate percentage if enabling equity
-    const currentlyRequested = project.equity?.equityRequested || false;
-    if (!currentlyRequested) {
-      // Enabling equity - validate percentage
-      const percentage = parseFloat(equityPercentage);
-      if (!equityPercentage.trim() || isNaN(percentage) || percentage <= 0 || percentage > 100) {
-        alert('Please enter a valid equity percentage between 1% and 100%');
-        return;
-      }
-    }
-    
-    setUpdatingEquity(true);
-    try {
-      const projectRef = doc(db, 'projects', project.id);
-      const newEquityRequested = !currentlyRequested;
-      
-      const equityData = {
-        equityRequested: newEquityRequested,
-        equityPercentage: newEquityRequested ? parseFloat(equityPercentage) : (project.equity?.equityPercentage || 0)
-      };
-      
-      await updateDoc(projectRef, {
-        equity: equityData
-      });
-      
-      // Update local state
-      setProject(prev => ({
-        ...prev,
-        equity: equityData
-      }));
-      
-    } catch (err) {
-      console.error('Failed to update equity requested:', err);
-      alert('Failed to update equity setting');
-    } finally {
-      setUpdatingEquity(false);
-    }
-  };
-
-  // Handle percentage button clicks
-  const handlePercentageClick = (percentage) => {
-    setEquityPercentage(percentage.toString());
-  };
-
-  // Handle percentage input change
-  const handlePercentageChange = (e) => {
-    const value = e.target.value;
-    // Allow empty string or valid numbers
-    if (value === '' || (!isNaN(value) && parseFloat(value) >= 0 && parseFloat(value) <= 100)) {
-      setEquityPercentage(value);
-    }
-  };
-
-  // Toggle milestone status with confirmation
-  const toggleMilestoneStatus = async (milestoneIndex, currentStatus) => {
-    const newStatus = currentStatus === "Complete" ? "Incomplete" : "Complete";
-    const action = newStatus === "Complete" ? "mark as complete" : "mark as incomplete";
-    
-    const confirmed = window.confirm(
-      `Are you sure you want to ${action} this milestone?\n\nClick OK to continue or Cancel to abort.`
-    );
-    
-    if (confirmed) {
-      try {
-        // Create a copy of the current milestones array
-        const updatedMilestones = [...project.milestones];
-        // Update only the specific milestone's status
-        updatedMilestones[milestoneIndex] = {
-          ...updatedMilestones[milestoneIndex],
-          milestoneStatus: newStatus
-        };
-        
-        // Update the entire milestones array in the database
-        const projectRef = doc(db, 'projects', project.id);
-        await updateDoc(projectRef, {
-          milestones: updatedMilestones
-        });
-        
-        // Update local state
-        setProject(prev => ({
-          ...prev,
-          milestones: updatedMilestones
-        }));
-      } catch (error) {
-        console.error('Error updating milestone status:', error);
-        alert('Failed to update milestone status');
-      }
-    }
-  };
-
-  // Handle project edit form changes
+  // Handle project edit form changes (excluding status)
   const handleEditChange = (field, value) => {
+    // Prevent editing status
+    if (field === 'status') {
+      console.warn("Status editing is disabled.");
+      return;
+    }
     setEditForm(prev => ({
       ...prev,
       [field]: value
     }));
+  };
+
+  // Check for pending requests and enable editing if allowed
+  const checkPendingAndEnableEditing = async () => {
+    if (!project?.id || checkingPending) return; // Prevent multiple clicks during check
+
+    setCheckingPending(true);
+    try {
+      const pendingChangesQuery = query(
+        collection(db, 'changeRequests'),
+        where('projectId', '==', project.id),
+        where('status', '==', 'pending')
+      );
+      const pendingChangesSnapshot = await getDocs(pendingChangesQuery);
+
+      if (!pendingChangesSnapshot.empty) {
+        const requestIds = pendingChangesSnapshot.docs.map(doc => doc.id);
+        const confirmDelete = window.confirm(
+          `You have a pending change request for this project. Do you want to delete it to start a new edit?`
+        );
+
+        if (confirmDelete) {
+          // Delete all pending requests for the project
+          const deletePromises = requestIds.map(reqId => {
+            const reqRef = doc(db, 'changeRequests', reqId);
+            return deleteDoc(reqRef);
+          });
+          await Promise.all(deletePromises);
+          console.log("Pending change request(s) deleted.");
+          // Update local state to reflect removal
+          setProject(prev => ({ ...prev, hasPendingChanges: false }));
+        } else {
+          console.log("Edit cancelled by user due to pending request.");
+          setCheckingPending(false);
+          return; // Exit if user doesn't confirm deletion
+        }
+      }
+
+      // If no pending requests existed or they were successfully deleted, enable editing
+      setIsEditing(true);
+      setEditForm({ 
+        ...project, 
+        endDate: safeFormatDateForInput(project.endDate) 
+      });
+
+    } catch (error) {
+      console.error('Error checking/deleting pending change request:', error);
+      alert('An error occurred while checking for pending changes. Please try again.');
+    } finally {
+      setCheckingPending(false);
+    }
   };
 
   // Handle project edit save
@@ -480,7 +484,6 @@ export default function MyProjectInfo() {
       alert(`Funding goal cannot be less than already funded amount (${formatCurrency(project.fundedMoney)})`);
       return;
     }
-
     try {
       // Create change request document
       const changeRequestRef = collection(db, 'changeRequests');
@@ -496,20 +499,23 @@ export default function MyProjectInfo() {
           longDescription: project.longDescription || '',
           fundingGoal: project.fundingGoal || 0,
           category: project.category || '',
-          status: project.status || '',
           startDate: project.startDate || null,
-          endDate: project.endDate || null,
+          endDate: safeConvertToISOString(project.endDate),
+          // status: project.status || '', // Excluded from change request
         }
       };
-
-      // Add only changed fields to the changes object (excluding createdAt)
+      // Add only changed fields to the changes object (excluding status and createdAt)
       Object.keys(editForm).forEach(key => {
-        if (key !== 'createdAt' && JSON.stringify(editForm[key]) !== JSON.stringify(project[key])) {
+        let originalValue = project[key];
+        if (originalValue && originalValue.seconds) { // Convert Firestore timestamp to ISO string for comparison
+          originalValue = safeConvertToISOString(originalValue);
+        }
+        if (key !== 'status' && key !== 'createdAt' && JSON.stringify(editForm[key]) !== JSON.stringify(originalValue)) {
           changeData.changes[key] = editForm[key];
         }
       });
 
-      // If no changes were made, return
+      // If no changes were made (excluding status), return
       if (Object.keys(changeData.changes).length === 0) {
         alert('No changes detected');
         setIsEditing(false);
@@ -517,11 +523,13 @@ export default function MyProjectInfo() {
       }
 
       await addDoc(changeRequestRef, changeData);
-      
       // Update local state with new values (optimistic update)
-      setProject(prev => ({ ...prev, ...editForm }));
+      setProject(prev => ({ 
+        ...prev, 
+        ...editForm, 
+        endDate: editForm.endDate ? new Date(editForm.endDate) : null 
+      }));
       setIsEditing(false);
-      
       alert('Change request submitted successfully!');
     } catch (error) {
       console.error('Error submitting change request:', error);
@@ -573,7 +581,6 @@ export default function MyProjectInfo() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <Navbar />
-      
       {/* Header */}
       <div className="pt-20 pb-4">
         <div className="max-w-7xl mx-auto px-4">
@@ -584,7 +591,6 @@ export default function MyProjectInfo() {
             <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             <span className="font-medium">Back to My Projects</span>
           </button>
-          
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
               {isEditing ? (
@@ -600,30 +606,16 @@ export default function MyProjectInfo() {
                 </h1>
               )}
               <div className="flex items-center gap-4 text-gray-600">
-                {isEditing ? (
-                  <select
-                    value={editForm.status}
-                    onChange={(e) => handleEditChange('status', e.target.value)}
-                    className="px-3 py-1 rounded-full text-sm font-semibold border border-gray-300 focus:ring-2 focus:ring-color-b"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="active">Active</option>
-                  </select>
-                ) : (
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(project.status)}`}>
-                    {project.status || 'Unknown'}
-                  </span>
-                )}
-                
+                {/* Status is no longer editable */}
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(project.status)}`}>
+                  {project.status || 'Unknown'}
+                </span>
                 {/* Visual cue for pending changes */}
                 {project.hasPendingChanges && (
                   <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
                     Pending Changes
                   </span>
                 )}
-                
                 {isEditing ? (
                   <input
                     type="text"
@@ -639,7 +631,6 @@ export default function MyProjectInfo() {
                 )}
               </div>
             </div>
-            
             <div className="flex gap-3">
               {isEditing ? (
                 <div className="flex gap-3">
@@ -652,7 +643,10 @@ export default function MyProjectInfo() {
                   </button>
                   <button
                     onClick={() => {
-                      setEditForm({ ...project });
+                      setEditForm({ 
+                        ...project, 
+                        endDate: safeFormatDateForInput(project.endDate) 
+                      });
                       setIsEditing(false);
                     }}
                     className="px-4 py-2 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition-colors flex items-center"
@@ -663,11 +657,22 @@ export default function MyProjectInfo() {
                 </div>
               ) : (
                 <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-white/80 text-gray-700 rounded-xl hover:bg-white transition-colors flex items-center"
+                  onClick={checkPendingAndEnableEditing}
+                  disabled={checkingPending}
+                  className={`px-4 py-2 rounded-xl hover:transition-colors flex items-center ${
+                    checkingPending
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-white/80 text-gray-700 hover:bg-white'
+                  }`}
                 >
-                  <FiEdit className="w-4 h-4 mr-2" />
-                  Edit
+                  {checkingPending ? (
+                    <>Checking...</>
+                  ) : (
+                    <>
+                      <FiEdit className="w-4 h-4 mr-2" />
+                      Edit
+                    </>
+                  )}
                 </button>
               )}
               <button className="px-4 py-2 bg-white/80 text-gray-700 rounded-xl hover:bg-white transition-colors flex items-center">
@@ -685,7 +690,6 @@ export default function MyProjectInfo() {
           </div>
         </div>
       </div>
-
       {/* Stats Cards */}
       <div className="max-w-7xl mx-auto px-4 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -700,7 +704,6 @@ export default function MyProjectInfo() {
               </div>
             </div>
           </div>
-
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
@@ -712,7 +715,6 @@ export default function MyProjectInfo() {
               </div>
             </div>
           </div>
-
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
@@ -724,7 +726,6 @@ export default function MyProjectInfo() {
               </div>
             </div>
           </div>
-
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
@@ -738,7 +739,6 @@ export default function MyProjectInfo() {
           </div>
         </div>
       </div>
-
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 mb-8">
         <div className="flex space-x-1 bg-white/50 backdrop-blur-sm rounded-2xl p-1">
@@ -763,7 +763,6 @@ export default function MyProjectInfo() {
           ))}
         </div>
       </div>
-
       {/* Tab Content */}
       <div className="max-w-7xl mx-auto px-4 pb-16">
         {activeTab === 'overview' && (
@@ -785,7 +784,6 @@ export default function MyProjectInfo() {
                     </div>
                   )}
                 </div>
-                
                 <div className="p-8">
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">Project Description</h3>
                   {isEditing ? (
@@ -811,15 +809,29 @@ export default function MyProjectInfo() {
                       </div>
                     </>
                   )}
+                  {/* Editable End Date */}
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Project Due Date
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={editForm.endDate}
+                        onChange={(e) => handleEditChange('endDate', e.target.value)}
+                        className="w-full p-2 border rounded"
+                      />
+                    ) : (
+                      <p className="text-gray-600">{project.endDate ? formatDate(project.endDate) : 'Not set'}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-
             {/* Funding Progress */}
             <div className="space-y-6">
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6">Funding Progress</h3>
-                
                 <div className="mb-6">
                   <div className="flex justify-between text-lg font-semibold text-gray-800 mb-2">
                     <span>{formatCurrency(project.fundedMoney)}</span>
@@ -836,14 +848,12 @@ export default function MyProjectInfo() {
                       )}
                     </span>
                   </div>
-                  
                   <div className="w-full bg-gray-200 rounded-full h-4 mb-3">
                     <div
                       className="bg-gradient-to-r from-color-b to-blue-600 h-4 rounded-full transition-all duration-1000"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>{progress.toFixed(1)}% funded</span>
                     <span>
@@ -853,97 +863,6 @@ export default function MyProjectInfo() {
                     </span>
                   </div>
                 </div>
-
-                {/* Equity Requested Toggle */}
-                <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="font-semibold text-gray-800">Equity Requested</h4>
-                      <p className="text-sm text-gray-600">
-                        {progress >= 85 
-                          ? "Set equity percentage and toggle request" 
-                          : "Project must be 85% or more funded to enable equity requests"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={progress < 85 || updatingEquity}
-                      onClick={toggleEquityRequested}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-                        progress < 85 
-                          ? 'bg-gray-300 cursor-not-allowed opacity-50' 
-                          : project.equity?.equityRequested 
-                            ? 'bg-green-500 hover:bg-green-600' 
-                            : 'bg-gray-300 hover:bg-gray-400'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-200 ${
-                          project.equity?.equityRequested ? 'translate-x-5' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Equity Percentage Input */}
-                  {progress >= 85 && (
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Equity Percentage
-                      </label>
-                      
-                      {/* Percentage Buttons */}
-                      <div className="flex gap-2 mb-3">
-                        {[5, 10, 15, 20].map((percentage) => (
-                          <button
-                            key={percentage}
-                            type="button"
-                            onClick={() => handlePercentageClick(percentage)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              equityPercentage === percentage.toString()
-                                ? 'bg-color-b text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                            }`}
-                          >
-                            {percentage}%
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Custom Input */}
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="1"
-                          max="100"
-                          step="0.1"
-                          value={equityPercentage}
-                          onChange={handlePercentageChange}
-                          placeholder="Enter percentage"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-color-b focus:border-color-b text-sm"
-                        />
-                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                          %
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {progress < 85 && (
-                    <div className="flex items-center text-sm text-orange-600">
-                      <span className="mr-2">⚠️</span>
-                      <span>Current funding: {progress.toFixed(1)}% (Need 85% minimum)</span>
-                    </div>
-                  )}
-                  
-                  {project.equity?.equityRequested && (
-                    <div className="flex items-center text-sm text-green-600 mt-2">
-                      <span className="mr-2">✅</span>
-                      <span>Equity is currently being requested for this project ({project.equity?.equityPercentage || 0}%)</span>
-                    </div>
-                  )}
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-gray-50 rounded-xl">
                     <FiUsers className="w-6 h-6 text-color-b mx-auto mb-2" />
@@ -960,13 +879,11 @@ export default function MyProjectInfo() {
             </div>
           </div>
         )}
-
         {activeTab === 'announcements' && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
             <div className="p-8 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-2xl font-bold text-gray-900">Announcements</h3>
             </div>
-
             <div className="p-8 space-y-6">
               {/* Inline Composer */}
               <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
@@ -1036,7 +953,6 @@ export default function MyProjectInfo() {
             </div>
           </div>
         )}
-
         {activeTab === 'funders' && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
             <div className="p-8 border-b border-gray-200">
@@ -1046,7 +962,6 @@ export default function MyProjectInfo() {
               </h3>
               <p className="text-gray-600 mt-2">People who have supported your project</p>
             </div>
-            
             <div className="p-8">
               {funders.length === 0 ? (
                 <div className="text-center py-12">
@@ -1076,7 +991,6 @@ export default function MyProjectInfo() {
                             </div>
                           </div>
                         </div>
-                        
                         <div className="text-right">
                           <p className="text-2xl font-bold text-color-b">{formatCurrency(funder.totalAmount)}</p>
                           <p className="text-sm text-gray-600">{funder.contributions.length} contribution{funder.contributions.length > 1 ? 's' : ''}</p>
@@ -1091,7 +1005,6 @@ export default function MyProjectInfo() {
                           </button>
                         </div>
                       </div>
-                      
                       {/* Contributions Details */}
                       {expandedFunders[funder.id] && (
                         <div id={`contrib-${funder.id}`} className="mt-4 pt-4 border-t border-gray-200">
@@ -1113,7 +1026,6 @@ export default function MyProjectInfo() {
             </div>
           </div>
         )}
-
         {activeTab === 'timeline' && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
             <div className="p-8 border-b border-gray-200">
@@ -1123,12 +1035,10 @@ export default function MyProjectInfo() {
               </h3>
               <p className="text-gray-600 mt-2">Key dates and milestones for your project</p>
             </div>
-            
             <div className="p-8">
               <div className="relative">
                 {/* Timeline Line */}
                 <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-color-b to-blue-300"></div>
-                
                 <div className="space-y-8">
                   {/* Project Creation */}
                   <div className="relative flex items-start">
@@ -1140,15 +1050,16 @@ export default function MyProjectInfo() {
                           <h4 className="text-lg font-semibold text-gray-900">Project Created</h4>
                         </div>
                         <p className="text-gray-600 mb-1">Your project was successfully created and submitted for review</p>
-                        <p className="text-sm font-medium text-color-b">
-                          {formatDate(project.createdAt) || 'Date not available'}
-                        </p>
+                        {project.createdAt && !isNaN(new Date(project.createdAt).getTime()) && (
+                          <p className="text-sm font-medium text-color-b">
+                            {formatDate(project.createdAt)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
-
                   {/* Campaign Start Date */}
-                  {project.startDate && (
+                  {project.startDate && !isNaN(new Date(project.startDate).getTime()) && (
                     <div className="relative flex items-start">
                       <div className="absolute left-6 w-4 h-4 bg-green-500 rounded-full border-4 border-white shadow-lg"></div>
                       <div className="ml-16">
@@ -1165,9 +1076,8 @@ export default function MyProjectInfo() {
                       </div>
                     </div>
                   )}
-
                   {/* Project Launch (if different from campaign start) */}
-                  {project.launchDate && project.launchDate !== project.startDate && (
+                  {project.launchDate && project.launchDate !== project.startDate && !isNaN(new Date(project.launchDate).getTime()) && (
                     <div className="relative flex items-start">
                       <div className="absolute left-6 w-4 h-4 bg-purple-500 rounded-full border-4 border-white shadow-lg"></div>
                       <div className="ml-16">
@@ -1184,56 +1094,24 @@ export default function MyProjectInfo() {
                       </div>
                     </div>
                   )}
-
-                  {/* Milestones with Toggle Functionality */}
+                  {/* Milestones */}
                   {project.milestones && project.milestones.length > 0 && (
                     project.milestones.map((milestone, index) => (
                       <div key={index} className="relative flex items-start">
-                        <div className={`absolute left-6 w-4 h-4 rounded-full border-4 border-white shadow-lg ${
-                          milestone.milestoneStatus === "Complete" ? 'bg-green-500' : 'bg-yellow-500'
-                        }`}></div>
+                        <div className="absolute left-6 w-4 h-4 bg-yellow-500 rounded-full border-4 border-white shadow-lg"></div>
                         <div className="ml-16">
-                          <div className={`bg-gradient-to-r rounded-xl p-6 border ${
-                            milestone.milestoneStatus === "Complete" 
-                              ? 'from-green-50 to-emerald-50 border-green-200' 
-                              : 'from-yellow-50 to-orange-50 border-yellow-200'
-                          }`}>
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center">
-                                <FiTarget className={`w-5 h-5 mr-2 ${
-                                  milestone.milestoneStatus === "Complete" ? 'text-green-600' : 'text-yellow-600'
-                                }`} />
-                                <h4 className="text-lg font-semibold text-gray-900">
-                                  {milestone.title || `Milestone ${index + 1}`}
-                                </h4>
-                                <span className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${
-                                  milestone.milestoneStatus === "Complete" 
-                                    ? "bg-green-100 text-green-700" 
-                                    : "bg-yellow-100 text-yellow-700"
-                                }`}>
-                                  {milestone.milestoneStatus || "Incomplete"}
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => toggleMilestoneStatus(index, milestone.milestoneStatus || "Incomplete")}
-                                className={`p-2 rounded-lg transition-colors ${
-                                  milestone.milestoneStatus === "Complete"
-                                    ? "text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100"
-                                    : "text-gray-400 hover:text-green-600 bg-gray-100 hover:bg-green-50"
-                                }`}
-                                title={`Mark as ${milestone.milestoneStatus === "Complete" ? "Incomplete" : "Complete"}`}
-                              >
-                                <FiCheck className="w-5 h-5" />
-                              </button>
+                          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
+                            <div className="flex items-center mb-2">
+                              <FiTarget className="w-5 h-5 text-yellow-600 mr-2" />
+                              <h4 className="text-lg font-semibold text-gray-900">
+                                {milestone.title || `Milestone ${index + 1}`}
+                              </h4>
                             </div>
                             <p className="text-gray-600 mb-1">
                               {milestone.description || 'No description provided'}
                             </p>
-                            {milestone.date && (
-                              <p className={`text-sm font-medium ${
-                                milestone.milestoneStatus === "Complete" ? 'text-green-600' : 'text-yellow-600'
-                              }`}>
+                            {milestone.date && !isNaN(new Date(milestone.date).getTime()) && (
+                              <p className="text-sm font-medium text-yellow-600">
                                 {formatDate(milestone.date)}
                               </p>
                             )}
@@ -1247,9 +1125,8 @@ export default function MyProjectInfo() {
                       </div>
                     ))
                   )}
-
                   {/* Campaign End Date */}
-                  {project.endDate && (
+                  {project.endDate && !isNaN(new Date(project.endDate).getTime()) && (
                     <div className="relative flex items-start">
                       <div className={`absolute left-6 w-4 h-4 rounded-full border-4 border-white shadow-lg ${
                         new Date(project.endDate) > new Date() ? 'bg-orange-500' : 'bg-red-500'
@@ -1288,9 +1165,8 @@ export default function MyProjectInfo() {
                       </div>
                     </div>
                   )}
-
                   {/* Project Launch End (if different from campaign end) */}
-                  {project.launchEndDate && project.launchEndDate !== project.endDate && (
+                  {project.launchEndDate && project.launchEndDate !== project.endDate && !isNaN(new Date(project.launchEndDate).getTime()) && (
                     <div className="relative flex items-start">
                       <div className="absolute left-6 w-4 h-4 bg-gray-500 rounded-full border-4 border-white shadow-lg"></div>
                       <div className="ml-16">
@@ -1308,7 +1184,6 @@ export default function MyProjectInfo() {
                     </div>
                   )}
                 </div>
-
                 {/* Current Status Indicator */}
                 <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
                   <h4 className="text-lg font-semibold text-gray-900 mb-2">Current Status</h4>
@@ -1327,14 +1202,12 @@ export default function MyProjectInfo() {
             </div>
           </div>
         )}
-
         {activeTab === 'analytics' && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
               <FiTrendingUp className="w-6 h-6 text-color-b mr-3" />
               Project Analytics
             </h3>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6">
                 <h4 className="font-semibold text-gray-800 mb-2">Average Contribution</h4>
@@ -1342,12 +1215,10 @@ export default function MyProjectInfo() {
                   {funders.length > 0 ? formatCurrency((project.fundedMoney || 0) / funders.length) : '$0'}
                 </p>
               </div>
-              
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6">
                 <h4 className="font-semibold text-gray-800 mb-2">Funding Rate</h4>
                 <p className="text-3xl font-bold text-green-600">{progress.toFixed(1)}%</p>
               </div>
-              
               <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6">
                 <h4 className="font-semibold text-gray-800 mb-2">Total Contributions</h4>
                 <p className="text-3xl font-bold text-purple-600">
