@@ -583,7 +583,97 @@ export default function MyProjectInfo() {
     }
   };
 
-  // Handle project edit save - Only for non-image fields
+  // Handle image updates directly (for both main and secondary images)
+  const handleImageUpdates = async () => {
+    console.log("handleImageUpdates: Starting image update process.");
+    console.log("Current project state (before updates):", project);
+    console.log("Current editForm state (for images/milestones):", {
+      imageUrl: editForm.imageUrl,
+      secondaryImages: editForm.secondaryImages,
+      milestones: editForm.milestones
+    });
+    console.log("New main image file selected:", mainImageFile);
+    console.log("New secondary image files selected:", newSecondaryImageFiles);
+    console.log("Current secondary images in project:", project.secondaryImages);
+
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      let updates = {};
+      let needsUpdate = false;
+
+      // --- Handle Main Image Upload ---
+      if (mainImageFile) {
+        console.log("handleImageUpdates: New main image file detected, starting upload...");
+        const uploadedMainImageUrl = await uploadImage(mainImageFile);
+        console.log("handleImageUpdates: Main image uploaded successfully, URL:", uploadedMainImageUrl);
+        updates.imageUrl = uploadedMainImageUrl;
+        needsUpdate = true;
+      } else {
+        console.log("handleImageUpdates: No new main image file selected, skipping main image upload.");
+      }
+
+      // --- Handle Secondary Image Uploads ---
+      let finalSecondaryImageUrls = [...editForm.secondaryImages]; // Start with existing images from editForm
+      console.log("handleImageUpdates: Initial finalSecondaryImageUrls (from editForm):", finalSecondaryImageUrls);
+
+      if (newSecondaryImageFiles.length > 0) {
+        console.log("handleImageUpdates: New secondary image files detected, starting upload...");
+        const uploadPromises = newSecondaryImageFiles.map(file => uploadImage(file));
+        const uploadedUrls = await Promise.all(uploadPromises);
+        console.log("handleImageUpdates: Secondary images uploaded successfully, URLs:", uploadedUrls);
+        finalSecondaryImageUrls = [...finalSecondaryImageUrls, ...uploadedUrls];
+        console.log("handleImageUpdates: Final secondary image URLs after adding uploads:", finalSecondaryImageUrls);
+        needsUpdate = true;
+      } else {
+        console.log("handleImageUpdates: No new secondary image files selected, skipping secondary image upload.");
+      }
+
+      // Only update secondary images in Firestore if the final list differs from the original project list
+      if (JSON.stringify(finalSecondaryImageUrls) !== JSON.stringify(project.secondaryImages)) {
+        console.log("handleImageUpdates: Secondary images have changed. Adding to updates.");
+        console.log("Original project secondary images:", project.secondaryImages);
+        console.log("Calculated final secondary images:", finalSecondaryImageUrls);
+        updates.secondaryImages = finalSecondaryImageUrls;
+        needsUpdate = true;
+      } else {
+          console.log("handleImageUpdates: Secondary images have NOT changed compared to the original project data, skipping update for this field.");
+      }
+
+      // --- Handle Milestone Updates ---
+      if (JSON.stringify(editForm.milestones) !== JSON.stringify(project.milestones)) {
+        console.log("handleImageUpdates: Milestones have changed. Adding to updates.");
+        console.log("Original project milestones:", project.milestones);
+        console.log("Calculated final milestones:", editForm.milestones);
+        updates.milestones = editForm.milestones;
+        needsUpdate = true;
+      } else {
+          console.log("handleImageUpdates: Milestones have NOT changed compared to the original project data, skipping update for this field.");
+      }
+
+      if (needsUpdate) {
+        console.log("handleImageUpdates: Applying updates to Firestore:", updates);
+        await updateDoc(projectRef, updates);
+        console.log("handleImageUpdates: Firestore update successful.");
+
+        // Optimistic local update for images and milestones
+        setProject(prev => {
+          const updatedProject = {
+            ...prev,
+            ...updates // Apply the direct updates to the project state
+          };
+          console.log("handleImageUpdates: Local project state updated optimistically to:", updatedProject);
+          return updatedProject;
+        });
+      } else {
+        console.log("handleImageUpdates: No image or milestone changes detected that require a Firestore update.");
+      }
+    } catch (error) {
+      console.error('Error within handleImageUpdates:', error);
+      throw error; // Re-throw to be caught by handleEditSave
+    }
+  };
+
+  // Handle project edit save - Only for non-image fields, calls handleImageUpdates first
   const handleEditSave = async () => {
     // Validate funding goal if changed
     if (editForm.fundingGoal && editForm.fundingGoal < project.fundedMoney) {
@@ -592,14 +682,17 @@ export default function MyProjectInfo() {
     }
 
     try {
-      // Prepare changes object, excluding image fields and status
+      // First, handle image and milestone updates directly
+      await handleImageUpdates();
+
+      // Prepare changes object, excluding image fields, milestones, and status
       const changesToSubmit = {};
       Object.keys(editForm).forEach(key => {
         let originalValue = project[key];
         if (originalValue && originalValue.seconds) { // Convert Firestore timestamp to ISO string for comparison
           originalValue = safeConvertToISOString(originalValue);
         }
-        // Exclude status, imageUrl, secondaryImages, and milestones from the change request for *this function*
+        // Exclude status, imageUrl, secondaryImages, and milestones from the change request
         if (key !== 'status' && key !== 'createdAt' && key !== 'imageUrl' && key !== 'secondaryImages' && key !== 'milestones') {
             if (JSON.stringify(editForm[key]) !== JSON.stringify(originalValue)) {
               changesToSubmit[key] = editForm[key];
@@ -656,11 +749,8 @@ export default function MyProjectInfo() {
         endDate: editForm.endDate ? new Date(editForm.endDate) : null 
       }));
 
-      // Now handle image updates directly
-      await handleImageUpdates();
-
       setIsEditing(false);
-      alert('Change request for other fields submitted successfully! Image changes applied directly.');
+      alert('Change request for other fields submitted successfully! Image and milestone changes applied directly.');
 
       // Reset new image states after successful save
       setNewSecondaryImageFiles([]);
@@ -675,62 +765,8 @@ export default function MyProjectInfo() {
     }
   };
 
-  // Handle image updates directly (for both main and secondary images)
-  const handleImageUpdates = async () => {
-    try {
-      const projectRef = doc(db, 'projects', project.id);
-      let updates = {};
-      let needsUpdate = false;
+  // console.log(project);
 
-      // Handle Main Image Upload
-      if (mainImageFile) {
-        console.log("Uploading new main image...");
-        const uploadedMainImageUrl = await uploadImage(mainImageFile);
-        updates.imageUrl = uploadedMainImageUrl;
-        needsUpdate = true;
-        console.log("New main image URL:", uploadedMainImageUrl);
-      }
-
-      // Handle Secondary Image Uploads
-      let finalSecondaryImageUrls = [...editForm.secondaryImages]; // Start with existing images
-      if (newSecondaryImageFiles.length > 0) {
-        console.log("Uploading new secondary images...");
-        const uploadPromises = newSecondaryImageFiles.map(file => uploadImage(file));
-        const uploadedUrls = await Promise.all(uploadPromises);
-        finalSecondaryImageUrls = [...finalSecondaryImageUrls, ...uploadedUrls];
-        console.log("Final secondary image URLs after upload:", finalSecondaryImageUrls);
-        needsUpdate = true;
-      }
-
-      // Only update secondary images if there were changes
-      if (JSON.stringify(finalSecondaryImageUrls) !== JSON.stringify(project.secondaryImages)) {
-        updates.secondaryImages = finalSecondaryImageUrls;
-        needsUpdate = true;
-      }
-
-      // Handle Milestone Updates
-      if (JSON.stringify(editForm.milestones) !== JSON.stringify(project.milestones)) {
-        updates.milestones = editForm.milestones;
-        needsUpdate = true;
-      }
-
-      if (needsUpdate) {
-        await updateDoc(projectRef, updates);
-
-        // Optimistic local update for images and milestones
-        setProject(prev => ({
-          ...prev,
-          ...updates // Apply the direct updates to the project state
-        }));
-        console.log("Project images and milestones updated directly in Firestore.");
-      } else {
-        console.log("No image or milestone changes to apply directly.");
-      }
-    } catch (error) {
-      console.error('Error updating images or milestones directly:', error);
-      throw error; // Re-throw to be caught by handleEditSave
-    }
-  };
 
   if (loading) {
     return (
@@ -772,7 +808,6 @@ export default function MyProjectInfo() {
 
   const progress = getProgressPercentage();
   const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
-  console.log(project);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
