@@ -41,7 +41,7 @@ npm install gsap/react
     react-router-dom
     tailwindcss
 ```
-### More dependencies might be used in the future so check [packages.json](https://github.com/Korvowastaken/CrowdFundingproj/main/package.json)
+### More dependencies might be used in the future so check [packages.json](https://github.com/Korvowastaken/CrowdFundingproj/blob/main/package.json)
 ```
 # Start development server
 npm run dev
