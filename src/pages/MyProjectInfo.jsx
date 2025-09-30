@@ -23,9 +23,37 @@ import {
   FiTarget,
   FiFlag,
   FiPlay,
-  FiStopCircle
+  FiStopCircle,
+  FiPlus, // Added for adding images
+  FiTrash2 // Added for removing images
 } from 'react-icons/fi';
 import Navbar from '../components/NavBar';
+
+// --- Helper function for image upload (similar to CreateProjectForm) ---
+const toBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = (error) => reject(error);
+  });
+
+const uploadImage = async (file) => {
+  const apiKey = import.meta.env.VITE_IMGBB_API_KEY; // Ensure you have this API key set
+  if (!apiKey) throw new Error("Missing ImgBB API key");
+  const base64Image = await toBase64(file);
+  const formDataObj = new FormData();
+  formDataObj.append("image", base64Image);
+  const response = await fetch(
+    `https://api.imgbb.com/1/upload?key=${apiKey}`,
+    { method: "POST", body: formDataObj }
+  );
+  const data = await response.json();
+  if (!data.success) throw new Error("Image upload failed");
+  return data.data.url;
+};
+// --- End of helper functions ---
+
 export default function MyProjectInfo() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -43,8 +71,15 @@ export default function MyProjectInfo() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [checkingPending, setCheckingPending] = useState(false); // New state for checking
+  const [isMilestonesExpanded, setIsMilestonesExpanded] = useState(true); // State for milestones collapse
+  const [newSecondaryImageFiles, setNewSecondaryImageFiles] = useState([]); // Store File objects for upload
+  const [previewSecondaryImageUrls, setPreviewSecondaryImageUrls] = useState([]); // Store preview URLs
+  const [mainImageFile, setMainImageFile] = useState(null); // Store new main image File object
+  const [previewMainImageUrl, setPreviewMainImageUrl] = useState(""); // Store preview URL for main image
+
   const auth = getAuth();
   const user = auth.currentUser;
+
   // Safe date formatting helper
   const safeFormatDateForInput = (dateValue) => {
     if (!dateValue) return '';
@@ -66,6 +101,7 @@ export default function MyProjectInfo() {
       return '';
     }
   };
+
   // Safe date conversion to ISO string
   const safeConvertToISOString = (dateValue) => {
     if (!dateValue) return null;
@@ -87,6 +123,7 @@ export default function MyProjectInfo() {
       return null;
     }
   };
+
   useEffect(() => {
     const fetchProjectAndFunders = async () => {
       if (!user || !id) return;
@@ -113,7 +150,9 @@ export default function MyProjectInfo() {
           shortDescription: projectData.shortDescription || '',
           longDescription: projectData.longDescription || '',
           category: projectData.category || '',
-          endDate: safeFormatDateForInput(projectData.endDate)
+          endDate: safeFormatDateForInput(projectData.endDate),
+          secondaryImages: [...projectData.secondaryImages || []], // Initialize edit form with secondary images
+          milestones: { ...projectData.milestones || {} } // Initialize milestones
         });
         // Fetch funders data from transactions
         const transactionsQuery = query(
@@ -184,6 +223,7 @@ export default function MyProjectInfo() {
     };
     fetchProjectAndFunders();
   }, [id, user]);
+
   useEffect(() => {
     const checkPendingChanges = async () => {
       if (!project?.id) return;
@@ -206,6 +246,81 @@ export default function MyProjectInfo() {
     };
     checkPendingChanges();
   }, [project?.id]);
+
+  // Handle main image file selection
+  const handleMainImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type.startsWith('image/')) {
+      // Revoke old preview URL if it exists
+      if (previewMainImageUrl) URL.revokeObjectURL(previewMainImageUrl);
+
+      const previewUrl = URL.createObjectURL(file); // Create preview URL
+      setPreviewMainImageUrl(previewUrl);
+      setMainImageFile(file); // Add File object to state
+    }
+  };
+
+  // Handle secondary image file selection
+  const handleSecondaryImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const newPreviews = [];
+    const newFileObjects = [...newSecondaryImageFiles]; // Start with existing files
+
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const previewUrl = URL.createObjectURL(file); // Create preview URL
+        newPreviews.push(previewUrl);
+        newFileObjects.push(file); // Add File object to the list to upload later
+      }
+    });
+
+    // Update states
+    setNewSecondaryImageFiles(newFileObjects);
+    setPreviewSecondaryImageUrls(prev => [...prev, ...newPreviews]);
+  };
+
+  // Remove a new secondary image before saving
+  const removeNewSecondaryImage = (indexToRemove) => {
+    const newFiles = newSecondaryImageFiles.filter((_, index) => index !== indexToRemove);
+    const newPreviews = previewSecondaryImageUrls.filter((_, index) => index !== indexToRemove);
+    setNewSecondaryImageFiles(newFiles);
+    setPreviewSecondaryImageUrls(newPreviews);
+
+    // Revoke the old URL to free up memory
+    URL.revokeObjectURL(previewSecondaryImageUrls[indexToRemove]);
+  };
+
+  // Remove an existing secondary image
+  const removeExistingSecondaryImage = (indexToRemove) => {
+    setEditForm(prev => {
+      const updatedImages = [...prev.secondaryImages];
+      updatedImages.splice(indexToRemove, 1);
+      return { ...prev, secondaryImages: updatedImages };
+    });
+  };
+
+  // Remove the new main image
+  const removeNewMainImage = () => {
+    if (previewMainImageUrl) URL.revokeObjectURL(previewMainImageUrl);
+    setPreviewMainImageUrl("");
+    setMainImageFile(null);
+  };
+
+  // Handle milestone description change
+  const handleMilestoneChange = (percentage, value) => {
+    setEditForm(prev => ({
+      ...prev,
+      milestones: {
+        ...prev.milestones,
+        [percentage]: { ...prev.milestones[percentage], description: value }
+      }
+    }));
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -214,6 +329,7 @@ export default function MyProjectInfo() {
       maximumFractionDigits: 0
     }).format(amount || 0);
   };
+
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Unknown';
     try {
@@ -250,10 +366,12 @@ export default function MyProjectInfo() {
       return 'Invalid date';
     }
   };
+
   const getProgressPercentage = () => {
     if (!project?.fundingGoal || !project?.fundedMoney) return 0;
     return Math.min((project.fundedMoney / project.fundingGoal) * 100, 100);
   };
+
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'pending':
@@ -268,6 +386,7 @@ export default function MyProjectInfo() {
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+
   // Toggle a single funder's contribution history
   const toggleFunder = (funderId) => {
     setExpandedFunders((prev) => ({
@@ -275,6 +394,7 @@ export default function MyProjectInfo() {
       [funderId]: !prev[funderId],
     }));
   };
+
   // Announcements helpers
   const getAnnouncementsArray = () => {
     if (!project?.announcements || typeof project.announcements !== 'object') return [];
@@ -286,16 +406,19 @@ export default function MyProjectInfo() {
     });
     return items;
   };
+
   const startEditAnnouncement = (a) => {
     setEditingAnnouncementId(a.id);
     setEditTitle(a.title || "");
     setEditContent(a.content || "");
   };
+
   const cancelEditAnnouncement = () => {
     setEditingAnnouncementId(null);
     setEditTitle("");
     setEditContent("");
   };
+
   const saveEditAnnouncement = async () => {
     if (!editingAnnouncementId || !project?.id) return;
     try {
@@ -322,6 +445,7 @@ export default function MyProjectInfo() {
       alert('Failed to save announcement');
     }
   };
+
   const deleteAnnouncement = async (announcementId) => {
     if (!project?.id) return;
     const confirmed = window.confirm('Delete this announcement? This cannot be undone.');
@@ -347,6 +471,7 @@ export default function MyProjectInfo() {
       alert('Failed to delete announcement');
     }
   };
+
   // Create a new announcement in project's announcements map
   const handleCreateAnnouncement = async () => {
     if (!project?.id) return;
@@ -386,11 +511,17 @@ export default function MyProjectInfo() {
       alert('Failed to create announcement');
     }
   };
-  // Handle project edit form changes (excluding status)
+
+  // Handle project edit form changes (excluding status, imageUrl, secondaryImages, milestones)
   const handleEditChange = (field, value) => {
     // Prevent editing status
     if (field === 'status') {
       console.warn("Status editing is disabled.");
+      return;
+    }
+    // Prevent editing image fields directly through text inputs
+    if (field === 'imageUrl' || field === 'secondaryImages') {
+      console.warn(`Editing ${field} is handled separately.`);
       return;
     }
     setEditForm(prev => ({
@@ -398,6 +529,7 @@ export default function MyProjectInfo() {
       [field]: value
     }));
   };
+
   // Check for pending requests and enable editing if allowed
   const checkPendingAndEnableEditing = async () => {
     if (!project?.id || checkingPending) return; // Prevent multiple clicks during check
@@ -434,8 +566,15 @@ export default function MyProjectInfo() {
       setIsEditing(true);
       setEditForm({ 
         ...project, 
-        endDate: safeFormatDateForInput(project.endDate) 
+        endDate: safeFormatDateForInput(project.endDate),
+        secondaryImages: [...project.secondaryImages || []], // Reset secondary images to project's current state
+        milestones: { ...project.milestones || {} } // Reset milestones to project's current state
       });
+      setNewSecondaryImageFiles([]); // Clear any new files added during a previous edit attempt
+      setPreviewSecondaryImageUrls([]); // Clear previews
+      setMainImageFile(null); // Clear new main image file
+      if (previewMainImageUrl) URL.revokeObjectURL(previewMainImageUrl); // Revoke old preview
+      setPreviewMainImageUrl(""); // Clear main image preview
     } catch (error) {
       console.error('Error checking/deleting pending change request:', error);
       alert('An error occurred while checking for pending changes. Please try again.');
@@ -443,20 +582,46 @@ export default function MyProjectInfo() {
       setCheckingPending(false);
     }
   };
-  // Handle project edit save
+
+  // Handle project edit save - Only for non-image fields
   const handleEditSave = async () => {
     // Validate funding goal if changed
     if (editForm.fundingGoal && editForm.fundingGoal < project.fundedMoney) {
       alert(`Funding goal cannot be less than already funded amount (${formatCurrency(project.fundedMoney)})`);
       return;
     }
+
     try {
-      // Create change request document
+      // Prepare changes object, excluding image fields and status
+      const changesToSubmit = {};
+      Object.keys(editForm).forEach(key => {
+        let originalValue = project[key];
+        if (originalValue && originalValue.seconds) { // Convert Firestore timestamp to ISO string for comparison
+          originalValue = safeConvertToISOString(originalValue);
+        }
+        // Exclude status, imageUrl, secondaryImages, and milestones from the change request for *this function*
+        if (key !== 'status' && key !== 'createdAt' && key !== 'imageUrl' && key !== 'secondaryImages' && key !== 'milestones') {
+            if (JSON.stringify(editForm[key]) !== JSON.stringify(originalValue)) {
+              changesToSubmit[key] = editForm[key];
+            }
+        }
+      });
+
+      // Check if any non-image changes were made
+      const hasNonImageChanges = Object.keys(changesToSubmit).length > 0;
+
+      if (!hasNonImageChanges) {
+        alert('No non-image changes detected');
+        setIsEditing(false);
+        return;
+      }
+
+      // Create change request document for non-image fields
       const changeRequestRef = collection(db, 'changeRequests');
       const changeData = {
         projectId: project.id,
         userId: user.uid,
-        changes: {},
+        changes: changesToSubmit, // Only non-image changes
         status: 'pending',
         createdAt: serverTimestamp(),
         originalValues: {
@@ -470,36 +635,103 @@ export default function MyProjectInfo() {
           // status: project.status || '', // Excluded from change request
         }
       };
-      // Add only changed fields to the changes object (excluding status and createdAt)
-      Object.keys(editForm).forEach(key => {
-        let originalValue = project[key];
-        if (originalValue && originalValue.seconds) { // Convert Firestore timestamp to ISO string for comparison
-          originalValue = safeConvertToISOString(originalValue);
-        }
-        if (key !== 'status' && key !== 'createdAt' && JSON.stringify(editForm[key]) !== JSON.stringify(originalValue)) {
-          changeData.changes[key] = editForm[key];
+
+      // Add original values for other fields that might be changing
+      Object.keys(changesToSubmit).forEach(key => {
+        if (project.hasOwnProperty(key) && key !== 'status' && key !== 'createdAt') {
+          let originalValue = project[key];
+          if (originalValue && originalValue.seconds) {
+            originalValue = safeConvertToISOString(originalValue);
+          }
+          changeData.originalValues[key] = originalValue;
         }
       });
-      // If no changes were made (excluding status), return
-      if (Object.keys(changeData.changes).length === 0) {
-        alert('No changes detected');
-        setIsEditing(false);
-        return;
-      }
+
       await addDoc(changeRequestRef, changeData);
-      // Update local state with new values (optimistic update)
+
+      // Update local state with non-image changes (optimistic update)
       setProject(prev => ({ 
         ...prev, 
-        ...editForm, 
+        ...changesToSubmit, // Apply only the changes submitted in the request
         endDate: editForm.endDate ? new Date(editForm.endDate) : null 
       }));
+
+      // Now handle image updates directly
+      await handleImageUpdates();
+
       setIsEditing(false);
-      alert('Change request submitted successfully!');
+      alert('Change request for other fields submitted successfully! Image changes applied directly.');
+
+      // Reset new image states after successful save
+      setNewSecondaryImageFiles([]);
+      setPreviewSecondaryImageUrls([]);
+      setMainImageFile(null);
+      if (previewMainImageUrl) URL.revokeObjectURL(previewMainImageUrl);
+      setPreviewMainImageUrl("");
+
     } catch (error) {
-      console.error('Error submitting change request:', error);
-      alert('Failed to submit change request');
+      console.error('Error submitting change request or updating images:', error);
+      alert('Failed to submit change request or update images');
     }
   };
+
+  // Handle image updates directly (for both main and secondary images)
+  const handleImageUpdates = async () => {
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      let updates = {};
+      let needsUpdate = false;
+
+      // Handle Main Image Upload
+      if (mainImageFile) {
+        console.log("Uploading new main image...");
+        const uploadedMainImageUrl = await uploadImage(mainImageFile);
+        updates.imageUrl = uploadedMainImageUrl;
+        needsUpdate = true;
+        console.log("New main image URL:", uploadedMainImageUrl);
+      }
+
+      // Handle Secondary Image Uploads
+      let finalSecondaryImageUrls = [...editForm.secondaryImages]; // Start with existing images
+      if (newSecondaryImageFiles.length > 0) {
+        console.log("Uploading new secondary images...");
+        const uploadPromises = newSecondaryImageFiles.map(file => uploadImage(file));
+        const uploadedUrls = await Promise.all(uploadPromises);
+        finalSecondaryImageUrls = [...finalSecondaryImageUrls, ...uploadedUrls];
+        console.log("Final secondary image URLs after upload:", finalSecondaryImageUrls);
+        needsUpdate = true;
+      }
+
+      // Only update secondary images if there were changes
+      if (JSON.stringify(finalSecondaryImageUrls) !== JSON.stringify(project.secondaryImages)) {
+        updates.secondaryImages = finalSecondaryImageUrls;
+        needsUpdate = true;
+      }
+
+      // Handle Milestone Updates
+      if (JSON.stringify(editForm.milestones) !== JSON.stringify(project.milestones)) {
+        updates.milestones = editForm.milestones;
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+        await updateDoc(projectRef, updates);
+
+        // Optimistic local update for images and milestones
+        setProject(prev => ({
+          ...prev,
+          ...updates // Apply the direct updates to the project state
+        }));
+        console.log("Project images and milestones updated directly in Firestore.");
+      } else {
+        console.log("No image or milestone changes to apply directly.");
+      }
+    } catch (error) {
+      console.error('Error updating images or milestones directly:', error);
+      throw error; // Re-throw to be caught by handleEditSave
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -514,6 +746,7 @@ export default function MyProjectInfo() {
       </div>
     );
   }
+
   if (error || !project) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -536,8 +769,11 @@ export default function MyProjectInfo() {
       </div>
     );
   }
+
   const progress = getProgressPercentage();
   const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+  console.log(project);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <Navbar />
@@ -599,15 +835,22 @@ export default function MyProjectInfo() {
                     className="px-4 py-2 bg-color-b text-white rounded-xl hover:bg-blue-600 transition-colors flex items-center"
                   >
                     <FiSave className="w-4 h-4 mr-2" />
-                    Submit Request
+                    Submit Request (Non-Image)
                   </button>
                   <button
                     onClick={() => {
                       setEditForm({ 
                         ...project, 
-                        endDate: safeFormatDateForInput(project.endDate) 
+                        endDate: safeFormatDateForInput(project.endDate),
+                        secondaryImages: [...project.secondaryImages || []], // Reset images on cancel
+                        milestones: { ...project.milestones || {} } // Reset milestones on cancel
                       });
                       setIsEditing(false);
+                      setNewSecondaryImageFiles([]); // Clear new files on cancel
+                      setPreviewSecondaryImageUrls([]); // Clear previews on cancel
+                      setMainImageFile(null); // Clear new main image on cancel
+                      if (previewMainImageUrl) URL.revokeObjectURL(previewMainImageUrl); // Revoke old preview on cancel
+                      setPreviewMainImageUrl(""); // Clear main image preview on cancel
                     }}
                     className="px-4 py-2 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition-colors flex items-center"
                   >
@@ -722,21 +965,70 @@ export default function MyProjectInfo() {
       <div className="max-w-7xl mx-auto px-4 pb-16">
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Project Details */}
+            {/* Project Details & Milestones (Combined in the left column - spans 2 columns) */}
             <div className="lg:col-span-2 space-y-8">
               {/* Project Image and Description */}
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
                 <div className="relative h-64">
-                  {project.imageUrl ? (
-                    <img
-                      src={project.imageUrl}
-                      alt={project.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                      <span className="text-gray-400 text-lg">No Image</span>
+                  {isEditing ? (
+                    // Editing Mode for Main Image
+                    <div className="w-full h-full flex flex-col justify-center items-center p-4">
+                      {previewMainImageUrl ? (
+                        <div className="relative w-full h-full flex flex-col justify-between">
+                          <img
+                            src={previewMainImageUrl}
+                            alt="Main Preview"
+                            className="w-full h-full object-contain rounded-lg shadow-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={removeNewMainImage}
+                            className="mt-2 px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs flex items-center justify-center"
+                          >
+                            <FiTrash2 className="w-3 h-3 mr-1" />
+                            Remove New Image
+                          </button>
+                        </div>
+                      ) : project.imageUrl ? (
+                        <img
+                          src={project.imageUrl}
+                          alt={project.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                          <span className="text-gray-400 text-lg">No Image</span>
+                        </div>
+                      )}
+                      <input
+                        id="mainImageInput"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleMainImageChange}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => document.getElementById("mainImageInput").click()}
+                        className="mt-4 bg-white text-gray-800 px-4 py-2 rounded-lg shadow hover:bg-gray-100"
+                      >
+                        {previewMainImageUrl ? 'Change Main Image' : 'Upload Main Image'}
+                      </button>
                     </div>
+                  ) : (
+                    // View Mode for Main Image
+                    <>
+                      {project.imageUrl ? (
+                        <img
+                          src={project.imageUrl}
+                          alt={project.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                          <span className="text-gray-400 text-lg">No Image</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="p-8">
@@ -782,8 +1074,149 @@ export default function MyProjectInfo() {
                   </div>
                 </div>
               </div>
+
+              {/* Secondary Images Section */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-2xl font-bold text-gray-900">Project Images</h3>
+                </div>
+                <div className="p-6">
+                  {isEditing ? (
+                    <>
+                      {/* Editing Mode - Show existing and new images with remove buttons */}
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Upload New Images</label>
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={handleSecondaryImageChange}
+                          className="block w-full text-sm text-gray-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-color-b file:text-white
+                            hover:file:bg-blue-600"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {/* Render existing images from editForm.secondaryImages */}
+                        {editForm.secondaryImages && editForm.secondaryImages.map((imgUrl, index) => (
+                          <div key={`existing-${index}`} className="relative group">
+                            <img
+                              src={imgUrl}
+                              alt={`Project ${index + 1}`}
+                              className="w-full h-32 object-cover rounded-lg"
+                              onError={(e) => { e.target.src = 'https://via.placeholder.com/200x150?text=Image+Error'; }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeExistingSecondaryImage(index)}
+                              className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label="Remove image"
+                            >
+                              <FiTrash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                        {/* Render new preview images */}
+                        {previewSecondaryImageUrls.map((previewUrl, index) => (
+                          <div key={`new-${index}`} className="relative group">
+                            <img
+                              src={previewUrl}
+                              alt="New preview"
+                              className="w-full h-32 object-cover rounded-lg"
+                              onError={(e) => { e.target.src = 'https://via.placeholder.com/200x150?text=Preview+Error'; }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeNewSecondaryImage(index)}
+                              className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label="Remove new image"
+                            >
+                              <FiTrash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    // View Mode - Show existing images from project data
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {project.secondaryImages && project.secondaryImages.map((imgUrl, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={imgUrl}
+                            alt={`Project ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg"
+                            onError={(e) => { e.target.src = 'https://via.placeholder.com/200x150?text=Image+Error'; }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Milestones Card - Now placed inside the left column */}
+              {project.milestones && (
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+                  <button
+                    onClick={() => setIsMilestonesExpanded(!isMilestonesExpanded)}
+                    className="w-full p-6 flex items-center justify-between bg-transparent border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center">
+                      <FiTarget className="w-6 h-6 text-color-b mr-3" />
+                      <h3 className="text-2xl font-bold text-gray-900">Project Milestones</h3>
+                    </div>
+                    <FiChevronDown className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${isMilestonesExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isMilestonesExpanded && (
+                    <div className="p-6">
+                      <div className="space-y-4">
+                        {Object.entries(editForm.milestones || project.milestones).map(([percentage, milestone]) => (
+                          <div key={percentage} className="relative">
+                            {/* Connecting Line */}
+                            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                            {/* Milestone Item */}
+                            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 relative">
+                              <div className="flex items-center">
+                                <div className={`absolute left-4 w-10 h-10 rounded-full ${
+                                  percentage === '25' ? 'bg-blue-500' :
+                                  percentage === '50' ? 'bg-purple-500' :
+                                  percentage === '75' ? 'bg-orange-500' : 'bg-green-500'
+                                } flex items-center justify-center text-white font-bold`}>
+                                  {percentage}%
+                                </div>
+                                <div className="ml-16">
+                                  <h4 className="font-semibold text-gray-900">Funding Goal: {percentage}%</h4>
+                                  {isEditing ? (
+                                    <textarea
+                                      value={milestone.description || ''}
+                                      onChange={(e) => handleMilestoneChange(percentage, e.target.value)}
+                                      className="w-full p-2 border rounded mt-2 text-sm"
+                                      rows="2"
+                                    />
+                                  ) : (
+                                    <p className="text-gray-700">{milestone.description || 'No description provided.'}</p>
+                                  )}
+                                  <div className="mt-2">
+                                    <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border-yellow-200">
+                                      Pending
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            {/* Funding Progress */}
+            {/* Funding Progress (Right column - spans 1 column) */}
             <div className="space-y-6">
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6">Funding Progress</h3>
