@@ -4,7 +4,7 @@ import { db } from "../firebase/firebase-config";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage, FiChevronRight, FiChevronLeft, FiUpload, FiCheck, FiX, FiPlus, FiTrash2, FiTarget } from "react-icons/fi";
+import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage, FiChevronRight, FiChevronLeft, FiUpload, FiCheck, FiX } from "react-icons/fi";
 import imgLogo from '../assets/images/img-logo.svg'
 import { useAuth } from "../context/AuthContext";
 
@@ -20,9 +20,6 @@ export default function CreateProjectForm() {
     longDescription: "",
     fundingGoal: "",
     endDate: "",
-    projectStartDate: "",
-    projectLaunchDate: "",
-    milestones: [],
     imageFile: null,
   });
   const [loading, setLoading] = useState(false);
@@ -49,110 +46,7 @@ export default function CreateProjectForm() {
     setFormData((prev) => ({ ...prev, imageFile: e.target.files[0] }));
   };
 
-  const getTodayDate = () => {
-    return new Date().toISOString().split('T')[0];
-  };
-
-  const addDaysToDate = (dateString, days) => {
-    if (!dateString) return null;
-    const date = new Date(dateString);
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
-  };
-
-  const getMilestoneMinDate = (currentIndex) => {
-    if (currentIndex === 0) {
-      // First milestone: minimum is project start date
-      return formData.projectStartDate || getTodayDate();
-    } else {
-      // Subsequent milestones: minimum is previous milestone date + 1 day
-      const previousMilestone = formData.milestones[currentIndex - 1];
-      if (previousMilestone && previousMilestone.date) {
-        return addDaysToDate(previousMilestone.date, 1);
-      } else {
-        // If previous milestone doesn't have a date, use project start date
-        return formData.projectStartDate || getTodayDate();
-      }
-    }
-  };
-
-  const getRelativeDateLabel = (targetDate, referenceDate, referenceLabel) => {
-    if (!targetDate || !referenceDate) return "";
-    
-    const target = new Date(targetDate);
-    const reference = new Date(referenceDate);
-    const diffTime = target - reference;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return `${Math.abs(diffDays)} days before ${referenceLabel}`;
-    if (diffDays === 0) return `Same day as ${referenceLabel}`;
-    if (diffDays < 30) return `${diffDays} days after ${referenceLabel}`;
-    
-    const months = Math.floor(diffDays / 30);
-    const remainingDays = diffDays % 30;
-    
-    if (remainingDays === 0) {
-      return `${months} month${months > 1 ? 's' : ''} after ${referenceLabel}`;
-    } else {
-      return `${months} month${months > 1 ? 's' : ''} and ${remainingDays} days after ${referenceLabel}`;
-    }
-  };
-
-  const getDaysFromNow = (targetDate) => {
-    if (!targetDate) return "";
-    
-    const target = new Date(targetDate);
-    const today = new Date();
-    const diffTime = target - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return `${Math.abs(diffDays)} days ago`;
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Tomorrow";
-    return `${diffDays} days from now`;
-  };
-
-  const canAddMilestone = () => {
-    if (!formData.projectLaunchDate) return false;
-    if (formData.milestones.length === 0) return true;
-    
-    const lastMilestone = formData.milestones[formData.milestones.length - 1];
-    return lastMilestone.title.trim() !== "" && 
-           lastMilestone.description.trim() !== "" && 
-           lastMilestone.date !== "";
-  };
-
-  const addMilestone = () => {
-    if (!canAddMilestone()) return;
-    
-    const newMilestone = {
-      id: Date.now(),
-      title: "",
-      description: "",
-      date: "",
-      milestoneStatus: "Incomplete"
-    };
-    setFormData((prev) => ({
-      ...prev,
-      milestones: [...prev.milestones, newMilestone]
-    }));
-  };
-
-  const removeMilestone = (id) => {
-    setFormData((prev) => ({
-      ...prev,
-      milestones: prev.milestones.filter(milestone => milestone.id !== id)
-    }));
-  };
-
-  const updateMilestone = (id, field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      milestones: prev.milestones.map(milestone =>
-        milestone.id === id ? { ...milestone, [field]: value } : milestone
-      )
-    }));
-  };
+ 
 
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -198,58 +92,10 @@ export default function CreateProjectForm() {
     if (!formData.shortDescription) return setMessage("❌ Short description is missing");
     if (!formData.longDescription) return setMessage("❌ Long description is missing");
     if (!formData.fundingGoal) return setMessage("❌ Funding goal is missing");
-    if (!formData.endDate) return setMessage("❌ Campaign end date is missing");
-    if (!formData.projectStartDate) return setMessage("❌ Project start date is missing");
-    if (!formData.projectLaunchDate) return setMessage("❌ Project launch date is missing");
+    if (!formData.endDate) return setMessage("❌ End date is missing");
     if (!formData.imageFile) return setMessage("❌ Image not uploaded");
 
-    // Validate date sequence
-    const endDate = new Date(formData.endDate);
-    const startDate = new Date(formData.projectStartDate);
-    const launchDate = new Date(formData.projectLaunchDate);
     
-    if (startDate < endDate) {
-      setLoading(false);
-      return setMessage("❌ Project start date must be on or after campaign end date");
-    }
-    
-    // Check for minimum one day gap between start and launch
-    const timeDiff = launchDate - startDate;
-    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-    
-    if (daysDiff < 1) {
-      setLoading(false);
-      return setMessage("❌ Project launch date must be at least one day after project start date");
-    }
-
-    // Validate milestone date sequence
-    for (let i = 0; i < formData.milestones.length; i++) {
-      const milestone = formData.milestones[i];
-      if (milestone.date) {
-        const milestoneDate = new Date(milestone.date);
-        
-        // Check if milestone is after project start
-        if (milestoneDate < startDate) {
-          setLoading(false);
-          return setMessage(`❌ Milestone ${i + 1} date must be on or after project start date`);
-        }
-        
-        // Check if milestone is before project launch
-        if (milestoneDate >= launchDate) {
-          setLoading(false);
-          return setMessage(`❌ Milestone ${i + 1} date must be before project launch date`);
-        }
-        
-        // Check if milestone is after previous milestone (if exists)
-        if (i > 0 && formData.milestones[i - 1].date) {
-          const prevMilestoneDate = new Date(formData.milestones[i - 1].date);
-          if (milestoneDate <= prevMilestoneDate) {
-            setLoading(false);
-            return setMessage(`❌ Milestone ${i + 1} date must be after milestone ${i} date`);
-          }
-        }
-      }
-    }
 
     try {
       const auth = getAuth();
@@ -309,9 +155,6 @@ export default function CreateProjectForm() {
         longDescription: "",
         fundingGoal: "",
         endDate: "",
-        projectStartDate: "",
-        projectLaunchDate: "",
-        milestones: [],
         imageFile: null,
       });
       navigate("/projects");
@@ -523,232 +366,37 @@ export default function CreateProjectForm() {
       </div>
     </div>,
 
-    <div className="space-y-4 w-full h-full flex flex-col">
-      <div className="text-center mb-4 flex-shrink-0">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">Project Timeline</h2>
-        <p className="text-sm text-gray-600">Set your campaign and project timeline</p>
+    <div className="space-y-4 w-full h-full overflow-hidden flex flex-col items-center justify-center">
+      <div className="text-center mb-4">
+        <h2 className="text-lg font-bold text-gray-800 mb-1">Campaign Timeline</h2>
+        <p className="text-sm text-gray-600">When should your campaign end?</p>
       </div>
       
-      <div className="space-y-4 flex-1 overflow-y-auto pr-2">
-        {/* Campaign End Date */}
+      <div className="w-full max-w-sm">
+
+      
         <div className="relative group">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Campaign End Date *</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 text-center">Campaign End Date *</label>
+
           <div className="relative">
-            <FiCalendar className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400 group-focus-within:text-color-b transition-colors" />
+            <FiCalendar className="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-400 group-focus-within:text-color-b transition-colors" />
+
             <input 
               type="date" 
               name="endDate" 
               value={formData.endDate} 
               onChange={handleChange}
-              min={getTodayDate()}
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 text-sm" 
+              className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 text-center text-lg" 
+
             />
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            When your funding campaign will end (cannot be before today)
-            {formData.endDate && (
-              <span className="text-blue-600 font-medium ml-2">
-                ({getDaysFromNow(formData.endDate)})
-              </span>
-            )}
-          </p>
+          <p className="text-xs text-gray-500 mt-2 text-center">Choose a date at least 30 days from today</p>
+
         </div>
 
-        {/* Project Start Date */}
-        <div className={`relative group ${!formData.endDate ? 'opacity-50' : ''}`}>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Project Development Start Date *
-            {!formData.endDate && <span className="text-red-500 ml-1">(Select campaign end date first)</span>}
-          </label>
-          <div className="relative">
-            <FiCalendar className={`absolute top-1/2 left-3 transform -translate-y-1/2 transition-colors ${
-              !formData.endDate ? 'text-gray-300' : 'text-gray-400 group-focus-within:text-color-b'
-            }`} />
-            <input 
-              type="date" 
-              name="projectStartDate" 
-              value={formData.projectStartDate} 
-              onChange={handleChange}
-              min={formData.endDate || getTodayDate()}
-              disabled={!formData.endDate}
-              className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl transition-all duration-300 text-sm ${
-                !formData.endDate 
-                  ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed' 
-                  : 'border-gray-200 focus:border-color-b focus:ring-2 focus:ring-color-b/20 text-gray-800'
-              }`}
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Must be on or after campaign end date
-            {formData.projectStartDate && formData.endDate && (
-              <span className="text-blue-600 font-medium ml-2">
-                ({getRelativeDateLabel(formData.projectStartDate, formData.endDate, "campaign end")})
-              </span>
-            )}
-          </p>
-        </div>
-
-        {/* Project Launch Date */}
-        <div className={`relative group ${!formData.projectStartDate ? 'opacity-50' : ''}`}>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Estimated Project Launch Date *
-            {!formData.projectStartDate && <span className="text-red-500 ml-1">(Select project start date first)</span>}
-          </label>
-          <div className="relative">
-            <FiTarget className={`absolute top-1/2 left-3 transform -translate-y-1/2 transition-colors ${
-              !formData.projectStartDate ? 'text-gray-300' : 'text-gray-400 group-focus-within:text-color-b'
-            }`} />
-            <input 
-              type="date" 
-              name="projectLaunchDate" 
-              value={formData.projectLaunchDate} 
-              onChange={handleChange}
-              min={addDaysToDate(formData.projectStartDate, 1) || getTodayDate()}
-              disabled={!formData.projectStartDate}
-              className={`w-full pl-10 pr-4 py-3 border-2 rounded-xl transition-all duration-300 text-sm ${
-                !formData.projectStartDate 
-                  ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed' 
-                  : 'border-gray-200 focus:border-color-b focus:ring-2 focus:ring-color-b/20 text-gray-800'
-              }`}
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Must be at least one day after project start date
-            {formData.projectLaunchDate && formData.projectStartDate && (
-              <>
-                <span className="text-blue-600 font-medium ml-2">
-                  ({getRelativeDateLabel(formData.projectLaunchDate, formData.projectStartDate, "project start")})
-                </span>
-                {(() => {
-                  const startDate = new Date(formData.projectStartDate);
-                  const launchDate = new Date(formData.projectLaunchDate);
-                  const diffDays = Math.ceil((launchDate - startDate) / (1000 * 60 * 60 * 24));
-                  if (diffDays < 30) {
-                    return (
-                      <span className="text-amber-600 font-medium ml-2 block mt-1">
-                        ⚠️ Development period less than 30 days - not recommended
-                      </span>
-                    );
-                  }
-                  return null;
-                })()}
-              </>
-            )}
-          </p>
-        </div>
-
-        {/* Milestones Section */}
-        <div className={`border-t pt-4 ${!formData.projectLaunchDate ? 'opacity-50' : ''}`}>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-700">
-              Project Milestones
-              {!formData.projectLaunchDate && <span className="text-red-500 ml-1">(Complete timeline first)</span>}
-            </h3>
-            <button
-              type="button"
-              onClick={addMilestone}
-              disabled={!canAddMilestone() || !formData.projectLaunchDate}
-              className={`flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors text-xs ${
-                canAddMilestone() && formData.projectLaunchDate
-                  ? "bg-color-b text-white hover:bg-blue-600" 
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-            >
-              <FiPlus className="w-3 h-3" />
-              <span>Add Milestone</span>
-            </button>
-          </div>
-
-          {!canAddMilestone() && formData.milestones.length > 0 && (
-            <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-xs text-yellow-700">
-                Complete the current milestone (title, description, and date) before adding a new one.
-              </p>
-            </div>
-          )}
-
-          {formData.milestones.length === 0 ? (
-            <div className="text-center py-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-              <FiTarget className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">No milestones added yet</p>
-              <p className="text-xs text-gray-400">Add milestones to track your project progress</p>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-60 overflow-y-auto">
-              {formData.milestones.map((milestone, index) => (
-                <div key={milestone.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-gray-600">Milestone {index + 1}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeMilestone(milestone.id)}
-                      className="text-red-500 hover:text-red-700 transition-colors"
-                    >
-                      <FiTrash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      placeholder="Milestone title"
-                      value={milestone.title}
-                      onChange={(e) => updateMilestone(milestone.id, 'title', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-color-b focus:ring-1 focus:ring-color-b/20 transition-all text-xs"
-                    />
-                    
-                    <textarea
-                      placeholder="Milestone description"
-                      value={milestone.description}
-                      onChange={(e) => updateMilestone(milestone.id, 'description', e.target.value)}
-                      rows="2"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-color-b focus:ring-1 focus:ring-color-b/20 transition-all text-xs resize-none"
-                    />
-                    
-                    <div className="space-y-1">
-                      <input
-                        type="date"
-                        value={milestone.date}
-                        onChange={(e) => updateMilestone(milestone.id, 'date', e.target.value)}
-                        min={getMilestoneMinDate(index)}
-                        max={formData.projectLaunchDate}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-color-b focus:ring-1 focus:ring-color-b/20 transition-all text-xs"
-                      />
-                      {milestone.date && (
-                        <div className="space-y-1">
-                          <p className="text-xs text-purple-600 font-medium">
-                            {index === 0 
-                              ? getRelativeDateLabel(milestone.date, formData.projectStartDate, "project start")
-                              : formData.milestones[index - 1]?.date 
-                                ? getRelativeDateLabel(milestone.date, formData.milestones[index - 1].date, `milestone ${index}`)
-                                : getRelativeDateLabel(milestone.date, formData.projectStartDate, "project start")
-                            }
-                          </p>
-                          {index > 0 && formData.milestones[index - 1]?.date && milestone.date && (
-                            (() => {
-                              const prevDate = new Date(formData.milestones[index - 1].date);
-                              const currentDate = new Date(milestone.date);
-                              const diffDays = Math.ceil((currentDate - prevDate) / (1000 * 60 * 60 * 24));
-                              if (diffDays < 7) {
-                                return (
-                                  <p className="text-xs text-amber-600 font-medium">
-                                    ⚠️ Less than 7 days from previous milestone
-                                  </p>
-                                );
-                              }
-                              return null;
-                            })()
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        
       </div>
+      
     </div>,
 
     <div className="space-y-4 w-full h-full overflow-hidden flex flex-col items-center justify-center">
@@ -820,13 +468,15 @@ export default function CreateProjectForm() {
       </div>
     </div>,
 
-    <div className="space-y-3 w-full h-full flex flex-col">
-      <div className="text-center mb-2 flex-shrink-0">
+    <div className="space-y-3 w-full h-full overflow-hidden flex flex-col relative bottom-10">
+      <div className="text-center mb-2">
+
         <h2 className="text-lg font-bold text-gray-800 mb-1">Project Preview</h2>
         <p className="text-xs text-gray-600">Review your project before submitting</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 flex-1 flex flex-col overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 flex-1 flex flex-col">
+
         {/* Hero Section */}
         <div className="relative">
           {formData.imageFile ? (
@@ -866,7 +516,8 @@ export default function CreateProjectForm() {
           </div>
 
           {/* Project Stats */}
-          <div className="grid grid-cols-2 gap-1 mb-3">
+          <div className="grid grid-cols-3 gap-1 mb-3">
+
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100">
               <div className="flex items-center mb-1">
                 <FiDollarSign className="w-3 h-3 text-color-b mr-1" />
@@ -875,61 +526,29 @@ export default function CreateProjectForm() {
               <p className="text-xs font-bold text-color-b">${formData.fundingGoal || 0}</p>
             </div>
             
-            <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-2 rounded-lg border border-purple-100">
-              <div className="flex items-center mb-1">
-                <FiTag className="w-3 h-3 text-purple-600 mr-1" />
-                <span className="font-semibold text-gray-700 text-xs">Country</span>
-              </div>
-              <p className="text-xs font-bold text-purple-600">{formData.country || 'N/A'}</p>
-            </div>
-          </div>
-
-          {/* Timeline Info */}
-          <div className="grid grid-cols-3 gap-1 mb-3">
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-2 rounded-lg border border-blue-100">
-              <div className="flex items-center mb-1">
-                <FiCalendar className="w-3 h-3 text-blue-600 mr-1" />
-                <span className="font-semibold text-gray-700 text-xs">Dev Start</span>
-              </div>
-              <p className="text-xs font-bold text-blue-600">{formData.projectStartDate || 'TBD'}</p>
-            </div>
+            
             
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-2 rounded-lg border border-green-100">
               <div className="flex items-center mb-1">
                 <FiCalendar className="w-3 h-3 text-green-600 mr-1" />
-                <span className="font-semibold text-gray-700 text-xs">Campaign End</span>
+                <span className="font-semibold text-gray-700 text-xs">End Date</span>
               </div>
               <p className="text-xs font-bold text-green-600">{formData.endDate || 'TBD'}</p>
             </div>
             
-            <div className="bg-gradient-to-br from-orange-50 to-red-50 p-2 rounded-lg border border-orange-100">
+            <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-2 rounded-lg border border-purple-100">
+
               <div className="flex items-center mb-1">
-                <FiTarget className="w-3 h-3 text-orange-600 mr-1" />
-                <span className="font-semibold text-gray-700 text-xs">Launch</span>
+                <FiTag className="w-3 h-3 text-purple-600 mr-1" />
+                <span className="font-semibold text-gray-700 text-xs">Country</span>
+
               </div>
-              <p className="text-xs font-bold text-orange-600">{formData.projectLaunchDate || 'TBD'}</p>
+              <p className="text-xs font-bold text-purple-600">{formData.country || 'N/A'}</p>
+
             </div>
           </div>
 
-          {/* Milestones Preview */}
-          {formData.milestones.length > 0 && (
-            <div className="bg-gray-50 rounded-lg p-2 mb-3">
-              <h4 className="text-xs font-bold text-gray-900 mb-1">Milestones ({formData.milestones.length})</h4>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {formData.milestones.map((milestone, index) => (
-                  <div key={milestone.id} className="text-xs text-gray-600">
-                    <span className="font-semibold">{milestone.title || `Milestone ${index + 1}`}</span>
-                    {milestone.date && <span className="text-gray-500 ml-1">({milestone.date})</span>}
-                    {milestone.description && (
-                      <div className="text-gray-500 mt-1 text-xs line-clamp-1">
-                        {milestone.description}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          
 
           {/* Detailed Description */}
           <div className="bg-gray-50 rounded-lg p-2 flex-1">
@@ -1020,7 +639,8 @@ export default function CreateProjectForm() {
             {/* Step box */}
             <div
               ref={ref}
-                className={`create border-3 bg-white/90 backdrop-blur-sm ${activeStep === idx + 1 && idx === 3 ? 'h-96' : 'h-60'} w-full font-titan flex relative z-10 mx-auto flex-none cursor-pointer shadow-xl hover:shadow-2xl transition-all duration-500
+                className={`create border-3 bg-white/90 backdrop-blur-sm h-60 w-full font-titan flex relative z-10 mx-auto flex-none cursor-pointer shadow-xl hover:shadow-2xl transition-all duration-500
+
                   ${idx === 4 && activeStep === 5 ? "border-dashed rounded-xl border-color-b" : "border-solid rounded-none border-color-b"}`}
             >
               {/* Number */}
@@ -1037,7 +657,8 @@ export default function CreateProjectForm() {
 
               {/* Content visible only when expanded */}
               {activeStep === idx + 1 && (
-                <div style={{ marginTop: "4rem", width: "100%", height: "calc(100% - 4rem)", overflow: "hidden" }}>
+                  <div style={{ marginTop: "4rem", width: "100%" }}>
+
                   {stepContents[idx]}
                 </div>
               )}
