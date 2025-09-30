@@ -17,6 +17,7 @@ import Support from "./pages/Support";
 import Community from "./pages/Community"
 import MyInvestments from "./pages/MyInvestments";
 import InvestPage from "./pages/InvestPage";
+import Wallet from "./pages/Wallet";
 
 function App() {
   const [loadingComplete, setLoadingComplete] = useState(false);
@@ -43,6 +44,7 @@ function App() {
       <Route path="/invest/:id" element={<InvestPage />} />
       <Route path="/rewards/:id" element={<Rewards />} />
       <Route path="/support/:id" element={<Support />} />
+      <Route path="/wallet" element={<Wallet />} />
     </Routes>
   )
 }
