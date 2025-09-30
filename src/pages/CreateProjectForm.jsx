@@ -305,7 +305,7 @@ export default function CreateProjectForm() {
       step.current.style.flexDirection = "column";
       step.current.style.justifyContent = "flex-start";
       step.current.style.alignItems = "flex-start";
-      step.current.style.overflow = "hidden";
+      step.current.style.overflow = isActive ? "auto" : "hidden";
 
       const numberEl = step.current.querySelector("p");
       if (numberEl) {
@@ -937,3 +937,8 @@ export default function CreateProjectForm() {
     </div>
   );
 }
+
+
+
+
+
