@@ -26,7 +26,6 @@ import {
   FiStopCircle
 } from 'react-icons/fi';
 import Navbar from '../components/NavBar';
-
 export default function MyProjectInfo() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -46,11 +45,9 @@ export default function MyProjectInfo() {
   const [checkingPending, setCheckingPending] = useState(false); // New state for checking
   const auth = getAuth();
   const user = auth.currentUser;
-
   // Safe date formatting helper
   const safeFormatDateForInput = (dateValue) => {
     if (!dateValue) return '';
-    
     try {
       let date;
       if (dateValue.seconds) {
@@ -60,22 +57,18 @@ export default function MyProjectInfo() {
       } else {
         date = new Date(dateValue);
       }
-      
       if (isNaN(date.getTime())) {
         return '';
       }
-      
       return date.toISOString().split('T')[0];
     } catch (error) {
       console.error('Error formatting date for input:', error);
       return '';
     }
   };
-
   // Safe date conversion to ISO string
   const safeConvertToISOString = (dateValue) => {
     if (!dateValue) return null;
-    
     try {
       let date;
       if (dateValue.seconds) {
@@ -85,18 +78,15 @@ export default function MyProjectInfo() {
       } else {
         date = new Date(dateValue);
       }
-      
       if (isNaN(date.getTime())) {
         return null;
       }
-      
       return date.toISOString();
     } catch (error) {
       console.error('Error converting date to ISO string:', error);
       return null;
     }
   };
-
   useEffect(() => {
     const fetchProjectAndFunders = async () => {
       if (!user || !id) return;
@@ -194,7 +184,6 @@ export default function MyProjectInfo() {
     };
     fetchProjectAndFunders();
   }, [id, user]);
-
   useEffect(() => {
     const checkPendingChanges = async () => {
       if (!project?.id) return;
@@ -217,7 +206,6 @@ export default function MyProjectInfo() {
     };
     checkPendingChanges();
   }, [project?.id]);
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -226,13 +214,10 @@ export default function MyProjectInfo() {
       maximumFractionDigits: 0
     }).format(amount || 0);
   };
-
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Unknown';
-    
     try {
       let date;
-      
       // Handle Firestore timestamp
       if (timestamp.seconds !== undefined) {
         date = new Date(timestamp.seconds * 1000);
@@ -249,12 +234,10 @@ export default function MyProjectInfo() {
       else {
         date = timestamp;
       }
-
       // Check if the date is valid
       if (isNaN(date.getTime())) {
         return 'Invalid date';
       }
-
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -267,12 +250,10 @@ export default function MyProjectInfo() {
       return 'Invalid date';
     }
   };
-
   const getProgressPercentage = () => {
     if (!project?.fundingGoal || !project?.fundedMoney) return 0;
     return Math.min((project.fundedMoney / project.fundingGoal) * 100, 100);
   };
-
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'pending':
@@ -287,7 +268,6 @@ export default function MyProjectInfo() {
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
-
   // Toggle a single funder's contribution history
   const toggleFunder = (funderId) => {
     setExpandedFunders((prev) => ({
@@ -295,7 +275,6 @@ export default function MyProjectInfo() {
       [funderId]: !prev[funderId],
     }));
   };
-
   // Announcements helpers
   const getAnnouncementsArray = () => {
     if (!project?.announcements || typeof project.announcements !== 'object') return [];
@@ -307,19 +286,16 @@ export default function MyProjectInfo() {
     });
     return items;
   };
-
   const startEditAnnouncement = (a) => {
     setEditingAnnouncementId(a.id);
     setEditTitle(a.title || "");
     setEditContent(a.content || "");
   };
-
   const cancelEditAnnouncement = () => {
     setEditingAnnouncementId(null);
     setEditTitle("");
     setEditContent("");
   };
-
   const saveEditAnnouncement = async () => {
     if (!editingAnnouncementId || !project?.id) return;
     try {
@@ -346,7 +322,6 @@ export default function MyProjectInfo() {
       alert('Failed to save announcement');
     }
   };
-
   const deleteAnnouncement = async (announcementId) => {
     if (!project?.id) return;
     const confirmed = window.confirm('Delete this announcement? This cannot be undone.');
@@ -372,7 +347,6 @@ export default function MyProjectInfo() {
       alert('Failed to delete announcement');
     }
   };
-
   // Create a new announcement in project's announcements map
   const handleCreateAnnouncement = async () => {
     if (!project?.id) return;
@@ -412,7 +386,6 @@ export default function MyProjectInfo() {
       alert('Failed to create announcement');
     }
   };
-
   // Handle project edit form changes (excluding status)
   const handleEditChange = (field, value) => {
     // Prevent editing status
@@ -425,11 +398,9 @@ export default function MyProjectInfo() {
       [field]: value
     }));
   };
-
   // Check for pending requests and enable editing if allowed
   const checkPendingAndEnableEditing = async () => {
     if (!project?.id || checkingPending) return; // Prevent multiple clicks during check
-
     setCheckingPending(true);
     try {
       const pendingChangesQuery = query(
@@ -438,13 +409,11 @@ export default function MyProjectInfo() {
         where('status', '==', 'pending')
       );
       const pendingChangesSnapshot = await getDocs(pendingChangesQuery);
-
       if (!pendingChangesSnapshot.empty) {
         const requestIds = pendingChangesSnapshot.docs.map(doc => doc.id);
         const confirmDelete = window.confirm(
           `You have a pending change request for this project. Do you want to delete it to start a new edit?`
         );
-
         if (confirmDelete) {
           // Delete all pending requests for the project
           const deletePromises = requestIds.map(reqId => {
@@ -461,14 +430,12 @@ export default function MyProjectInfo() {
           return; // Exit if user doesn't confirm deletion
         }
       }
-
       // If no pending requests existed or they were successfully deleted, enable editing
       setIsEditing(true);
       setEditForm({ 
         ...project, 
         endDate: safeFormatDateForInput(project.endDate) 
       });
-
     } catch (error) {
       console.error('Error checking/deleting pending change request:', error);
       alert('An error occurred while checking for pending changes. Please try again.');
@@ -476,7 +443,6 @@ export default function MyProjectInfo() {
       setCheckingPending(false);
     }
   };
-
   // Handle project edit save
   const handleEditSave = async () => {
     // Validate funding goal if changed
@@ -514,14 +480,12 @@ export default function MyProjectInfo() {
           changeData.changes[key] = editForm[key];
         }
       });
-
       // If no changes were made (excluding status), return
       if (Object.keys(changeData.changes).length === 0) {
         alert('No changes detected');
         setIsEditing(false);
         return;
       }
-
       await addDoc(changeRequestRef, changeData);
       // Update local state with new values (optimistic update)
       setProject(prev => ({ 
@@ -536,7 +500,6 @@ export default function MyProjectInfo() {
       alert('Failed to submit change request');
     }
   };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -551,7 +514,6 @@ export default function MyProjectInfo() {
       </div>
     );
   }
-
   if (error || !project) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -564,7 +526,7 @@ export default function MyProjectInfo() {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Error</h2>
             <p className="text-gray-600 mb-6">{error}</p>
             <button 
-              onClick={() => navigate('/view-my-projects')}
+              onClick={() => navigate('/projects')}
               className="bg-gradient-to-r from-color-b to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               Back to My Projects
@@ -574,10 +536,8 @@ export default function MyProjectInfo() {
       </div>
     );
   }
-
   const progress = getProgressPercentage();
   const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <Navbar />
@@ -585,7 +545,7 @@ export default function MyProjectInfo() {
       <div className="pt-20 pb-4">
         <div className="max-w-7xl mx-auto px-4">
           <button
-            onClick={() => navigate('/view-my-projects')}
+            onClick={() => navigate('/projects')}
             className="flex items-center space-x-2 text-gray-600 hover:text-color-b transition-colors group mb-6"
           >
             <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -675,10 +635,6 @@ export default function MyProjectInfo() {
                   )}
                 </button>
               )}
-              <button className="px-4 py-2 bg-white/80 text-gray-700 rounded-xl hover:bg-white transition-colors flex items-center">
-                <FiShare2 className="w-4 h-4 mr-2" />
-                Share
-              </button>
               <Link 
                 to={`/projectDet/${project.id}`}
                 className="px-4 py-2 bg-color-b text-white rounded-xl hover:bg-blue-600 transition-colors flex items-center"
@@ -746,7 +702,6 @@ export default function MyProjectInfo() {
             { id: 'overview', label: 'Overview' },
             { id: 'funders', label: `Funders (${funders.length})` },
             { id: 'announcements', label: 'Announcements' },
-            { id: 'timeline', label: 'Timeline' },
             { id: 'analytics', label: 'Analytics' }
           ].map(tab => (
             <button
@@ -1023,182 +978,6 @@ export default function MyProjectInfo() {
                   ))}
                 </div>
               )}
-            </div>
-          </div>
-        )}
-        {activeTab === 'timeline' && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
-            <div className="p-8 border-b border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-900 flex items-center">
-                <FiClock className="w-6 h-6 text-color-b mr-3" />
-                Project Timeline
-              </h3>
-              <p className="text-gray-600 mt-2">Key dates and milestones for your project</p>
-            </div>
-            <div className="p-8">
-              <div className="relative">
-                {/* Timeline Line */}
-                <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-color-b to-blue-300"></div>
-                <div className="space-y-8">
-                  {/* Project Creation */}
-                  <div className="relative flex items-start">
-                    <div className="absolute left-6 w-4 h-4 bg-color-b rounded-full border-4 border-white shadow-lg"></div>
-                    <div className="ml-16">
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-                        <div className="flex items-center mb-2">
-                          <FiFlag className="w-5 h-5 text-color-b mr-2" />
-                          <h4 className="text-lg font-semibold text-gray-900">Project Created</h4>
-                        </div>
-                        <p className="text-gray-600 mb-1">Your project was successfully created and submitted for review</p>
-                        {project.createdAt && !isNaN(new Date(project.createdAt).getTime()) && (
-                          <p className="text-sm font-medium text-color-b">
-                            {formatDate(project.createdAt)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Campaign Start Date */}
-                  {project.startDate && !isNaN(new Date(project.startDate).getTime()) && (
-                    <div className="relative flex items-start">
-                      <div className="absolute left-6 w-4 h-4 bg-green-500 rounded-full border-4 border-white shadow-lg"></div>
-                      <div className="ml-16">
-                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
-                          <div className="flex items-center mb-2">
-                            <FiPlay className="w-5 h-5 text-green-600 mr-2" />
-                            <h4 className="text-lg font-semibold text-gray-900">Campaign Started</h4>
-                          </div>
-                          <p className="text-gray-600 mb-1">Fundraising campaign officially began</p>
-                          <p className="text-sm font-medium text-green-600">
-                            {formatDate(project.startDate)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {/* Project Launch (if different from campaign start) */}
-                  {project.launchDate && project.launchDate !== project.startDate && !isNaN(new Date(project.launchDate).getTime()) && (
-                    <div className="relative flex items-start">
-                      <div className="absolute left-6 w-4 h-4 bg-purple-500 rounded-full border-4 border-white shadow-lg"></div>
-                      <div className="ml-16">
-                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
-                          <div className="flex items-center mb-2">
-                            <FiTarget className="w-5 h-5 text-purple-600 mr-2" />
-                            <h4 className="text-lg font-semibold text-gray-900">Project Launched</h4>
-                          </div>
-                          <p className="text-gray-600 mb-1">Project officially launched to the public</p>
-                          <p className="text-sm font-medium text-purple-600">
-                            {formatDate(project.launchDate)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {/* Milestones */}
-                  {project.milestones && project.milestones.length > 0 && (
-                    project.milestones.map((milestone, index) => (
-                      <div key={index} className="relative flex items-start">
-                        <div className="absolute left-6 w-4 h-4 bg-yellow-500 rounded-full border-4 border-white shadow-lg"></div>
-                        <div className="ml-16">
-                          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
-                            <div className="flex items-center mb-2">
-                              <FiTarget className="w-5 h-5 text-yellow-600 mr-2" />
-                              <h4 className="text-lg font-semibold text-gray-900">
-                                {milestone.title || `Milestone ${index + 1}`}
-                              </h4>
-                            </div>
-                            <p className="text-gray-600 mb-1">
-                              {milestone.description || 'No description provided'}
-                            </p>
-                            {milestone.date && !isNaN(new Date(milestone.date).getTime()) && (
-                              <p className="text-sm font-medium text-yellow-600">
-                                {formatDate(milestone.date)}
-                              </p>
-                            )}
-                            {milestone.targetAmount && (
-                              <p className="text-sm text-gray-500 mt-1">
-                                Target: {formatCurrency(milestone.targetAmount)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                  {/* Campaign End Date */}
-                  {project.endDate && !isNaN(new Date(project.endDate).getTime()) && (
-                    <div className="relative flex items-start">
-                      <div className={`absolute left-6 w-4 h-4 rounded-full border-4 border-white shadow-lg ${
-                        new Date(project.endDate) > new Date() ? 'bg-orange-500' : 'bg-red-500'
-                      }`}></div>
-                      <div className="ml-16">
-                        <div className={`bg-gradient-to-r rounded-xl p-6 border ${
-                          new Date(project.endDate) > new Date() 
-                            ? 'from-orange-50 to-red-50 border-orange-200' 
-                            : 'from-red-50 to-pink-50 border-red-200'
-                        }`}>
-                          <div className="flex items-center mb-2">
-                            <FiStopCircle className={`w-5 h-5 mr-2 ${
-                              new Date(project.endDate) > new Date() ? 'text-orange-600' : 'text-red-600'
-                            }`} />
-                            <h4 className="text-lg font-semibold text-gray-900">
-                              Campaign {new Date(project.endDate) > new Date() ? 'Ends' : 'Ended'}
-                            </h4>
-                          </div>
-                          <p className="text-gray-600 mb-1">
-                            {new Date(project.endDate) > new Date() 
-                              ? 'Fundraising campaign will end' 
-                              : 'Fundraising campaign has ended'
-                            }
-                          </p>
-                          <p className={`text-sm font-medium ${
-                            new Date(project.endDate) > new Date() ? 'text-orange-600' : 'text-red-600'
-                          }`}>
-                            {formatDate(project.endDate)}
-                          </p>
-                          {new Date(project.endDate) > new Date() && (
-                            <p className="text-sm text-gray-500 mt-1">
-                              {Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24))} days remaining
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {/* Project Launch End (if different from campaign end) */}
-                  {project.launchEndDate && project.launchEndDate !== project.endDate && !isNaN(new Date(project.launchEndDate).getTime()) && (
-                    <div className="relative flex items-start">
-                      <div className="absolute left-6 w-4 h-4 bg-gray-500 rounded-full border-4 border-white shadow-lg"></div>
-                      <div className="ml-16">
-                        <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-6 border border-gray-200">
-                          <div className="flex items-center mb-2">
-                            <FiStopCircle className="w-5 h-5 text-gray-600 mr-2" />
-                            <h4 className="text-lg font-semibold text-gray-900">Project Launch Period Ends</h4>
-                          </div>
-                          <p className="text-gray-600 mb-1">Official project launch period concludes</p>
-                          <p className="text-sm font-medium text-gray-600">
-                            {formatDate(project.launchEndDate)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {/* Current Status Indicator */}
-                <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Current Status</h4>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-600">Funding Progress: {progress.toFixed(1)}%</p>
-                      <p className="text-gray-600">Status: {project.status || 'Unknown'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-color-b">{formatCurrency(project.fundedMoney)}</p>
-                      <p className="text-sm text-gray-600">of {formatCurrency(project.fundingGoal)} goal</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
