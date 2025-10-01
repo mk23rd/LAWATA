@@ -1,7 +1,7 @@
 // MyProjectInfo.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp, addDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp, Timestamp, addDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
 import { db } from '../firebase/firebase-config';
 import { getAuth } from 'firebase/auth';
 import { 
@@ -28,6 +28,10 @@ import {
   FiTrash2 // Added for removing images
 } from 'react-icons/fi';
 import Navbar from '../components/NavBar';
+
+const auth = getAuth();
+const currentUser = auth.currentUser;
+
 
 // --- Helper function for image upload (similar to CreateProjectForm) ---
 const toBase64 = (file) =>
@@ -717,7 +721,20 @@ export default function MyProjectInfo() {
       }));
 
       setIsEditing(false);
-      alert('Change request for other fields submitted successfully! Image and milestone changes applied directly.');
+      // alert('Change request for other fields submitted successfully! Image and milestone changes applied directly.');
+      
+      try {
+          await addDoc(collection(db, "notifications"), {
+            message: `Your request for Change on ${project.title} is being reviewed`,
+            type: "ChnageReq",
+            read: false,
+            userId: currentUser.uid,
+            createdAt: Timestamp.now()
+          });
+      } 
+      catch (notifErr) {
+        console.error("Failed to create notification:", notifErr);
+      }
 
       // Reset new image states after successful save
       setNewSecondaryImageFiles([]);
