@@ -6,6 +6,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users, Share2, Heart, Bookmark, MessageCircle, TrendingUp, Award, Shield, Star, ChevronDown } from 'lucide-react';
 import { getAuth } from 'firebase/auth';
 import { useAuth } from "../context/AuthContext";
+import { toast } from 'react-toastify';
 
 import Comment from '../components/comment';
 import Navbar from "../components/NavBar";
@@ -139,12 +140,12 @@ const ProjectDetails = () => {
     const fundedPercentage = calculateFundingPercentage(project.fundedMoney, project.fundingGoal);
     const isFullyFunded = fundedPercentage >= 100;
     if (!currentUser) {
-      alert("Please sign in to proceed.");
+      toast.warning("Please sign in to proceed.");
       navigate(`/signing?redirectTo=${isFullyFunded ? `/rewards/${id}` : `/support/${id}`}`);
       return;
     }
     if (!profileComplete) {
-      alert("Please complete your profile to proceed.");
+      toast.warning("Please complete your profile to proceed.");
       navigate(`/manage-profile?redirectTo=${isFullyFunded ? `/rewards/${id}` : `/support/${id}`}`);
       return;
     }
@@ -154,12 +155,12 @@ const ProjectDetails = () => {
 
   const handleInvestClick = () => {
     if (!currentUser) {
-      alert("Please sign in to invest.");
+      toast.warning("Please sign in to invest.");
       navigate(`/signing?redirectTo=/invest/${id}`);
       return;
     }
     if (!profileComplete) {
-      alert("Please complete your profile to invest.");
+      toast.warning("Please complete your profile to invest.");
       navigate(`/manage-profile?redirectTo=/invest/${id}`);
       return;
     }
@@ -216,7 +217,7 @@ const ProjectDetails = () => {
       const user = auth.currentUser;
 
       if (!user) {
-        alert("You must be logged in to comment.");
+        toast.warning("You must be logged in to comment.");
         return;
       }
 
@@ -239,7 +240,7 @@ const ProjectDetails = () => {
       setNewComment(""); // clear input
     } catch (err) {
       console.error("Error adding comment:", err);
-      alert("Failed to add comment.");
+      toast.error("Failed to add comment.");
     }
   };
 

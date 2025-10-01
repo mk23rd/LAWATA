@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage, FiChevronRight, FiChevronLeft, FiUpload, FiCheck, FiX, FiTarget, FiTrash2 } from "react-icons/fi";
 import imgLogo from '../assets/images/img-logo.svg'
 import { useAuth } from "../context/AuthContext";
+import { toast } from 'react-toastify';
 
 export default function CreateProjectForm() {
   const navigate = useNavigate();
@@ -157,12 +158,12 @@ export default function CreateProjectForm() {
 
   const handleSubmit = async () => {
     if (!currentUser) {
-      alert("Please sign in to proceed.");
+      toast.warning("Please sign in to proceed.");
       navigate(`/signing?redirectTo=/create`);
       return;
     }
     if (!profileComplete) {
-      alert("Please complete your profile to proceed.");
+      toast.warning("Please complete your profile to proceed.");
       navigate(`/manage-profile?redirectTo=/create`);
       return;
     }

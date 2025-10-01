@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 // Page-level route components import for centralised routing configuration
 import Registration from "./pages/registration"
 import Loading from "./pages/Loading";
@@ -12,7 +14,7 @@ import Profile from "./pages/Profile";
 import ManageProfile from "./pages/ManageProfile";
 import Projects from "./pages/Projects";
 import ViewMyProjects from "./pages/ViewMyProjects";
-import MyProjectInfo from "./pages/MyProjectInfo";
+import MyProjectInfo from "./pages/MyProjectInfoModern";
 import Rewards from "./pages/Rewards";
 import Support from "./pages/Support";
 import Community from "./pages/Community"
@@ -30,30 +32,44 @@ function App() {
   }*/
 
   return (
-    // Centralised route table for the single-page application
-    <Routes> 
-      {/* Landing and home variants */}
-      <Route path="/" element={<Home />} />
-      <Route path="/home" element={<Home />} />
-      {/* Authentication flows */}
-      <Route path="/signing" element={<Signing />} />
-      <Route path="/create" element={<CreateProjectForm />} />
-      <Route path="/community" element={<Community />} />
-      <Route path="/browse" element={<Browse />} />
-      {/* Dynamic routes for project-oriented experiences */}
-      <Route path="/projectDet/:id" element={<ProjectDetails />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/manage-profile" element={<ManageProfile />} />
-      <Route path="/projects" element={<Projects />} />
-      <Route path="/view-my-projects" element={<ViewMyProjects />} />
-      <Route path="/my-project-info/:id" element={<MyProjectInfo />} />
-      <Route path="/myInvestments" element={<MyInvestments />} />
-      <Route path="/invest/:id" element={<InvestPage />} />
-      <Route path="/rewards/:id" element={<Rewards />} />
-      <Route path="/support/:id" element={<Support />} />
-      {/* Wallet and finance management */}
-      <Route path="/wallet" element={<Wallet />} />
-    </Routes>
+    <>
+      {/* Centralised route table for the single-page application */}
+      <Routes> 
+        {/* Landing and home variants */}
+        <Route path="/" element={<Home />} />
+        <Route path="/home" element={<Home />} />
+        {/* Authentication flows */}
+        <Route path="/signing" element={<Signing />} />
+        <Route path="/create" element={<CreateProjectForm />} />
+        <Route path="/community" element={<Community />} />
+        <Route path="/browse" element={<Browse />} />
+        {/* Dynamic routes for project-oriented experiences */}
+        <Route path="/projectDet/:id" element={<ProjectDetails />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/manage-profile" element={<ManageProfile />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/view-my-projects" element={<ViewMyProjects />} />
+        <Route path="/my-project-info/:id" element={<MyProjectInfo />} />
+        <Route path="/myInvestments" element={<MyInvestments />} />
+        <Route path="/invest/:id" element={<InvestPage />} />
+        <Route path="/rewards/:id" element={<Rewards />} />
+        <Route path="/support/:id" element={<Support />} />
+        {/* Wallet and finance management */}
+        <Route path="/wallet" element={<Wallet />} />
+      </Routes>
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+    </>
   )
 }
 

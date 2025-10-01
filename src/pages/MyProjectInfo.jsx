@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp, Timestamp, addDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
 import { db } from '../firebase/firebase-config';
 import { getAuth } from 'firebase/auth';
+import { toast } from 'react-toastify';
 import { 
   FiArrowLeft, 
   FiDollarSign, 
@@ -28,6 +29,13 @@ import {
   FiTrash2 // Added for removing images
 } from 'react-icons/fi';
 import Navbar from '../components/NavBar';
+import {
+  ProjectCard,
+  StatCard,
+  Button,
+  AnnouncementManager,
+  ProjectEditForm
+} from '../components/project';
 
 const auth = getAuth();
 const currentUser = auth.currentUser;
@@ -423,37 +431,36 @@ export default function MyProjectInfo() {
     setEditContent("");
   };
 
-  const saveEditAnnouncement = async () => {
-    if (!editingAnnouncementId || !project?.id) return;
+  const saveEditAnnouncement = async (announcementId, title, content) => {
+    if (!project?.id) return;
     try {
       const projectRef = doc(db, 'projects', project.id);
       await updateDoc(projectRef, {
-        [`announcements.${editingAnnouncementId}.title`]: editTitle,
-        [`announcements.${editingAnnouncementId}.content`]: editContent,
+        [`announcements.${announcementId}.title`]: title,
+        [`announcements.${announcementId}.content`]: content,
       });
       // Optimistic local update
       setProject((prev) => {
         if (!prev) return prev;
         const updated = { ...prev };
         updated.announcements = { ...(prev.announcements || {}) };
-        updated.announcements[editingAnnouncementId] = {
-          ...(updated.announcements[editingAnnouncementId] || {}),
-          title: editTitle,
-          content: editContent,
+        updated.announcements[announcementId] = {
+          ...(updated.announcements[announcementId] || {}),
+          title,
+          content,
         };
         return updated;
       });
-      cancelEditAnnouncement();
+      toast.success('Announcement updated successfully!');
     } catch (err) {
       console.error('Failed to save announcement:', err);
-      alert('Failed to save announcement');
+      toast.error('Failed to save announcement');
+      throw err; // Re-throw so component can handle it
     }
   };
 
   const deleteAnnouncement = async (announcementId) => {
     if (!project?.id) return;
-    const confirmed = window.confirm('Delete this announcement? This cannot be undone.');
-    if (!confirmed) return;
     try {
       const projectRef = doc(db, 'projects', project.id);
       await updateDoc(projectRef, {
@@ -469,28 +476,25 @@ export default function MyProjectInfo() {
         }
         return updated;
       });
-      if (editingAnnouncementId === announcementId) cancelEditAnnouncement();
+      toast.success('Announcement deleted successfully!');
     } catch (err) {
       console.error('Failed to delete announcement:', err);
-      alert('Failed to delete announcement');
+      toast.error('Failed to delete announcement');
+      throw err;
     }
   };
 
   // Create a new announcement in project's announcements map
-  const handleCreateAnnouncement = async () => {
+  const handleCreateAnnouncement = async (title, content) => {
     if (!project?.id) return;
-    if (!newTitle.trim() || !newContent.trim()) {
-      alert('Please enter title and content');
-      return;
-    }
     try {
       const announcementId = (typeof crypto !== 'undefined' && crypto.randomUUID)
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
       const projectRef = doc(db, 'projects', project.id);
       const data = {
-        title: newTitle.trim(),
-        content: newContent.trim(),
+        title: title.trim(),
+        content: content.trim(),
         date: serverTimestamp(),
         createdBy: user ? { uid: user.uid, email: user.email || null } : null,
       };
@@ -508,11 +512,11 @@ export default function MyProjectInfo() {
         };
         return updated;
       });
-      setNewTitle("");
-      setNewContent("");
+      toast.success('Announcement created successfully!');
     } catch (err) {
       console.error('Failed to create announcement:', err);
-      alert('Failed to create announcement');
+      toast.error('Failed to create announcement');
+      throw err; // Re-throw so component can handle it
     }
   };
 
@@ -581,7 +585,7 @@ export default function MyProjectInfo() {
       setPreviewMainImageUrl(""); // Clear main image preview
     } catch (error) {
       console.error('Error checking/deleting pending change request:', error);
-      alert('An error occurred while checking for pending changes. Please try again.');
+      toast.error('An error occurred while checking for pending changes. Please try again.');
     } finally {
       setCheckingPending(false);
     }
@@ -648,7 +652,7 @@ export default function MyProjectInfo() {
   const handleEditSave = async () => {
     // Validate funding goal if changed
     if (editForm.fundingGoal && editForm.fundingGoal < project.fundedMoney) {
-      alert(`Funding goal cannot be less than already funded amount (${formatCurrency(project.fundedMoney)})`);
+      toast.error(`Funding goal cannot be less than already funded amount (${formatCurrency(project.fundedMoney)})`);
       return;
     }
 
@@ -675,7 +679,7 @@ export default function MyProjectInfo() {
       const hasNonImageChanges = Object.keys(changesToSubmit).length > 0;
 
       if (!hasNonImageChanges) {
-        alert('No non-image changes detected');
+        toast.info('No non-image changes detected');
         setIsEditing(false);
         return;
       }
@@ -745,7 +749,7 @@ export default function MyProjectInfo() {
 
     } catch (error) {
       console.error('Error submitting change request or updating images:', error);
-      alert('Failed to submit change request or update images');
+      toast.error('Failed to submit change request or update images');
     }
   };
 
@@ -1287,79 +1291,16 @@ export default function MyProjectInfo() {
           </div>
         )}
         {activeTab === 'announcements' && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
-            <div className="p-8 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-gray-900">Announcements</h3>
-            </div>
-            <div className="p-8 space-y-6">
-              {/* Inline Composer */}
-              <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
-                <h4 className="text-lg font-semibold text-gray-900 mb-3">Create Announcement</h4>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    className="w-full p-2 border rounded"
-                    placeholder="Announcement Title"
-                  />
-                  <textarea
-                    value={newContent}
-                    onChange={(e) => setNewContent(e.target.value)}
-                    className="w-full p-2 border rounded h-28"
-                    placeholder="Announcement Content"
-                  />
-                  <div className="flex justify-end">
-                    <button onClick={handleCreateAnnouncement} className="px-4 py-2 bg-color-b text-white rounded hover:bg-blue-600">Post</button>
-                  </div>
-                </div>
-              </div>
-              {getAnnouncementsArray().length === 0 ? (
-                <p className="text-gray-600">No announcements yet.</p>
-              ) : (
-                <div className="space-y-6">
-                  {getAnnouncementsArray().map((a) => (
-                    <div key={a.id} className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                      {editingAnnouncementId === a.id ? (
-                        <div className="space-y-3">
-                          <input
-                            type="text"
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            className="w-full p-2 border rounded"
-                            placeholder="Announcement Title"
-                          />
-                          <textarea
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            className="w-full p-2 border rounded h-28"
-                            placeholder="Announcement Content"
-                          />
-                          <div className="flex gap-2">
-                            <button onClick={saveEditAnnouncement} className="px-4 py-2 bg-color-b text-white rounded hover:bg-blue-600">Save</button>
-                            <button onClick={cancelEditAnnouncement} className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200">Cancel</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-xl font-semibold text-gray-900">{a.title || 'Announcement'}</h4>
-                            <span className="text-sm text-gray-500">{formatDate(a.date)}</span>
-                          </div>
-                          <p className="text-gray-700 whitespace-pre-wrap mb-4">{a.content}</p>
-                          <div className="flex gap-2">
-                            <button onClick={() => startEditAnnouncement(a)} className="px-4 py-2 bg-white border rounded hover:bg-gray-50">Edit</button>
-                            <button onClick={() => deleteAnnouncement(a.id)} className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200">Delete</button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+  <div className="max-w-4xl mx-auto">
+    <AnnouncementManager
+      announcements={getAnnouncementsArray()}
+      onCreateAnnouncement={handleCreateAnnouncement}
+      onEditAnnouncement={saveEditAnnouncement}
+      onDeleteAnnouncement={deleteAnnouncement}
+      loading={false}
+    />
+  </div>
+)}
         {activeTab === 'funders' && (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
             <div className="p-8 border-b border-gray-200">

@@ -13,6 +13,7 @@ import {
   updateDoc
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { toast } from 'react-toastify';
 
 // Community hub enabling founders to send direct messages and announcements
 const Community = () => {
@@ -102,11 +103,11 @@ const Community = () => {
   // Send Announcement
   const handleSendAnnouncement = async () => {
     if (!selectedProjectId) {
-      alert("Please choose an approved project.");
+      toast.warning("Please choose an approved project.");
       return;
     }
     if (!announcementTitle || !announcementContent) {
-      alert("Please fill in both title and content.");
+      toast.warning("Please fill in both title and content.");
       return;
     }
 
@@ -129,13 +130,13 @@ const Community = () => {
         [`announcements.${announcementId}`]: data,
       });
 
-      alert("Announcement posted successfully!");
+      toast.success("Announcement posted successfully!");
       setAnnouncementTitle("");
       setAnnouncementContent("");
       setSelectedProjectId("");
     } catch (error) {
       console.error("Error sending announcement:", error);
-      alert("Failed to send announcement");
+      toast.error("Failed to send announcement");
     }
   };
 
