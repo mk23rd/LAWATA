@@ -31,7 +31,8 @@ import {
   StatCard,
   Button,
   AnnouncementManager,
-  ProjectEditForm
+  ProjectEditForm,
+  ProjectAnalytics
 } from '../components/project';
 
 const auth = getAuth();
@@ -1170,13 +1171,7 @@ export default function MyProjectInfo() {
         )}
 
         {activeTab === 'analytics' && (
-          <ProjectCard title="Project Analytics" icon={FiBarChart2}>
-            <div className="text-center py-16">
-              <FiBarChart2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h4 className="text-xl font-semibold text-gray-600 mb-2">Analytics Coming Soon</h4>
-              <p className="text-gray-500">Detailed analytics and insights will be available here.</p>
-            </div>
-          </ProjectCard>
+          <ProjectAnalytics project={project} funders={funders} />
         )}
       </div>
     </div>
