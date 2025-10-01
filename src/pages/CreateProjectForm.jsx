@@ -1,62 +1,321 @@
-import React, { useState, useRef, useEffect } from "react";
-import { gsap } from "gsap";
-import { db } from "../firebase/firebase-config";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
-import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage, FiChevronRight, FiChevronLeft, FiUpload, FiCheck, FiX, FiTarget, FiTrash2 } from "react-icons/fi";
-import imgLogo from '../assets/images/img-logo.svg'
-import { useAuth } from "../context/AuthContext";
-import { toast } from 'react-toastify';
+// MyProjectInfo.js
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, deleteField, serverTimestamp, addDoc, deleteDoc } from 'firebase/firestore'; // Added deleteDoc
+import { db } from '../firebase/firebase-config';
+import { getAuth } from 'firebase/auth';
+import { 
+  FiArrowLeft, 
+  FiDollarSign, 
+  FiUsers, 
+  FiCalendar, 
+  FiClock, 
+  FiTag, 
+  FiTrendingUp,
+  FiEdit,
+  FiShare2,
+  FiEye,
+  FiUser,
+  FiMapPin,
+  FiChevronDown,
+  FiSave,
+  FiX,
+  FiTarget,
+  FiFlag,
+  FiPlay,
+  FiStopCircle,
+  FiPlus, // Added for adding images
+  FiTrash2, // Added for removing images
+  FiUpload,
+  FiImage,
+  FiCheck
+} from 'react-icons/fi';
+import Navbar from '../components/NavBar';
 
-export default function CreateProjectForm() {
-  const navigate = useNavigate();
-  // Pull current user and profile completeness gate from auth context
-  const { currentUser, profileComplete } = useAuth();
-  // Track which step of the multi-step wizard is active
-  const [activeStep, setActiveStep] = useState(1);
-  // Central form data state shared across steps
-  const [formData, setFormData] = useState({
-    title: "",
-    category: "",
-    country: "",
-    shortDescription: "",
-    longDescription: "",
-    fundingGoal: "",
-    endDate: "",
-    imageFile: null,
-    secondaryImages: [],
-    milestones: {
-      '25': { description: '', completed: false },
-      '50': { description: '', completed: false },
-      '75': { description: '', completed: false },
-      '100': { description: '', completed: false }
-    }
+// --- Helper function for image upload (similar to CreateProjectForm) ---
+const toBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = (error) => reject(error);
   });
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  
-  // Provide titles for the progress indicator and headings
-  const getStepTitle = (step) => {
-    const titles = [
-      "Project Details",
-      "Description",
-      "Funding Goal",
-      "Campaign Timeline",
-      "Milestones",
-      "Project Images",
-      "Preview & Submit"
-    ];
-    return titles[step - 1] || "Unknown Step";
+
+const uploadImage = async (file) => {
+  const apiKey = import.meta.env.VITE_IMGBB_API_KEY; // Ensure you have this API key set
+  if (!apiKey) throw new Error("Missing ImgBB API key");
+  const base64Image = await toBase64(file);
+  const formDataObj = new FormData();
+  formDataObj.append("image", base64Image);
+  const response = await fetch(
+    `https://api.imgbb.com/1/upload?key=${apiKey}`,
+    { method: "POST", body: formDataObj }
+  );
+  const data = await response.json();
+  if (!data.success) throw new Error("Image upload failed");
+  return data.data.url;
+};
+// --- End of helper functions ---
+
+export default function MyProjectInfo() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [project, setProject] = useState(null);
+  const [funders, setFunders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [expandedFunders, setExpandedFunders] = useState({});
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [checkingPending, setCheckingPending] = useState(false); // New state for checking
+  const [isMilestonesExpanded, setIsMilestonesExpanded] = useState(true); // State for milestones collapse
+  const [newSecondaryImageFiles, setNewSecondaryImageFiles] = useState([]); // Store File objects for upload
+  const [previewSecondaryImageUrls, setPreviewSecondaryImageUrls] = useState([]); // Store preview URLs
+  const [mainImageFile, setMainImageFile] = useState(null); // Store new main image File object
+  const [previewMainImageUrl, setPreviewMainImageUrl] = useState(""); // Store preview URL for main image
+
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  // Safe date formatting helper
+  const safeFormatDateForInput = (dateValue) => {
+    if (!dateValue) return '';
+    try {
+      let date;
+      if (dateValue.seconds) {
+        date = new Date(dateValue.seconds * 1000);
+      } else if (dateValue instanceof Date) {
+        date = dateValue;
+      } else {
+        date = new Date(dateValue);
+      }
+      if (isNaN(date.getTime())) {
+        return '';
+      }
+      return date.toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Error formatting date for input:', error);
+      return '';
+    }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Safe date conversion to ISO string
+  const safeConvertToISOString = (dateValue) => {
+    if (!dateValue) return null;
+    try {
+      let date;
+      if (dateValue.seconds) {
+        date = new Date(dateValue.seconds * 1000);
+      } else if (dateValue instanceof Date) {
+        date = dateValue;
+      } else {
+        date = new Date(dateValue);
+      }
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      return date.toISOString();
+    } catch (error) {
+      console.error('Error converting date to ISO string:', error);
+      return null;
+    }
   };
 
+  useEffect(() => {
+    const fetchProjectAndFunders = async () => {
+      if (!user || !id) return;
+      setLoading(true);
+      try {
+        // Fetch project details
+        const projectRef = doc(db, 'projects', id);
+        const projectSnap = await getDoc(projectRef);
+        if (!projectSnap.exists()) {
+          setError('Project not found');
+          return;
+        }
+        const projectData = { id: projectSnap.id, ...projectSnap.data() };
+        // Check if current user owns this project
+        if (projectData.createdBy?.uid !== user.uid) {
+          setError('You do not have permission to view this project');
+          return;
+        }
+        setProject(projectData);
+        setEditForm({ 
+          ...projectData,
+          fundingGoal: projectData.fundingGoal || 0,
+          title: projectData.title || '',
+          shortDescription: projectData.shortDescription || '',
+          longDescription: projectData.longDescription || '',
+          category: projectData.category || '',
+          endDate: safeFormatDateForInput(projectData.endDate),
+          secondaryImages: [...projectData.secondaryImages || []], // Initialize edit form with secondary images
+          milestones: { ...projectData.milestones || {} } // Initialize milestones
+        });
+        // Fetch funders data from transactions
+        const transactionsQuery = query(
+          collection(db, 'transactions'),
+          where('projectId', '==', id),
+          where('funding', '==', true)
+        );
+        const transactionsSnap = await getDocs(transactionsQuery);
+        const fundersData = [];
+        // Get unique funders and their contributions
+        const funderMap = new Map();
+        for (const transactionDoc of transactionsSnap.docs) {
+          const transaction = transactionDoc.data();
+          const userId = transaction.userId;
+          // Fetch user details
+          const userRef = doc(db, 'users', userId);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            // Build a safe display name and location
+            const nameFromFirstLast = [userData?.firstName, userData?.lastName].filter(Boolean).join(' ').trim();
+            const safeName = (userData?.displayName && userData.displayName.trim())
+              || nameFromFirstLast
+              || userData?.username
+              || userData?.email
+              || 'Anonymous';
+            const hasCityOrCountry = !!(userData?.location && (userData.location.city || userData.location.country));
+            const safeLocation = hasCityOrCountry
+              ? [userData.location.city, userData.location.country].filter(Boolean).join(', ')
+              : 'Unknown';
+            if (funderMap.has(userId)) {
+              // Add to existing funder's contributions
+              const existingFunder = funderMap.get(userId);
+              existingFunder.totalAmount += transaction.fundedMoney;
+              existingFunder.contributions.push({
+                amount: transaction.fundedMoney,
+                date: transaction.transactionTime,
+                id: transactionDoc.id
+              });
+            } else {
+              // Create new funder entry
+              funderMap.set(userId, {
+                id: userId,
+                name: safeName,
+                email: userData.email,
+                profileImage: userData.profileImageUrl || 'https://via.placeholder.com/40',
+                location: safeLocation,
+                totalAmount: transaction.fundedMoney,
+                contributions: [{
+                  amount: transaction.fundedMoney,
+                  date: transaction.transactionTime,
+                  id: transactionDoc.id
+                }],
+                firstContribution: transaction.transactionTime
+              });
+            }
+          }
+        }
+        // Convert map to array and sort by total amount
+        const fundersArray = Array.from(funderMap.values()).sort((a, b) => b.totalAmount - a.totalAmount);
+        setFunders(fundersArray);
+      } catch (err) {
+        console.error('Error fetching project ', err);
+        setError('Failed to load project information');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProjectAndFunders();
+  }, [id, user]);
+
+  useEffect(() => {
+    const checkPendingChanges = async () => {
+      if (!project?.id) return;
+      try {
+        const pendingChangesQuery = query(
+          collection(db, 'changeRequests'),
+          where('projectId', '==', project.id),
+          where('status', '==', 'pending')
+        );
+        const pendingChangesSnapshot = await getDocs(pendingChangesQuery);
+        const hasPending = !pendingChangesSnapshot.empty;
+        // Update project state to indicate pending changes
+        setProject(prev => ({
+          ...prev,
+          hasPendingChanges: hasPending
+        }));
+      } catch (error) {
+        console.error('Error checking pending changes:', error);
+      }
+    };
+    checkPendingChanges();
+  }, [project?.id]);
+
+  // Handle main image file selection
+  const handleMainImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type.startsWith('image/')) {
+      // Revoke old preview URL if it exists
+      if (previewMainImageUrl) URL.revokeObjectURL(previewMainImageUrl);
+
+      const previewUrl = URL.createObjectURL(file); // Create preview URL
+      setPreviewMainImageUrl(previewUrl);
+      setMainImageFile(file); // Add File object to state
+    }
+  };
+
+  // Handle secondary image file selection
+  const handleSecondaryImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const newPreviews = [];
+    const newFileObjects = [...newSecondaryImageFiles]; // Start with existing files
+
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const previewUrl = URL.createObjectURL(file); // Create preview URL
+        newPreviews.push(previewUrl);
+        newFileObjects.push(file); // Add File object to the list to upload later
+      }
+    });
+
+    // Update states
+    setNewSecondaryImageFiles(newFileObjects);
+    setPreviewSecondaryImageUrls(prev => [...prev, ...newPreviews]);
+  };
+
+  // Remove a new secondary image before saving
+  const removeNewSecondaryImage = (indexToRemove) => {
+    const newFiles = newSecondaryImageFiles.filter((_, index) => index !== indexToRemove);
+    const newPreviews = previewSecondaryImageUrls.filter((_, index) => index !== indexToRemove);
+    setNewSecondaryImageFiles(newFiles);
+    setPreviewSecondaryImageUrls(newPreviews);
+
+    // Revoke the old URL to free up memory
+    URL.revokeObjectURL(previewSecondaryImageUrls[indexToRemove]);
+  };
+
+  // Remove an existing secondary image
+  const removeExistingSecondaryImage = (indexToRemove) => {
+    setEditForm(prev => {
+      const updatedImages = [...prev.secondaryImages];
+      updatedImages.splice(indexToRemove, 1);
+      return { ...prev, secondaryImages: updatedImages };
+    });
+  };
+
+  // Remove the new main image
+  const removeNewMainImage = () => {
+    if (previewMainImageUrl) URL.revokeObjectURL(previewMainImageUrl);
+    setPreviewMainImageUrl("");
+    setMainImageFile(null);
+  };
+
+  // Handle milestone description change
   const handleMilestoneChange = (percentage, value) => {
-    setFormData(prev => ({
+    setEditForm(prev => ({
       ...prev,
       milestones: {
         ...prev.milestones,
@@ -65,888 +324,1242 @@ export default function CreateProjectForm() {
     }));
   };
 
-  // Improved file handling logic
-  const handleFileChange = (e, isMainImage = false) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount || 0);
+  };
 
-    if (isMainImage) {
-      // Set the first file as main image
-      setFormData(prev => ({
-        ...prev,
-        imageFile: files[0]
-      }));
-    } else {
-      // Add all files to secondary images
-      setFormData(prev => ({
-        ...prev,
-        secondaryImages: [...prev.secondaryImages, ...files]
-      }));
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'Unknown';
+    try {
+      let date;
+      // Handle Firestore timestamp
+      if (timestamp.seconds !== undefined) {
+        date = new Date(timestamp.seconds * 1000);
+      } 
+      // Handle JavaScript Date object
+      else if (timestamp instanceof Date) {
+        date = timestamp;
+      }
+      // Handle ISO string or numeric timestamp
+      else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+        date = new Date(timestamp);
+      }
+      // If it's already a valid date, use it directly
+      else {
+        date = timestamp;
+      }
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error, timestamp);
+      return 'Invalid date';
     }
   };
 
-  // Handle drag and drop for images
-  const handleDrop = (e, isMainImage = false) => {
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
-    if (files.length === 0) return;
+  const getProgressPercentage = () => {
+    if (!project?.fundingGoal || !project?.fundedMoney) return 0;
+    return Math.min((project.fundedMoney / project.fundingGoal) * 100, 100);
+  };
 
-    if (isMainImage) {
-      setFormData(prev => ({
-        ...prev,
-        imageFile: files[0]
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        secondaryImages: [...prev.secondaryImages, ...files]
-      }));
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'approved':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'active':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const removeSecondaryImage = (index) => {
-    setFormData(prev => ({
+  // Toggle a single funder's contribution history
+  const toggleFunder = (funderId) => {
+    setExpandedFunders((prev) => ({
       ...prev,
-      secondaryImages: prev.secondaryImages.filter((_, i) => i !== index)
+      [funderId]: !prev[funderId],
     }));
   };
 
-  const removeMainImage = () => {
-    setFormData(prev => ({
-      ...prev,
-      imageFile: null
-    }));
+  // Announcements helpers
+  const getAnnouncementsArray = () => {
+    if (!project?.announcements || typeof project.announcements !== 'object') return [];
+    const items = Object.entries(project.announcements).map(([id, value]) => ({ id, ...(value || {}) }));
+    items.sort((a, b) => {
+      const da = a.date?.seconds ? a.date.seconds : (a.date ? new Date(a.date).getTime()/1000 : 0);
+      const dbt = b.date?.seconds ? b.date.seconds : (b.date ? new Date(b.date).getTime()/1000 : 0);
+      return dbt - da;
+    });
+    return items;
   };
 
-  // Promote a secondary image to main image
-  const promoteToMainImage = (index) => {
-    setFormData(prev => {
-      const newSecondary = [...prev.secondaryImages];
-      const promotedImage = newSecondary.splice(index, 1)[0];
-      return {
-        ...prev,
-        imageFile: promotedImage,
-        secondaryImages: newSecondary
+  const startEditAnnouncement = (a) => {
+    setEditingAnnouncementId(a.id);
+    setEditTitle(a.title || "");
+    setEditContent(a.content || "");
+  };
+
+  const cancelEditAnnouncement = () => {
+    setEditingAnnouncementId(null);
+    setEditTitle("");
+    setEditContent("");
+  };
+
+  const saveEditAnnouncement = async () => {
+    if (!editingAnnouncementId || !project?.id) return;
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      await updateDoc(projectRef, {
+        [`announcements.${editingAnnouncementId}.title`]: editTitle,
+        [`announcements.${editingAnnouncementId}.content`]: editContent,
+      });
+      // Optimistic local update
+      setProject((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev };
+        updated.announcements = { ...(prev.announcements || {}) };
+        updated.announcements[editingAnnouncementId] = {
+          ...(updated.announcements[editingAnnouncementId] || {}),
+          title: editTitle,
+          content: editContent,
+        };
+        return updated;
+      });
+      cancelEditAnnouncement();
+    } catch (err) {
+      console.error('Failed to save announcement:', err);
+      alert('Failed to save announcement');
+    }
+  };
+
+  const deleteAnnouncement = async (announcementId) => {
+    if (!project?.id) return;
+    const confirmed = window.confirm('Delete this announcement? This cannot be undone.');
+    if (!confirmed) return;
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      await updateDoc(projectRef, {
+        [`announcements.${announcementId}`]: deleteField(),
+      });
+      // Optimistic local update
+      setProject((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev };
+        if (updated.announcements && updated.announcements[announcementId]) {
+          const { [announcementId]: _, ...rest } = updated.announcements;
+          updated.announcements = rest;
+        }
+        return updated;
+      });
+      if (editingAnnouncementId === announcementId) cancelEditAnnouncement();
+    } catch (err) {
+      console.error('Failed to delete announcement:', err);
+      alert('Failed to delete announcement');
+    }
+  };
+
+  // Create a new announcement in project's announcements map
+  const handleCreateAnnouncement = async () => {
+    if (!project?.id) return;
+    if (!newTitle.trim() || !newContent.trim()) {
+      alert('Please enter title and content');
+      return;
+    }
+    try {
+      const announcementId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2,9)}`;
+      const projectRef = doc(db, 'projects', project.id);
+      const data = {
+        title: newTitle.trim(),
+        content: newContent.trim(),
+        date: serverTimestamp(),
+        createdBy: user ? { uid: user.uid, email: user.email || null } : null,
       };
-    });
+      await updateDoc(projectRef, {
+        [`announcements.${announcementId}`]: data,
+      });
+      // Optimistic local update
+      setProject((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev };
+        updated.announcements = { ...(updated.announcements || {}) };
+        updated.announcements[announcementId] = {
+          ...data,
+          date: new Date().toISOString(),
+        };
+        return updated;
+      });
+      setNewTitle("");
+      setNewContent("");
+    } catch (err) {
+      console.error('Failed to create announcement:', err);
+      alert('Failed to create announcement');
+    }
   };
 
-  // Utility: convert selected image file into Base64 for the ImgBB API
-  const toBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result.split(",")[1]);
-      reader.onerror = (error) => reject(error);
-    });
-
-  // Upload project image to ImgBB and return hosted URL
-  const uploadImage = async (file) => {
-    const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
-    if (!apiKey) throw new Error("Missing ImgBB API key");
-    const base64Image = await toBase64(file);
-    const formDataObj = new FormData();
-    formDataObj.append("image", base64Image);
-    const response = await fetch(
-      `https://api.imgbb.com/1/upload?key=${apiKey}`,
-      { method: "POST", body: formDataObj }
-    );
-    const data = await response.json();
-    if (!data.success) throw new Error("Image upload failed");
-    return data.data.url;
+  // Handle project edit form changes (excluding status, imageUrl, secondaryImages, milestones)
+  const handleEditChange = (field, value) => {
+    // Prevent editing status
+    if (field === 'status') {
+      console.warn("Status editing is disabled.");
+      return;
+    }
+    // Prevent editing image fields directly through text inputs
+    if (field === 'imageUrl' || field === 'secondaryImages') {
+      console.warn(`Editing ${field} is handled separately.`);
+      return;
+    }
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const handleSubmit = async () => {
-    if (!currentUser) {
-      toast.warning("Please sign in to proceed.");
-      navigate(`/signing?redirectTo=/create`);
-      return;
+  // Check for pending requests and enable editing if allowed
+  const checkPendingAndEnableEditing = async () => {
+    if (!project?.id || checkingPending) return; // Prevent multiple clicks during check
+    setCheckingPending(true);
+    try {
+      const pendingChangesQuery = query(
+        collection(db, 'changeRequests'),
+        where('projectId', '==', project.id),
+        where('status', '==', 'pending')
+      );
+      const pendingChangesSnapshot = await getDocs(pendingChangesQuery);
+      if (!pendingChangesSnapshot.empty) {
+        const requestIds = pendingChangesSnapshot.docs.map(doc => doc.id);
+        const confirmDelete = window.confirm(
+          `You have a pending change request for this project. Do you want to delete it to start a new edit?`
+        );
+        if (confirmDelete) {
+          // Delete all pending requests for the project
+          const deletePromises = requestIds.map(reqId => {
+            const reqRef = doc(db, 'changeRequests', reqId);
+            return deleteDoc(reqRef);
+          });
+          await Promise.all(deletePromises);
+          console.log("Pending change request(s) deleted.");
+          // Update local state to reflect removal
+          setProject(prev => ({ ...prev, hasPendingChanges: false }));
+        } else {
+          console.log("Edit cancelled by user due to pending request.");
+          setCheckingPending(false);
+          return; // Exit if user doesn't confirm deletion
+        }
+      }
+      // If no pending requests existed or they were successfully deleted, enable editing
+      setIsEditing(true);
+      setEditForm({ 
+        ...project, 
+        endDate: safeFormatDateForInput(project.endDate),
+        secondaryImages: [...project.secondaryImages || []], // Reset secondary images to project's current state
+        milestones: { ...project.milestones || {} } // Reset milestones to project's current state
+      });
+      setNewSecondaryImageFiles([]); // Clear any new files added during a previous edit attempt
+      setPreviewSecondaryImageUrls([]); // Clear previews
+      setMainImageFile(null); // Clear new main image file
+      if (previewMainImageUrl) URL.revokeObjectURL(previewMainImageUrl); // Revoke old preview
+      setPreviewMainImageUrl(""); // Clear main image preview
+    } catch (error) {
+      console.error('Error checking/deleting pending change request:', error);
+      alert('An error occurred while checking for pending changes. Please try again.');
+    } finally {
+      setCheckingPending(false);
     }
-    if (!profileComplete) {
-      toast.warning("Please complete your profile to proceed.");
-      navigate(`/manage-profile?redirectTo=/create`);
-      return;
+  };
+
+  // Handle image updates directly (for both main and secondary images)
+  const handleImageUpdates = async () => {
+
+    try {
+      const projectRef = doc(db, 'projects', project.id);
+      let updates = {};
+      let needsUpdate = false;
+
+      if (mainImageFile) {
+        console.log("handleImageUpdates: New main image file detected, starting upload...");
+        const uploadedMainImageUrl = await uploadImage(mainImageFile);
+        console.log("handleImageUpdates: Main image uploaded successfully, URL:", uploadedMainImageUrl);
+        updates.imageUrl = uploadedMainImageUrl;
+        needsUpdate = true;
+      } else {
+        console.log("handleImageUpdates: No new main image file selected, skipping main image upload.");
+      }
+
+      
+      let finalSecondaryImageUrls = [...editForm.secondaryImages];
+      console.log("handleImageUpdates: Initial finalSecondaryImageUrls (from editForm):", finalSecondaryImageUrls);
+
+      if (newSecondaryImageFiles.length > 0) {
+        const uploadPromises = newSecondaryImageFiles.map(file => uploadImage(file));
+        const uploadedUrls = await Promise.all(uploadPromises);
+        finalSecondaryImageUrls = [...finalSecondaryImageUrls, ...uploadedUrls];
+        needsUpdate = true;
+      } 
+      
+      if (JSON.stringify(finalSecondaryImageUrls) !== JSON.stringify(project.secondaryImages)) {
+        updates.secondaryImages = finalSecondaryImageUrls;
+        needsUpdate = true;
+      } 
+     
+      if (JSON.stringify(editForm.milestones) !== JSON.stringify(project.milestones)) {
+        updates.milestones = editForm.milestones;
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+
+        await updateDoc(projectRef, updates);
+
+        setProject(prev => {
+          const updatedProject = {
+            ...prev,
+            ...updates // Apply the direct updates to the project state
+          };
+          return updatedProject;
+        });
+      }
+    } catch (error) {
+      console.error('Error within handleImageUpdates:', error);
+      throw error; // Re-throw to be caught by handleEditSave
     }
-    setLoading(true);
-    setMessage("");
+  };
 
-    if (!formData.title) return setMessage("❌ Title is missing");
-    if (!formData.category) return setMessage("❌ Category is missing");
-    if (!formData.country) return setMessage("❌ Country is missing");
-    if (!formData.shortDescription) return setMessage("❌ Short description is missing");
-    if (!formData.longDescription) return setMessage("❌ Long description is missing");
-    if (!formData.fundingGoal) return setMessage("❌ Funding goal is missing");
-    if (!formData.endDate) return setMessage("❌ End date is missing");
-    if (!formData.imageFile) return setMessage("❌ Main project image not uploaded");
-
-    const hasEmptyMilestone = Object.values(formData.milestones).some(
-      milestone => !milestone.description.trim()
-    );
-    if (hasEmptyMilestone) {
-      setMessage("❌ All milestone descriptions must be filled.");
-      setLoading(false);
+ 
+  const handleEditSave = async () => {
+    // Validate funding goal if changed
+    if (editForm.fundingGoal && editForm.fundingGoal < project.fundedMoney) {
+      alert(`Funding goal cannot be less than already funded amount (${formatCurrency(project.fundedMoney)})`);
       return;
     }
 
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) throw new Error("You must be logged in");
+      // First, handle image and milestone updates directly
+      await handleImageUpdates();
 
-      // Upload main image
-      const imageUrl = await uploadImage(formData.imageFile);
-      
-      // Upload secondary images
-      let secondaryImageUrls = [];
-      if (formData.secondaryImages.length > 0) {
-        const uploadPromises = formData.secondaryImages.map(file => uploadImage(file));
-        secondaryImageUrls = await Promise.all(uploadPromises);
+      // Prepare changes object, excluding image fields, milestones, and status
+      const changesToSubmit = {};
+      Object.keys(editForm).forEach(key => {
+        let originalValue = project[key];
+        if (originalValue && originalValue.seconds) { 
+          originalValue = safeConvertToISOString(originalValue);
+        }
+        // Exclude status, imageUrl, secondaryImages, and milestones from the change request
+        if (key !== 'status' && key !== 'createdAt' && key !== 'imageUrl' && key !== 'secondaryImages' && key !== 'milestones') {
+            if (JSON.stringify(editForm[key]) !== JSON.stringify(originalValue)) {
+              changesToSubmit[key] = editForm[key];
+            }
+        }
+      });
+
+      // Check if any non-image changes were made
+      const hasNonImageChanges = Object.keys(changesToSubmit).length > 0;
+
+      if (!hasNonImageChanges) {
+        setIsEditing(false);
+        return;
       }
 
-      const today = new Date();
-      const endDate = new Date(formData.endDate);
-      const duration = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
-
-      const { imageFile, secondaryImages, ...dataWithoutFiles } = formData;
-
-      const projectData = {
-        ...dataWithoutFiles,
-        imageUrl,
-        secondaryImages: secondaryImageUrls,
-        fundingGoal: Number(formData.fundingGoal),
-        duration,
-        backers: 0,
-        fundedMoney: 0,
-        status: "Pending",
-        riskLevel: "High",
-        createdAt: Timestamp.now(),
-        createdBy: {
-          uid: user.uid,
-          email: user.email,
-          name: user.displayName,
-        },
-        milestones: formData.milestones
+      // Create change request document for non-image fields
+      const changeRequestRef = collection(db, 'changeRequests');
+      const changeData = {
+        projectId: project.id,
+        userId: user.uid,
+        changes: changesToSubmit,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        originalValues: {
+          title: project.title || '',
+          shortDescription: project.shortDescription || '',
+          longDescription: project.longDescription || '',
+          fundingGoal: project.fundingGoal || 0,
+          category: project.category || '',
+          startDate: project.startDate || null,
+          endDate: safeConvertToISOString(project.endDate),
+          
+        }        
       };
 
-      const projectRef = await addDoc(collection(db, "projects"), projectData);
-      setMessage("✅ Project submitted successfully!");
+      // Add original values for other fields that might be changing
+      Object.keys(changesToSubmit).forEach(key => {
+        if (project.hasOwnProperty(key) && key !== 'status' && key !== 'createdAt') {
+          let originalValue = project[key];
+          if (originalValue && originalValue.seconds) {
+            originalValue = safeConvertToISOString(originalValue);
+          }
+          changeData.originalValues[key] = originalValue;
+        }
+      });
+
+      await addDoc(changeRequestRef, changeData);
+
       
-      try {
-        // Notify the owner so they know their submission is under review
+      setProject(prev => ({ 
+        ...prev, 
+        ...changesToSubmit, // Apply only the changes submitted in the request
+        endDate: editForm.endDate ? new Date(editForm.endDate) : null 
+      }));
+
+      setIsEditing(false);
+
+       try {
         await addDoc(collection(db, "notifications"), {
-          userId: user.uid,
-          projectId: projectRef.id,
-          projectTitle: projectData.title,
-          message: `You submitted a project called ${projectData.title}. The admins are reviewing it.`,
-          type: "project_submission",
+          message: `Your request for Change on ${project.title} is being reviewed`,
+          type: "ChnageReq", // Note: You had "ChnageReq" in your original snippet, assuming it's intentional
           read: false,
+          userId: currentUser.uid, // Use the current user's ID
           createdAt: Timestamp.now()
         });
+        console.log("Change request notification created successfully.");
       } catch (notifErr) {
         console.error("Failed to create notification:", notifErr);
+
       }
+      
+      // alert('Change request for other fields submitted successfully! Image and milestone changes applied directly.');
 
-      setActiveStep(1);
-      setFormData({
-        title: "",
-        category: "",
-        country: "",
-        shortDescription: "",
-        longDescription: "",
-        fundingGoal: "",
-        endDate: "",
-        imageFile: null,
-        secondaryImages: [],
-        milestones: {
-          '25': { description: '', completed: false },
-          '50': { description: '', completed: false },
-          '75': { description: '', completed: false },
-          '100': { description: '', completed: false }
-        }
-      });
-      navigate("/projects");
+      // Reset new image states after successful save
+      setNewSecondaryImageFiles([]);
+      setPreviewSecondaryImageUrls([]);
+      setMainImageFile(null);
+      if (previewMainImageUrl) URL.revokeObjectURL(previewMainImageUrl);
+      setPreviewMainImageUrl("");
+
     } catch (error) {
-      console.error(error);
-      setMessage("❌ Failed to submit project.");
+      console.error('Error submitting change request or updating images:', error);
+      alert('Failed to submit change request or update images');
     }
-
-    setLoading(false);
   };
 
-  // GSAP refs
-  const stepwrapperRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
-  const steplineRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
-  const stepboxRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
+  // console.log(project);
 
-  useEffect(() => {
-    const tl = gsap.timeline();
 
-    stepwrapperRefs.forEach((step, idx) => {
-      if (idx + 1 === activeStep) {
-        tl.to(step.current, { width: "75%", y: 0, duration: 0.5, ease: "power2.out" }, 0);
-      } else {
-        tl.to(step.current, { width: "5%", y: (idx + 1) * 20, duration: 0.5, ease: "power2.out" }, 0);
-      }
-    });
-
-    steplineRefs.forEach((step, idx) => {
-      if (idx + 1 === activeStep) {
-        tl.to(step.current, { height: "70vh", y: 0, duration: 0.5, ease: "power2.out" }, 0);
-      } else {
-        tl.to(step.current, { height: "30vh", duration: 0.5, ease: "power2.out" }, 0);
-      }
-    });
-
-    stepboxRefs.forEach((step, idx) => {
-      if (!step.current) return;
-      const isActive = idx + 1 === activeStep;
-
-      tl.to(step.current, {
-        height: isActive ? "65vh" : "25vh",
-        width: isActive ? "100%" : "100%",
-        padding: isActive ? "0.8rem" : "0.3rem",
-        duration: 0.5,
-        ease: "power2.out",
-      }, 0);
-
-      step.current.style.display = "flex";
-      step.current.style.flexDirection = "column";
-      step.current.style.justifyContent = "flex-start";
-      step.current.style.alignItems = "flex-start";
-      step.current.style.overflow = isActive ? "auto" : "hidden";
-
-      const numberEl = step.current.querySelector("p");
-      if (numberEl) {
-        tl.to(numberEl, {
-          top: isActive ? "0.8rem" : "50%",
-          left: isActive ? "0.8rem" : "50%",
-          x: isActive ? 0 : "-50%",
-          y: isActive ? 0 : "-50%",
-          duration: 0.5,
-          ease: "power2.out",
-        }, 0);
-      }
-
-      Array.from(step.current.children).forEach((child) => {
-        if (child.tagName !== "P") {
-          child.style.display = isActive ? "block" : "none";
-        }
-      });
-    });
-  }, [activeStep]);
-
-  const stepContents = [
-    // Steps 1-4 remain the same as your original code
-    // Step 1
-    <div className="space-y-4 w-full h-full overflow-hidden">
-      <div className="text-center mb-4">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">Project Information</h2>
-        <p className="text-sm text-gray-600">Tell us about your amazing project</p>
-      </div>
-      
-      <div className="space-y-4 h-full overflow-y-auto">
-        <div className="relative group">
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Project Title *</label>
-          <div className="relative">
-            <FiUser className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400 group-focus-within:text-color-b transition-colors" />
-            <input 
-              type="text" 
-              name="title" 
-              placeholder="Enter your project title" 
-              value={formData.title} 
-              onChange={handleChange} 
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 placeholder-gray-400 text-sm" 
-            />
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <Navbar />
+        <div className="pt-20 flex justify-center items-center min-h-[80vh]">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-color-b border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Loading Project Details</h2>
+            <p className="text-gray-600">Please wait while we fetch your project information...</p>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative group">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Category *</label>
-            <div className="relative">
-              <FiTag className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400 group-focus-within:text-color-b transition-colors pointer-events-none" />
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="appearance-none w-full pl-10 pr-8 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 bg-white cursor-pointer text-sm"
-              >
-                <option value="">Select Category</option>
-                <option value="cars">🚗 Cars & Automotive</option>
-                <option value="cloth">👕 Fashion & Clothing</option>
-                <option value="books">📚 Books & Literature</option>
-              </select>
-              <FiChevronRight className="absolute right-3 top-1/2 transform -translate-y-1/2 rotate-90 text-gray-400 pointer-events-none" />
+  if (error || !project) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <Navbar />
+        <div className="pt-20 flex justify-center items-center min-h-[80vh]">
+          <div className="text-center bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl max-w-md border border-white/20">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-red-500 text-2xl">⚠️</span>
             </div>
-          </div>
-
-          <div className="relative group">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Country *</label>
-            <div className="relative">
-              <FiTag className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400 group-focus-within:text-color-b transition-colors pointer-events-none" />
-              <select
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                className="appearance-none w-full pl-10 pr-8 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 bg-white cursor-pointer text-sm"
-              >
-                <option value="">Select Country</option>
-                <option value="Ethiopia">🇪🇹 Ethiopia</option>
-                <option value="USA">🇺🇸 United States</option>
-                <option value="Germany">🇩🇪 Germany</option>
-                <option value="India">🇮🇳 India</option>
-                <option value="Japan">🇯🇵 Japan</option>
-              </select>
-              <FiChevronRight className="absolute right-3 top-1/2 transform -translate-y-1/2 rotate-90 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>,
-
-    // Step 2
-    <div className="space-y-4 w-full h-full overflow-hidden">
-      <div className="text-center mb-4">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">Project Description</h2>
-        <p className="text-sm text-gray-600">Describe your project in detail</p>
-      </div>
-      
-      <div className="space-y-4 h-full overflow-y-auto">
-        <div className="relative group">
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Short Description *</label>
-          <div className="relative">
-            <FiAlignLeft className="absolute top-3 left-3 text-gray-400 group-focus-within:text-color-b transition-colors" />
-            <textarea 
-              name="shortDescription" 
-              placeholder="Brief description (2-3 sentences)" 
-              value={formData.shortDescription} 
-              onChange={handleChange} 
-              rows="2" 
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 placeholder-gray-400 resize-none text-sm" 
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-1">Shown on project card</p>
-        </div>
-
-        <div className="relative group">
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Detailed Description *</label>
-          <div className="relative">
-            <FiAlignLeft className="absolute top-3 left-3 text-gray-400 group-focus-within:text-color-b transition-colors" />
-            <textarea 
-              name="longDescription" 
-              placeholder="Tell the full story of your project..." 
-              value={formData.longDescription} 
-              onChange={handleChange} 
-              rows="4" 
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 placeholder-gray-400 resize-none text-sm" 
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-1">Shown on project details page</p>
-        </div>
-      </div>
-    </div>,
-
-    // Step 3
-    <div className="space-y-4 w-full h-full overflow-hidden flex flex-col items-center justify-center">
-      <div className="text-center mb-4">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">Funding Goal</h2>
-        <p className="text-sm text-gray-600">Set your funding target</p>
-      </div>
-      
-      <div className="w-full max-w-sm">
-        <div className="relative group">
-          <label className="block text-sm font-semibold text-gray-700 mb-2 text-center">Funding Goal (USD) *</label>
-          <div className="relative">
-            <FiDollarSign className="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-400 group-focus-within:text-color-b transition-colors" />
-            <input 
-              type="number" 
-              name="fundingGoal" 
-              placeholder="Enter amount in USD" 
-              value={formData.fundingGoal} 
-              onChange={handleChange}
-              className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 placeholder-gray-400 text-center text-xl font-bold" 
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-2 text-center">Minimum amount you need to raise</p>
-        </div>
-      </div>
-    </div>,
-
-    // Step 4
-    <div className="space-y-4 w-full h-full overflow-hidden flex flex-col items-center justify-center">
-      <div className="text-center mb-4">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">Campaign Timeline</h2>
-        <p className="text-sm text-gray-600">When should your campaign end?</p>
-      </div>
-      
-      <div className="w-full max-w-sm">
-        <div className="relative group">
-          <label className="block text-sm font-semibold text-gray-700 mb-2 text-center">Campaign End Date *</label>
-          <div className="relative">
-            <FiCalendar className="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-400 group-focus-within:text-color-b transition-colors" />
-            <input 
-              type="date" 
-              name="endDate" 
-              value={formData.endDate} 
-              onChange={handleChange}
-              className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 text-center text-lg" 
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-2 text-center">Choose a date at least 30 days from today</p>
-        </div>
-      </div>
-    </div>,
-
-    // UPDATED STEP 5 - Project Milestones (Properly Scrollable)
-    <div className="w-full h-full overflow-hidden flex flex-col">
-      <div className="text-center mb-4">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">Project Milestones</h2>
-        <p className="text-sm text-gray-600">Describe what you'll do at each funding level</p>
-      </div>
-      
-      {/* Proper scrollable container */}
-      <div className="flex-1 overflow-y-auto pr-2">
-        <div className="space-y-6 pb-4">
-          {Object.entries(formData.milestones).map(([percentage, milestone]) => (
-            <div key={percentage} className="relative group">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                {percentage}% Funding Milestone *
-              </label>
-              <div className="relative">
-                <FiTarget className="absolute top-3 left-3 text-gray-400 group-focus-within:text-color-b transition-colors" />
-                <textarea 
-                  value={milestone.description}
-                  onChange={(e) => handleMilestoneChange(percentage, e.target.value)}
-                  placeholder={`Describe what you'll do when ${percentage}% funded...`}
-                  rows="3"
-                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 placeholder-gray-400 resize-none text-sm" 
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Planned activities for {percentage}% of funding goal</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>,
-
-    // UPDATED STEP 6 - Project Images (Improved & Scrollable)
-    <div className="w-full h-full overflow-hidden flex flex-col">
-      <div className="text-center mb-4">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">Project Images</h2>
-        <p className="text-sm text-gray-600">Upload your main image and additional images</p>
-      </div>
-      
-      {/* Scrollable container */}
-      <div className="flex-1 overflow-y-auto pr-2">
-        <div className="space-y-6 pb-4">
-          {/* Main Image Upload */}
-          <div className="relative">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Main Project Image *</label>
-            <p className="text-xs text-gray-500 mb-3">This will be the primary image shown for your project</p>
-            
-            <div
-              className={`relative w-full h-48 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer group ${
-                formData.imageFile 
-                  ? "border-green-400 bg-green-50" 
-                  : "border-gray-300 hover:border-color-b hover:bg-blue-50"
-              }`}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => handleDrop(e, true)}
-              onClick={() => document.getElementById("mainImageInput").click()}
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Error</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <button 
+              onClick={() => navigate('/projects')}
+              className="bg-gradient-to-r from-color-b to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
-              {formData.imageFile ? (
-                <div className="text-center p-4 w-full h-full flex flex-col justify-between">
-                  <div className="flex-1 flex items-center justify-center">
-                    <img
-                      src={URL.createObjectURL(formData.imageFile)}
-                      alt="Main Preview"
-                      className="max-h-32 max-w-full object-contain rounded-lg shadow-lg"
-                    />
-                  </div>
-                  <div className="mt-2">
-                    <div className="flex items-center justify-center mb-2">
-                      <FiCheck className="w-4 h-4 text-green-600 mr-1" />
-                      <span className="text-sm font-semibold text-green-800">Main Image Set</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeMainImage();
-                      }}
-                      className="px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs flex items-center justify-center mx-auto"
-                    >
-                      <FiTrash2 className="w-3 h-3 mr-1" />
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center p-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-color-b/10 transition-colors">
-                    <FiUpload className="w-8 h-8 text-gray-400 group-hover:text-color-b transition-colors" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-1">Upload Main Image</h3>
-                  <p className="text-gray-600 text-xs">Click to browse or drag & drop</p>
-                  <p className="text-gray-500 text-xs mt-1">PNG, JPG, GIF up to 10MB</p>
-                </div>
-              )}
-              <input
-                id="mainImageInput"
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileChange(e, true)}
-                className="hidden"
-              />
-            </div>
-          </div>
-
-          {/* Secondary Images Upload */}
-          <div className="relative">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Additional Images</label>
-            <p className="text-xs text-gray-500 mb-3">These will be shown in your project gallery</p>
-            
-            <div
-              className={`relative w-full h-32 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer group ${
-                formData.secondaryImages.length > 0 
-                  ? "border-blue-400 bg-blue-50" 
-                  : "border-gray-300 hover:border-color-b hover:bg-blue-50"
-              }`}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => handleDrop(e, false)}
-              onClick={() => document.getElementById("secondaryImagesInput").click()}
-            >
-              <div className="text-center p-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2 group-hover:bg-color-b/10 transition-colors">
-                  <FiUpload className="w-6 h-6 text-blue-600 group-hover:text-color-b transition-colors" />
-                </div>
-                <h3 className="text-sm font-semibold text-blue-800 mb-1">
-                  {formData.secondaryImages.length > 0 ? 'Add More Images' : 'Upload Additional Images'}
-                </h3>
-                <p className="text-blue-600 text-xs">Click, drag & drop, or paste</p>
-                <p className="text-gray-500 text-xs mt-1">PNG, JPG, GIF up to 10MB each</p>
-              </div>
-              <input
-                id="secondaryImagesInput"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => handleFileChange(e, false)}
-                className="hidden"
-              />
-            </div>
-          </div>
-
-          {/* Preview Secondary Images */}
-          {formData.secondaryImages.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                Additional Images ({formData.secondaryImages.length})
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {formData.secondaryImages.map((file, index) => (
-                  <div key={index} className="relative group bg-white rounded-lg border border-gray-200 p-2">
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-20 object-cover rounded-md"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 rounded-md flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-1">
-                        <button
-                          type="button"
-                          onClick={() => promoteToMainImage(index)}
-                          className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-600 transition-colors"
-                          title="Set as main image"
-                        >
-                          <FiImage className="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeSecondaryImage(index)}
-                          className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
-                          title="Remove image"
-                        >
-                          <FiX className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 text-center truncate">
-                      Image {index + 1}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>,
-
-    // Step 7 - Preview & Submit (No changes)
-    <div className="space-y-3 w-full h-full overflow-hidden flex flex-col relative bottom-10">
-      <div className="text-center mb-2">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">Project Preview</h2>
-        <p className="text-xs text-gray-600">Review your project before submitting</p>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 flex-1 flex flex-col">
-        {/* Hero Section */}
-        <div className="relative">
-          {formData.imageFile ? (
-            <img
-              src={URL.createObjectURL(formData.imageFile)}
-              alt="Project Preview"
-              className="w-full h-20 object-cover"
-            />
-          ) : (
-            <div className="w-full h-20 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <div className="text-center">
-                <FiImage className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                <p className="text-gray-500 text-xs">No image</p>
-              </div>
-            </div>
-          )}
-
-          <div className="absolute top-1 left-1">
-            <span className="bg-white/90 backdrop-blur-sm text-color-b px-2 py-1 rounded-full text-xs font-semibold flex items-center shadow-lg">
-              <FiTag className="mr-1 w-3 h-3" />
-              {formData.category || 'General'}
-            </span>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-3 flex-1 flex flex-col">
-          <div className="mb-3">
-            <h1 className="text-sm font-bold text-gray-900 mb-1 line-clamp-1">
-              {formData.title || 'Untitled Project'}
-            </h1>
-            <p className="text-gray-600 text-xs leading-relaxed line-clamp-1">
-              {formData.shortDescription || 'No short description provided.'}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-1 mb-3">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100">
-              <div className="flex items-center mb-1">
-                <FiDollarSign className="w-3 h-3 text-color-b mr-1" />
-                <span className="font-semibold text-gray-700 text-xs">Goal</span>
-              </div>
-              <p className="text-xs font-bold text-color-b">${formData.fundingGoal || 0}</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-2 rounded-lg border border-green-100">
-              <div className="flex items-center mb-1">
-                <FiCalendar className="w-3 h-3 text-green-600 mr-1" />
-                <span className="font-semibold text-gray-700 text-xs">End Date</span>
-              </div>
-              <p className="text-xs font-bold text-green-600">{formData.endDate || 'TBD'}</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-2 rounded-lg border border-purple-100">
-              <div className="flex items-center mb-1">
-                <FiTag className="w-3 h-3 text-purple-600 mr-1" />
-                <span className="font-semibold text-gray-700 text-xs">Country</span>
-              </div>
-              <p className="text-xs font-bold text-purple-600">{formData.country || 'N/A'}</p>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-2 mb-2">
-            <h3 className="text-xs font-bold text-gray-900 mb-1">Funding Milestones</h3>
-            <div className="space-y-1 text-xs">
-              {Object.entries(formData.milestones).map(([percentage, milestone]) => (
-                <div key={percentage} className="flex items-start">
-                  <span className="font-semibold text-color-b mr-2">{percentage}%:</span>
-                  <span className="text-gray-700">{milestone.description || 'Not specified'}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-2 flex-1">
-            <h3 className="text-xs font-bold text-gray-900 mb-1">About This Project</h3>
-            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-xs line-clamp-3 overflow-y-auto">
-              {formData.longDescription || 'No detailed description available.'}
-            </div>
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-gray-200">
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="w-full py-2 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  <span>Submitting...</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center">
-                  <span>Submit Project</span>
-                  <FiCheck className="w-4 h-4 ml-1" />
-                </div>
-              )}
+              Back to My Projects
             </button>
           </div>
         </div>
       </div>
-    </div>
-  ];
+    );
+  }
+
+  const progress = getProgressPercentage();
+  const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-6xl font-titan bg-gradient-to-r from-color-b via-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4 animate-fade-in-up">
-            Create Your Project
-          </h1>
-          <p className="text-lg text-gray-600 animate-fade-in-up animation-delay-200">
-            Bring your ideas to life with our modern project creation platform
-          </p>
-        </div>
-
-        {/* Mobile Step Navigation */}
-        <div className="md:hidden w-full mb-6">
-          <div className="flex justify-between items-center bg-white/80 backdrop-blur-sm rounded-2xl p-3 shadow-lg border border-white/20">
-            {stepboxRefs.map((ref, idx) => (
-              <button
-                key={idx}
-                onClick={() => setActiveStep(idx + 1)}
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-500 ${
-                  activeStep === idx + 1 
-                    ? "bg-gradient-to-r from-color-b to-blue-600 text-white shadow-lg scale-110" 
-                    : "bg-white text-color-b hover:bg-gray-100 border-2 border-gray-200"
-                }`}
-              >
-                {idx + 1}
-              </button>
-            ))}
-          </div>
-          <p className="text-center text-sm text-gray-600 mt-3 font-medium">
-            Step {activeStep} of 7: {getStepTitle(activeStep)}
-          </p>
-        </div>
-
-        {/* Desktop Candlestick Layout */}
-        <div className="hidden md:flex w-full justify-center items-center gap-10">
-          {stepboxRefs.map((ref, idx) => (
-            <div
-              key={idx}
-              ref={stepwrapperRefs[idx]}
-              className="w-1/25 flex items-center justify-center relative"
-              onClick={() => setActiveStep(idx + 1)}
-            >
-              <div
-                ref={steplineRefs[idx]}
-                className={`w-0.5 absolute ${idx === 4 && activeStep === 5 ? "border-l-2 border-dashed border-color-b" : "bg-gradient-to-b from-color-b to-blue-600"}`}
-                style={{ height: idx + 1 === activeStep ? "90vh" : "50vh" }}
-              ></div>
-
-              <div
-                ref={ref}
-                className={`create border-3 bg-white/90 backdrop-blur-sm h-60 w-full font-titan flex relative z-10 mx-auto flex-none cursor-pointer shadow-xl hover:shadow-2xl transition-all duration-500
-                  ${idx === 4 && activeStep === 5 ? "border-dashed rounded-xl border-color-b" : "border-solid rounded-none border-color-b"}`}
-              >
-                <p
-                  className="text-color-b font-titan sm:text-xl md:text-3xl lg:text-5xl absolute"
-                  style={{
-                    top: activeStep === idx + 1 ? "flex-start" : "center",
-                    left: activeStep === idx + 1 ? "flex-start" : "center",
-                    transform: activeStep === idx + 1 ? "1rem" : "0rem",
-                  }}
-                >
-                  {idx + 1}
-                </p>
-
-                {activeStep === idx + 1 && (
-                  <div style={{ marginTop: "4rem", width: "100%" }}>
-                    {stepContents[idx]}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <Navbar />
+      {/* Header */}
+      <div className="pt-20 pb-4">
+        <div className="max-w-7xl mx-auto px-4">
+          <button
+            onClick={() => navigate('/projects')}
+            className="flex items-center space-x-2 text-gray-600 hover:text-color-b transition-colors group mb-6"
+          >
+            <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">Back to My Projects</span>
+          </button>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex-1">
+              {isEditing ? (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => handleEditChange('title', e.target.value)}
+                    className="text-4xl md:text-5xl font-titan bg-gradient-to-r from-slate-100 to-white/90 backdrop-blur-sm border-2 border-blue-200 focus:border-color-b focus:outline-none focus:ring-4 focus:ring-blue-100/50 w-full rounded-2xl px-6 py-4 shadow-lg transition-all duration-300 hover:shadow-xl placeholder:text-gray-400"
+                    placeholder="Enter project title..."
+                  />
+                  <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-lg text-xs font-medium">
+                    <FiEdit className="w-3 h-3 inline mr-1" />
+                    Editing
                   </div>
+                </div>
+              ) : (
+                <h1 className="text-4xl md:text-5xl font-titan bg-gradient-to-r from-color-b to-blue-600 bg-clip-text text-transparent mb-2">
+                  {project.title}
+                </h1>
+              )}
+              <div className="flex items-center gap-4 text-gray-600 mt-4">
+                {/* Status is no longer editable */}
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getStatusColor(project.status)}`}>
+                  {project.status || 'Unknown'}
+                </span>
+                {/* Visual cue for pending changes */}
+                {project.hasPendingChanges && (
+                  <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium border border-amber-200 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                    Pending Changes
+                  </span>
+                )}
+                {isEditing ? (
+                  <div className="relative">
+                    <select
+                      value={editForm.category}
+                      onChange={(e) => handleEditChange('category', e.target.value)}
+                      className="appearance-none bg-gradient-to-r from-slate-100 to-white/90 backdrop-blur-sm border-2 border-blue-200 focus:border-color-b focus:outline-none focus:ring-4 focus:ring-blue-100/50 px-4 py-2 pr-10 rounded-xl text-sm font-semibold shadow-lg transition-all duration-300 hover:shadow-xl"
+                    >
+                      <option value="">Select Category</option>
+                      <option value="Technology">Technology</option>
+                      <option value="Arts">Arts</option>
+                      <option value="Education">Education</option>
+                      <option value="Environment">Environment</option>
+                      <option value="Health">Health</option>
+                      <option value="Community">Community</option>
+                      <option value="General">General</option>
+                    </select>
+                    <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none" />
+                  </div>
+                ) : (
+                  <span className="flex items-center bg-white/60 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-semibold border border-white/40">
+                    <FiTag className="w-4 h-4 mr-1" />
+                    {project.category || 'General'}
+                  </span>
                 )}
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Mobile Step Content */}
-        <div className="md:hidden w-full max-w-md mx-auto">
-          <div className="bg-white/90 backdrop-blur-sm border-3 border-color-b rounded-2xl p-6 min-h-[500px] shadow-xl">
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-color-b mb-3">Step {activeStep}</h2>
-              <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
-                <div 
-                  className="bg-gradient-to-r from-color-b to-blue-600 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${(activeStep / 7) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-            <div className="w-full">
-              {stepContents[activeStep - 1]}
-            </div>
-            
-            <div className="flex justify-between mt-8">
-              <button
-                onClick={() => setActiveStep(Math.max(1, activeStep - 1))}
-                disabled={activeStep === 1}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                  activeStep === 1
-                    ? "opacity-50 cursor-not-allowed text-gray-400"
-                    : "text-gray-600 hover:text-color-b hover:bg-gray-100"
-                }`}
-              >
-                <FiChevronLeft className="w-5 h-5" />
-                <span>Previous</span>
-              </button>
-              
-              {activeStep < 7 ? (
-                <button
-                  onClick={() => setActiveStep(Math.min(7, activeStep + 1))}
-                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-color-b to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 shadow-lg"
-                >
-                  <span>Next</span>
-                  <FiChevronRight className="w-5 h-5" />
-                </button>
+            <div className="flex gap-3">
+              {isEditing ? (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleEditSave}
+                    className="relative px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-2 group overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <FiSave className="w-4 h-4 relative z-10" />
+                    <span className="relative z-10">Save Changes</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditForm({ 
+                        ...project, 
+                        endDate: safeFormatDateForInput(project.endDate),
+                        secondaryImages: [...project.secondaryImages || []], // Reset images on cancel
+                        milestones: { ...project.milestones || {} } // Reset milestones on cancel
+                      });
+                      setIsEditing(false);
+                      setNewSecondaryImageFiles([]); // Clear new files on cancel
+                      setPreviewSecondaryImageUrls([]); // Clear previews on cancel
+                      setMainImageFile(null); // Clear new main image on cancel
+                      if (previewMainImageUrl) URL.revokeObjectURL(previewMainImageUrl); // Revoke old preview on cancel
+                      setPreviewMainImageUrl(""); // Clear main image preview on cancel
+                    }}
+                    className="relative px-6 py-3 bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 text-gray-800 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-2 group overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-200 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <FiX className="w-4 h-4 relative z-10" />
+                    <span className="relative z-10">Cancel</span>
+                  </button>
+                </div>
               ) : (
                 <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={checkPendingAndEnableEditing}
+                  disabled={checkingPending}
+                  className={`relative px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-2 group overflow-hidden ${
+                    checkingPending
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-white/80 to-white/90 hover:from-white/90 hover:to-white text-gray-700 backdrop-blur-sm border border-white/40'
+                  }`}
                 >
-                  {loading ? (
+                  {checkingPending ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Submitting...</span>
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Checking...</span>
                     </>
                   ) : (
                     <>
-                      <span>Submit Project</span>
-                      <FiCheck className="w-5 h-5" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <FiEdit className="w-4 h-4 relative z-10" />
+                      <span className="relative z-10">Edit Project</span>
                     </>
                   )}
                 </button>
               )}
+              <Link 
+                to={`/projectDet/${project.id}`}
+                className="relative px-6 py-3 bg-gradient-to-r from-color-b to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-2 group overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <FiEye className="w-4 h-4 relative z-10" />
+                <span className="relative z-10">View Public</span>
+              </Link>
             </div>
           </div>
         </div>
+      </div>
+      {/* Stats Cards */}
+      <div className="max-w-7xl mx-auto px-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Funding Progress</p>
+                <p className="text-3xl font-bold text-color-b">{progress.toFixed(1)}%</p>
+              </div>
+              <div className="p-3 bg-color-b/10 rounded-xl">
+                <FiTrendingUp className="w-6 h-6 text-color-b" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Amount Raised</p>
+                <p className="text-3xl font-bold text-green-600">{formatCurrency(project.fundedMoney)}</p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-xl">
+                <FiDollarSign className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Funders</p>
+                <p className="text-3xl font-bold text-blue-600">{funders.length}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <FiUsers className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Days Left</p>
+                <p className="text-3xl font-bold text-purple-600">{daysLeft > 0 ? daysLeft : 'Ended'}</p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-xl">
+                <FiClock className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Tabs */}
+      <div className="max-w-7xl mx-auto px-4 mb-8">
+        <div className="flex space-x-1 bg-white/50 backdrop-blur-sm rounded-2xl p-1">
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'funders', label: `Funders (${funders.length})` },
+            { id: 'announcements', label: 'Announcements' },
+            { id: 'analytics', label: 'Analytics' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+                activeTab === tab.id
+                  ? 'bg-white text-color-b shadow-lg'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Tab Content */}
+      <div className="max-w-7xl mx-auto px-4 pb-16">
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Project Details & Milestones (Combined in the left column - spans 2 columns) */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Project Image and Description */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+                <div className="relative h-64">
+                  {isEditing ? (
+                    // Modern Editing Mode for Main Image
+                    <div className="w-full h-full flex flex-col justify-center items-center p-6 bg-gradient-to-br from-slate-50 to-blue-50">
+                      {previewMainImageUrl ? (
+                        <div className="relative w-full h-full group">
+                          <img
+                            src={previewMainImageUrl}
+                            alt="Main Preview"
+                            className="w-full h-full object-cover rounded-2xl shadow-lg ring-4 ring-blue-100 transition-all duration-300 group-hover:ring-blue-200"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 rounded-2xl"></div>
+                          <button
+                            type="button"
+                            onClick={removeNewMainImage}
+                            className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 opacity-0 group-hover:opacity-100"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                          <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg">
+                            <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                              <FiCheck className="w-4 h-4 text-green-500" />
+                              New Image Ready
+                            </span>
+                          </div>
+                        </div>
+                      ) : project.imageUrl ? (
+                        <div className="relative w-full h-full group">
+                          <img
+                            src={project.imageUrl}
+                            alt={project.title}
+                            className="w-full h-full object-cover rounded-2xl shadow-lg ring-4 ring-gray-100"
+                          />
+                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors duration-300 rounded-2xl flex items-center justify-center">
+                            <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <span className="text-sm font-medium text-gray-700">Current Image</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center border-4 border-dashed border-gray-300">
+                          <div className="text-center">
+                            <FiImage className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                            <span className="text-gray-500 text-lg font-medium">No Image</span>
+                          </div>
+                        </div>
+                      )}
+                      <input
+                        id="mainImageInput"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleMainImageChange}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => document.getElementById("mainImageInput").click()}
+                        className="mt-6 relative bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 group overflow-hidden"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <FiUpload className="w-4 h-4 relative z-10" />
+                        <span className="relative z-10">
+                          {previewMainImageUrl ? 'Change Main Image' : 'Upload Main Image'}
+                        </span>
+                      </button>
+                    </div>
+                  ) : (
+                    // View Mode for Main Image
+                    <>
+                      {project.imageUrl ? (
+                        <img
+                          src={project.imageUrl}
+                          alt={project.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                          <span className="text-gray-400 text-lg">No Image</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">Project Description</h3>
+                  {isEditing ? (
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-3">Short Description</label>
+                        <textarea
+                          value={editForm.shortDescription}
+                          onChange={(e) => handleEditChange('shortDescription', e.target.value)}
+                          className="w-full p-4 bg-gradient-to-r from-slate-100 to-white/90 backdrop-blur-sm border-2 border-blue-200 focus:border-color-b focus:outline-none focus:ring-4 focus:ring-blue-100/50 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl resize-none"
+                          rows="3"
+                          placeholder="Brief description of your project..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-3">Detailed Description</label>
+                        <textarea
+                          value={editForm.longDescription}
+                          onChange={(e) => handleEditChange('longDescription', e.target.value)}
+                          className="w-full p-4 bg-gradient-to-r from-slate-100 to-white/90 backdrop-blur-sm border-2 border-blue-200 focus:border-color-b focus:outline-none focus:ring-4 focus:ring-blue-100/50 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl resize-none"
+                          rows="8"
+                          placeholder="Detailed description of your project goals, methodology, and expected outcomes..."
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-gray-600 mb-4">{project.shortDescription}</p>
+                      <div className="prose prose-gray max-w-none">
+                        <p className="whitespace-pre-wrap">{project.longDescription || 'No detailed description available.'}</p>
+                      </div>
+                    </>
+                  )}
+                  {/* Editable End Date */}
+                  <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <FiCalendar className="w-4 h-4 text-blue-600" />
+                      Project Due Date
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={editForm.endDate}
+                        onChange={(e) => handleEditChange('endDate', e.target.value)}
+                        className="w-full p-3 bg-white border-2 border-blue-200 focus:border-color-b focus:outline-none focus:ring-4 focus:ring-blue-100/50 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl"
+                      />
+                    ) : (
+                      <p className="text-gray-700 font-medium">{project.endDate ? formatDate(project.endDate) : 'Not set'}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
 
-        {message && (
-          <div className={`max-w-4xl mx-auto mt-6 p-4 rounded-xl text-center font-semibold animate-fade-in-up ${
-            message.includes("✅") 
-              ? "bg-green-100 text-green-800 border border-green-200" 
-              : "bg-red-100 text-red-800 border border-red-200"
-          }`}>
-            {message}
+              {/* Secondary Images Section */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+                <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                  <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                    <FiImage className="w-6 h-6 text-blue-600" />
+                    Project Gallery
+                  </h3>
+                  <p className="text-gray-600 mt-2">Additional images showcasing your project</p>
+                </div>
+                <div className="p-6">
+                  {isEditing ? (
+                    <>
+                      {/* Modern Upload Interface */}
+                      <div className="mb-8">
+                        <label className="block text-sm font-semibold text-gray-700 mb-4">Add New Images</label>
+                        <div className="relative">
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={handleSecondaryImageChange}
+                            className="hidden"
+                            id="secondaryImageInput"
+                          />
+                          <button
+                            onClick={() => document.getElementById("secondaryImageInput").click()}
+                            className="w-full p-8 border-3 border-dashed border-blue-300 hover:border-blue-400 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-2xl transition-all duration-300 group"
+                          >
+                            <div className="text-center">
+                              <FiPlus className="w-12 h-12 text-blue-500 mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
+                              <h4 className="text-lg font-semibold text-gray-700 mb-2">Upload New Images</h4>
+                              <p className="text-gray-500">Click to select multiple images or drag and drop</p>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Image Grid with Modern Design */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                        {/* Render existing images from editForm.secondaryImages */}
+                        {editForm.secondaryImages && editForm.secondaryImages.map((imgUrl, index) => (
+                          <div key={`existing-${index}`} className="relative group">
+                            <div className="aspect-square overflow-hidden rounded-2xl shadow-lg ring-2 ring-gray-100 group-hover:ring-blue-200 transition-all duration-300">
+                              <img
+                                src={imgUrl}
+                                alt={`Project ${index + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => { e.target.src = 'https://via.placeholder.com/200x150?text=Image+Error'; }}
+                              />
+                            </div>
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 rounded-2xl"></div>
+                            <button
+                              type="button"
+                              onClick={() => removeExistingSecondaryImage(index)}
+                              className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 transform hover:scale-110"
+                              aria-label="Remove image"
+                            >
+                              <FiTrash2 className="w-4 h-4" />
+                            </button>
+                            <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <span className="text-xs font-medium text-gray-700">Existing</span>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {/* Render new preview images */}
+                        {previewSecondaryImageUrls.map((previewUrl, index) => (
+                          <div key={`new-${index}`} className="relative group">
+                            <div className="aspect-square overflow-hidden rounded-2xl shadow-lg ring-2 ring-green-200 group-hover:ring-green-300 transition-all duration-300">
+                              <img
+                                src={previewUrl}
+                                alt="New preview"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => { e.target.src = 'https://via.placeholder.com/200x150?text=Preview+Error'; }}
+                              />
+                            </div>
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 rounded-2xl"></div>
+                            <button
+                              type="button"
+                              onClick={() => removeNewSecondaryImage(index)}
+                              className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 transform hover:scale-110"
+                              aria-label="Remove new image"
+                            >
+                              <FiTrash2 className="w-4 h-4" />
+                            </button>
+                            <div className="absolute bottom-3 left-3 bg-green-500 text-white px-2 py-1 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <span className="text-xs font-medium flex items-center gap-1">
+                                <FiPlus className="w-3 h-3" />
+                                New
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    // View Mode - Show existing images from project data
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {project.secondaryImages && project.secondaryImages.map((imgUrl, index) => (
+                        <div key={index} className="relative aspect-square overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+                          <img
+                            src={imgUrl}
+                            alt={`Project ${index + 1}`}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                            onError={(e) => { e.target.src = 'https://via.placeholder.com/200x150?text=Image+Error'; }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Milestones Card - Now placed inside the left column */}
+              {project.milestones && (
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+                  <button
+                    onClick={() => setIsMilestonesExpanded(!isMilestonesExpanded)}
+                    className="w-full p-6 flex items-center justify-between bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-200 hover:from-purple-100 hover:to-pink-100 transition-all duration-300"
+                  >
+                    <div className="flex items-center">
+                      <div className="p-3 bg-purple-100 rounded-xl mr-4">
+                        <FiTarget className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-2xl font-bold text-gray-900">Project Milestones</h3>
+                        <p className="text-gray-600 text-sm">Track your project progress</p>
+                      </div>
+                    </div>
+                    <FiChevronDown className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${isMilestonesExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isMilestonesExpanded && (
+                    <div className="p-6">
+                      <div className="space-y-6">
+                        {Object.entries(editForm.milestones || project.milestones).map(([percentage, milestone], index) => (
+                          <div key={percentage} className="relative">
+                            {/* Connecting Line - only show if not the last item */}
+                            {index < Object.keys(editForm.milestones || project.milestones).length - 1 && (
+                              <div className="absolute left-8 top-16 bottom-0 w-0.5 bg-gradient-to-b from-gray-300 to-transparent"></div>
+                            )}
+                            {/* Milestone Item */}
+                            <div className="bg-gradient-to-r from-white to-slate-50 rounded-2xl p-6 shadow-lg border border-gray-100 relative hover:shadow-xl transition-shadow duration-300">
+                              <div className="flex items-start">
+                                <div className={`w-12 h-12 rounded-full ${
+                                  percentage === '25' ? 'bg-gradient-to-br from-blue-400 to-blue-600' :
+                                  percentage === '50' ? 'bg-gradient-to-br from-purple-400 to-purple-600' :
+                                  percentage === '75' ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-gradient-to-br from-green-400 to-green-600'
+                                } flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0`}>
+                                  {percentage}%
+                                </div>
+                                <div className="ml-6 flex-1">
+                                  <h4 className="font-bold text-gray-900 text-lg mb-2">Funding Goal: {percentage}%</h4>
+                                  {isEditing ? (
+                                    <textarea
+                                      value={milestone.description || ''}
+                                      onChange={(e) => handleMilestoneChange(percentage, e.target.value)}
+                                      className="w-full p-3 bg-white border-2 border-gray-200 focus:border-purple-400 focus:outline-none focus:ring-4 focus:ring-purple-100/50 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl resize-none"
+                                      rows="3"
+                                      placeholder={`Describe what will be achieved at ${percentage}% funding...`}
+                                    />
+                                  ) : (
+                                    <p className="text-gray-700 leading-relaxed mb-4">{milestone.description || 'No description provided.'}</p>
+                                  )}
+                                  <div className="mt-3">
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                                      <div className="w-2 h-2 bg-amber-400 rounded-full mr-2 animate-pulse"></div>
+                                      Pending
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Funding Progress (Right column - spans 1 column) */}
+            <div className="space-y-6">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-6">Funding Progress</h3>
+                <div className="mb-6">
+                  <div className="flex justify-between text-lg font-semibold text-gray-800 mb-2">
+                    <span>{formatCurrency(project.fundedMoney)}</span>
+                    <span className="text-gray-500">
+                      {isEditing ? (
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={editForm.fundingGoal || 0}
+                            onChange={(e) => handleEditChange('fundingGoal', Number(e.target.value) || 0)}
+                            className="bg-gradient-to-r from-slate-100 to-white/90 backdrop-blur-sm border-2 border-blue-200 focus:border-color-b focus:outline-none focus:ring-4 focus:ring-blue-100/50 rounded-xl px-3 py-2 w-32 text-right shadow-lg transition-all duration-300 hover:shadow-xl"
+                            placeholder="Goal"
+                          />
+                          <div className="absolute -top-6 right-0 text-xs text-gray-500 font-normal">
+                            Funding Goal
+                          </div>
+                        </div>
+                      ) : (
+                        formatCurrency(project.fundingGoal)
+                      )}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-4 mb-3">
+                    <div
+                      className="bg-gradient-to-r from-color-b to-blue-600 h-4 rounded-full transition-all duration-1000"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>{progress.toFixed(1)}% funded</span>
+                    <span>
+                      {project.fundingGoal - (project.fundedMoney || 0) > 0
+                        ? formatCurrency(project.fundingGoal - (project.fundedMoney || 0)) + ' to go'
+                        : 'Goal reached!'}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 bg-gray-50 rounded-xl">
+                    <FiUsers className="w-6 h-6 text-color-b mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-gray-800">{funders.length}</p>
+                    <p className="text-sm text-gray-600">Funders</p>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-xl">
+                    <FiCalendar className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-gray-800">{daysLeft || 'N/A'}</p>
+                    <p className="text-sm text-gray-600">Days Left</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab === 'announcements' && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+            <div className="p-8 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-900">Announcements</h3>
+            </div>
+            <div className="p-8 space-y-6">
+              {/* Inline Composer */}
+              <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
+                <h4 className="text-lg font-semibold text-gray-900 mb-3">Create Announcement</h4>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder="Announcement Title"
+                  />
+                  <textarea
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                    className="w-full p-2 border rounded h-28"
+                    placeholder="Announcement Content"
+                  />
+                  <div className="flex justify-end">
+                    <button onClick={handleCreateAnnouncement} className="px-4 py-2 bg-color-b text-white rounded hover:bg-blue-600">Post</button>
+                  </div>
+                </div>
+              </div>
+              {getAnnouncementsArray().length === 0 ? (
+                <p className="text-gray-600">No announcements yet.</p>
+              ) : (
+                <div className="space-y-6">
+                  {getAnnouncementsArray().map((a) => (
+                    <div key={a.id} className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                      {editingAnnouncementId === a.id ? (
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className="w-full p-2 border rounded"
+                            placeholder="Announcement Title"
+                          />
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="w-full p-2 border rounded h-28"
+                            placeholder="Announcement Content"
+                          />
+                          <div className="flex gap-2">
+                            <button onClick={saveEditAnnouncement} className="px-4 py-2 bg-color-b text-white rounded hover:bg-blue-600">Save</button>
+                            <button onClick={cancelEditAnnouncement} className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200">Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-xl font-semibold text-gray-900">{a.title || 'Announcement'}</h4>
+                            <span className="text-sm text-gray-500">{formatDate(a.date)}</span>
+                          </div>
+                          <p className="text-gray-700 whitespace-pre-wrap mb-4">{a.content}</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => startEditAnnouncement(a)} className="px-4 py-2 bg-white border rounded hover:bg-gray-50">Edit</button>
+                            <button onClick={() => deleteAnnouncement(a.id)} className="px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200">Delete</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {activeTab === 'funders' && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+            <div className="p-8 border-b border-gray-200">
+              <h3 className="text-2xl font-bold text-gray-900 flex items-center">
+                <FiUsers className="w-6 h-6 text-color-b mr-3" />
+                Project Funders ({funders.length})
+              </h3>
+              <p className="text-gray-600 mt-2">People who have supported your project</p>
+            </div>
+            <div className="p-8">
+              {funders.length === 0 ? (
+                <div className="text-center py-12">
+                  <FiUsers className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h4 className="text-xl font-semibold text-gray-600 mb-2">No Funders Yet</h4>
+                  <p className="text-gray-500">Your project hasn't received any funding yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {funders.map((funder, index) => (
+                    <div key={funder.id} className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-4">
+                          <img
+                            src={funder.profileImage}
+                            alt={funder.name}
+                            className="w-12 h-12 rounded-full object-cover"
+                            onError={(e) => {
+                              e.target.src = 'https://via.placeholder.com/48';
+                            }}
+                          />
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{funder.name}</h4>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <FiMapPin className="w-4 h-4 mr-1" />
+                              {funder.location}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-color-b">{formatCurrency(funder.totalAmount)}</p>
+                          <p className="text-sm text-gray-600">{funder.contributions.length} contribution{funder.contributions.length > 1 ? 's' : ''}</p>
+                          <button
+                            onClick={() => toggleFunder(funder.id)}
+                            className="mt-2 inline-flex items-center text-sm text-color-b hover:text-blue-700 transition-colors"
+                            aria-expanded={!!expandedFunders[funder.id]}
+                            aria-controls={`contrib-${funder.id}`}
+                          >
+                            <FiChevronDown className={`w-4 h-4 mr-1 transition-transform ${expandedFunders[funder.id] ? 'rotate-180' : ''}`} />
+                            {expandedFunders[funder.id] ? 'Hide' : 'Show'} contributions
+                          </button>
+                        </div>
+                      </div>
+                      {/* Contributions Details */}
+                      {expandedFunders[funder.id] && (
+                        <div id={`contrib-${funder.id}`} className="mt-4 pt-4 border-t border-gray-200">
+                          <h5 className="font-medium text-gray-800 mb-3">Contribution History</h5>
+                          <div className="space-y-2">
+                            {funder.contributions.map((contribution, idx) => (
+                              <div key={idx} className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600">{formatDate(contribution.date)}</span>
+                                <span className="font-semibold text-gray-800">{formatCurrency(contribution.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {activeTab === 'analytics' && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+              <FiTrendingUp className="w-6 h-6 text-color-b mr-3" />
+              Project Analytics
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6">
+                <h4 className="font-semibold text-gray-800 mb-2">Average Contribution</h4>
+                <p className="text-3xl font-bold text-blue-600">
+                  {funders.length > 0 ? formatCurrency((project.fundedMoney || 0) / funders.length) : '$0'}
+                </p>
+              </div>
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6">
+                <h4 className="font-semibold text-gray-800 mb-2">Funding Rate</h4>
+                <p className="text-3xl font-bold text-green-600">{progress.toFixed(1)}%</p>
+              </div>
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6">
+                <h4 className="font-semibold text-gray-800 mb-2">Total Contributions</h4>
+                <p className="text-3xl font-bold text-purple-600">
+                  {funders.reduce((total, funder) => total + funder.contributions.length, 0)}
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
-
-
-
-
-
