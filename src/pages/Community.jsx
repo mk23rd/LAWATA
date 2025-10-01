@@ -14,21 +14,28 @@ import {
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
+// Community hub enabling founders to send direct messages and announcements
 const Community = () => {
   const [activeTab, setActiveTab] = useState("dm"); // "dm" or "announcement"
 
   // DM State
+  // List of potential supporters pulled from Firestore
   const [supporters, setSupporters] = useState([]);
+  // Filter text entered by the user to locate a supporter
   const [supportersNameInput, setSupportersNameInput] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  // Currently selected supporter to message
   const [selectedSupporter, setSelectedSupporter] = useState(null);
   const [dmMessage, setDmMessage] = useState("");
+  // Conversation history for the active supporter
   const [dmHistory, setDmHistory] = useState([]);
   const chatEndRef = useRef(null);
 
   // Announcement State
+  // Title and body for the outgoing announcement
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementContent, setAnnouncementContent] = useState("");
+  // Approved projects owned by the creator (announcement target)
   const [approvedProjects, setApprovedProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const auth = getAuth();
@@ -114,6 +121,7 @@ const Community = () => {
         title: announcementTitle,
         content: announcementContent,
         date: serverTimestamp(),
+        // Persist the author for traceability in the UI
         createdBy: user ? { uid: user.uid, email: user.email || null } : null,
       };
 

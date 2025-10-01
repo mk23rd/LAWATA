@@ -8,13 +8,16 @@ import { signOut } from 'firebase/auth';
 import Arrow from "../assets/images/arrow-left.svg";
 import Navbar from "../components/NavBar";
 
+// Project discovery page with search/filter/sort controls and animated cards
 const Browse = () => {
   const navigate = useNavigate();
   const user = auth.currentUser;
 
+  // Authenticated user metadata for greeting and dropdown
   const [userData, setUserData] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // Collection of all approved projects and the filtered subset for display
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -127,11 +130,13 @@ const Browse = () => {
     setFilteredProjects(filtered);
   }, [projects, searchTerm, selectedCategory, sortBy]);
 
+  // Guard against divide-by-zero while computing progress
   const calculateFundingPercentage = (fundedMoney, fundingGoal) => {
     if (!fundedMoney || !fundingGoal || fundingGoal === 0) return 0;
     return Math.min((fundedMoney / fundingGoal) * 100, 100);
   };
 
+  // Format amounts as USD currency strings
   const formatFunding = (amount) => {
     return amount?.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }) || '$0';
   };

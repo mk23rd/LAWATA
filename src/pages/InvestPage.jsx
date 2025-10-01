@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { ArrowLeft, DollarSign, TrendingUp, Shield, AlertCircle, Calculator } from 'lucide-react';
 import Navbar from "../components/NavBar";
 
+// Equity investment workflow for a specific project
 const InvestPage = () => {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +66,7 @@ const InvestPage = () => {
     }
     
     const available = totalEquity - investedEquity;
+    // Clamp to zero to avoid negative availability when rounding errors occur
     setAvailableEquity(Math.max(0, available));
     console.log("Total Equity Offered:", totalEquity);
     console.log("Already Invested Equity:", investedEquity);

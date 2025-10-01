@@ -6,13 +6,17 @@ import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import NotificationBell from "../components/NotificationBell";
 
+// Responsive navigation bar that adapts between desktop and mobile layouts
 const Navbar = () => {
   const navigate = useNavigate();
   const user = auth.currentUser;
 
+  // Store extended profile fields fetched from Firestore
   const [userData, setUserData] = useState(null);
+  // Track whether the desktop profile dropdown is visible
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // Control the hamburger menu open state on mobile
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
@@ -33,6 +37,7 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
+      // Sign out from Firebase auth and redirect home
       await signOut(auth);
       navigate("/");
     } catch (err) {
@@ -58,6 +63,7 @@ const Navbar = () => {
         setMenuOpen(false);
       }
     };
+    // Only attach the listener while the menu is open
     if (menuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);

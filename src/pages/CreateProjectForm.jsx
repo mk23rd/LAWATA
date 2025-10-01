@@ -10,8 +10,11 @@ import { useAuth } from "../context/AuthContext";
 
 export default function CreateProjectForm() {
   const navigate = useNavigate();
+  // Pull current user and profile completeness gate from auth context
   const { currentUser, profileComplete } = useAuth();
+  // Track which step of the multi-step wizard is active
   const [activeStep, setActiveStep] = useState(1);
+  // Central form data state shared across steps
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -32,6 +35,7 @@ export default function CreateProjectForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   
+  // Provide titles for the progress indicator and headings
   const getStepTitle = (step) => {
     const titles = [
       "Project Details",
@@ -126,6 +130,7 @@ export default function CreateProjectForm() {
     });
   };
 
+  // Utility: convert selected image file into Base64 for the ImgBB API
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -134,6 +139,7 @@ export default function CreateProjectForm() {
       reader.onerror = (error) => reject(error);
     });
 
+  // Upload project image to ImgBB and return hosted URL
   const uploadImage = async (file) => {
     const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
     if (!apiKey) throw new Error("Missing ImgBB API key");
@@ -225,6 +231,7 @@ export default function CreateProjectForm() {
       setMessage("✅ Project submitted successfully!");
       
       try {
+        // Notify the owner so they know their submission is under review
         await addDoc(collection(db, "notifications"), {
           userId: user.uid,
           projectId: projectRef.id,
