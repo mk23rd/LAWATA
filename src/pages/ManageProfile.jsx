@@ -12,6 +12,7 @@ const steps = [
   { label: "Preferred Categories", name: "preferredCategories", type: "text", milestone: "Preferences" },
 ];
 
+// Guided wizard that helps creators complete the required profile fields
 const ManageProfile = () => {
   const navigate = useNavigate();
   const user = auth.currentUser;
@@ -104,6 +105,7 @@ const ManageProfile = () => {
     setFilePreview("");
   };
 
+  // Upload helper for profile pictures using the ImgBB API
   const uploadToImageBB = async (file) => {
     setUploading(true);
     try {

@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 
+// Animated splash/loading experience displayed before the app becomes interactive
 const Loading = ({ onComplete }) => {
+  // Numeric percentage shown under the bar animation
   const [progress, setProgress] = useState(2);
   const percentRef = useRef(null);
   const containerRef = useRef(null);
+  // Store references to each animated bar element
   const barsRef = useRef([]);
   const barsRandomTop = useRef(
     Array.from({ length: 50 }).map(() => Math.floor(Math.random() * 100))
