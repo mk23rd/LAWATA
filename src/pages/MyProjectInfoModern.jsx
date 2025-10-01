@@ -25,7 +25,6 @@ import {
   FiBarChart2,
   FiX
 } from 'react-icons/fi';
-import Navbar from '../components/NavBar';
 import {
   ProjectCard,
   StatCard,
@@ -655,7 +654,6 @@ export default function MyProjectInfo() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-        <Navbar />
         <div className="pt-20 flex justify-center items-center min-h-[80vh]">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-color-b border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -670,7 +668,6 @@ export default function MyProjectInfo() {
   if (error || !project) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-        <Navbar />
         <div className="pt-20 flex justify-center items-center min-h-[80vh]">
           <div className="text-center bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl max-w-md border border-white/20">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -696,7 +693,6 @@ export default function MyProjectInfo() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
       
       {/* Modern Hero Header */}
       <div className="relative pt-20 pb-8 overflow-hidden bg-white border-b border-gray-200">

@@ -71,10 +71,12 @@ const Navbar = () => {
   }, [menuOpen]);
 
   return (
-    <nav className='fixed top-0 left-0 w-screen h-16 md:h-20 z-50 flex items-center bg-white shadow-sm'>
+    <nav className='fixed top-0 left-0 w-screen h-16 md:h-20 z-[100] flex items-center bg-white shadow-sm'>
       {/* Logo */}
       <div className='flex-1 md:w-1/6 h-full flex justify-center md:justify-center items-center'>
-        <p className='font-titan text-2xl md:text-5xl text-color-b pointer-events-none'>LAWATA</p>
+        <Link to="/" className='font-titan text-2xl md:text-5xl text-color-b hover:opacity-80 transition-opacity cursor-pointer'>
+          LAWATA
+        </Link>
       </div>
 
       {/* Desktop Navigation */}

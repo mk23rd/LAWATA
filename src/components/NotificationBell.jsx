@@ -120,8 +120,19 @@ const NotificationBell = ({ containerClassName = '' }) => {
                     console.error('Failed to mark notification read', e)
                   } finally {
                     setOpen(false)
+                    // Navigate to specific project if projectId exists
                     if (n.projectId) {
-                      navigate('/projects')
+                      // Check notification type to determine which page to navigate to
+                      if (n.type === 'Your_project_Funded' || n.type === 'Milestone_Completed') {
+                        // Navigate to project info page for creator
+                        navigate(`/my-project-info/${n.projectId}`)
+                      } else if (n.type === 'You_Funded_a_project') {
+                        // Navigate to project details page for supporters
+                        navigate(`/projectDet/${n.projectId}`)
+                      } else {
+                        // Default to project details
+                        navigate(`/projectDet/${n.projectId}`)
+                      }
                     }
                   }
                 }}

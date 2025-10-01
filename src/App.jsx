@@ -21,6 +21,7 @@ import Community from "./pages/Community"
 import MyInvestments from "./pages/MyInvestments";
 import InvestPage from "./pages/InvestPage";
 import Wallet from "./pages/Wallet";
+import Navbar from "./components/NavBar";
 
 function App() {
   // Track whether the splash/loading experience has finished running
@@ -33,6 +34,9 @@ function App() {
 
   return (
     <>
+      {/* Global Navbar - appears on all pages */}
+      <Navbar />
+      
       {/* Centralised route table for the single-page application */}
       <Routes> 
         {/* Landing and home variants */}
