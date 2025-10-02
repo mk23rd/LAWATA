@@ -6,7 +6,7 @@ import { ArrowLeft, Clock, DollarSign, Target, Users, Share2, Bookmark, MessageC
 import { getAuth } from 'firebase/auth';
 import { useAuth } from "../context/AuthContext";
 import { toast } from 'react-toastify';
-import Comment from '../components/comment';
+import Comment from '../components/Comment';
 import Navbar from "../components/NavBar";
 import MilestoneRoadmap from '../components/MilestoneRoadmap';
 
