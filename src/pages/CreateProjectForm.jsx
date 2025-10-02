@@ -4,7 +4,7 @@ import { db } from "../firebase/firebase-config";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage, FiChevronRight, FiChevronLeft, FiUpload, FiCheck, FiX, FiTarget, FiTrash2 } from "react-icons/fi";
+import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage, FiChevronRight, FiChevronLeft, FiUpload, FiCheck, FiX, FiTarget, FiTrash2, FiPlus } from "react-icons/fi";
 import imgLogo from '../assets/images/img-logo.svg'
 import { useAuth } from "../context/AuthContext";
 import { toast } from 'react-toastify';
@@ -31,7 +31,8 @@ export default function CreateProjectForm() {
       '50': { description: '', completed: false },
       '75': { description: '', completed: false },
       '100': { description: '', completed: false }
-    }
+    },
+    rewards: []
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -45,6 +46,7 @@ export default function CreateProjectForm() {
       "Campaign Timeline",
       "Milestones",
       "Project Images",
+      "Rewards",
       "Preview & Submit"
     ];
     return titles[step - 1] || "Unknown Step";
@@ -63,6 +65,43 @@ export default function CreateProjectForm() {
         [percentage]: { ...prev.milestones[percentage], description: value }
       }
     }));
+  };
+
+  // Reward handling functions
+  const addReward = () => {
+    const newReward = {
+      id: Date.now(),
+      title: "",
+      description: "",
+      amount: "",
+      type: "unlimited", // "unlimited" or "limited"
+      quantity: "",
+      imageFile: null
+    };
+    setFormData(prev => ({
+      ...prev,
+      rewards: [...prev.rewards, newReward]
+    }));
+  };
+
+  const removeReward = (rewardId) => {
+    setFormData(prev => ({
+      ...prev,
+      rewards: prev.rewards.filter(reward => reward.id !== rewardId)
+    }));
+  };
+
+  const updateReward = (rewardId, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      rewards: prev.rewards.map(reward =>
+        reward.id === rewardId ? { ...reward, [field]: value } : reward
+      )
+    }));
+  };
+
+  const handleRewardImageChange = (rewardId, file) => {
+    updateReward(rewardId, 'imageFile', file);
   };
 
   // Improved file handling logic
@@ -188,6 +227,22 @@ export default function CreateProjectForm() {
       return;
     }
 
+    // Validate rewards if any exist
+    if (formData.rewards.length > 0) {
+      const hasInvalidReward = formData.rewards.some(reward => 
+        !reward.title.trim() || 
+        !reward.description.trim() || 
+        !reward.amount || 
+        Number(reward.amount) <= 0 ||
+        (reward.type === 'limited' && (!reward.quantity || Number(reward.quantity) <= 0))
+      );
+      if (hasInvalidReward) {
+        setMessage("❌ All reward fields must be properly filled. Check titles, descriptions, amounts, and quantities for limited rewards.");
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const auth = getAuth();
       const user = auth.currentUser;
@@ -203,11 +258,28 @@ export default function CreateProjectForm() {
         secondaryImageUrls = await Promise.all(uploadPromises);
       }
 
+      // Upload reward images
+      let rewardsWithImages = [];
+      if (formData.rewards.length > 0) {
+        rewardsWithImages = await Promise.all(
+          formData.rewards.map(async (reward) => {
+            if (reward.imageFile) {
+              const rewardImageUrl = await uploadImage(reward.imageFile);
+              const { imageFile, ...rewardWithoutFile } = reward;
+              return { ...rewardWithoutFile, imageUrl: rewardImageUrl };
+            } else {
+              const { imageFile, ...rewardWithoutFile } = reward;
+              return { ...rewardWithoutFile, imageUrl: null };
+            }
+          })
+        );
+      }
+
       const today = new Date();
       const endDate = new Date(formData.endDate);
       const duration = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
 
-      const { imageFile, secondaryImages, ...dataWithoutFiles } = formData;
+      const { imageFile, secondaryImages, rewards, ...dataWithoutFiles } = formData;
 
       const projectData = {
         ...dataWithoutFiles,
@@ -225,14 +297,15 @@ export default function CreateProjectForm() {
           email: user.email,
           name: user.displayName,
         },
-        milestones: formData.milestones
+        milestones: formData.milestones,
+        rewardsList: rewardsWithImages
       };
 
       const projectRef = await addDoc(collection(db, "projects"), projectData);
       setMessage("✅ Project submitted successfully!");
       
       try {
-        
+        // Notify the owner so they know their submission is under review
         await addDoc(collection(db, "notifications"), {
           userId: user.uid,
           projectId: projectRef.id,
@@ -262,7 +335,8 @@ export default function CreateProjectForm() {
           '50': { description: '', completed: false },
           '75': { description: '', completed: false },
           '100': { description: '', completed: false }
-        }
+        },
+        rewards: []
       });
       navigate("/projects");
     } catch (error) {
@@ -274,9 +348,9 @@ export default function CreateProjectForm() {
   };
 
   // GSAP refs
-  const stepwrapperRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
-  const steplineRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
-  const stepboxRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
+  const stepwrapperRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
+  const steplineRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
+  const stepboxRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
 
   useEffect(() => {
     const tl = gsap.timeline();
@@ -683,7 +757,190 @@ export default function CreateProjectForm() {
       </div>
     </div>,
 
-    // Step 7 - Preview & Submit (No changes)
+    // Step 7 - Rewards
+    <div className="w-full h-full overflow-hidden flex flex-col">
+      <div className="text-center mb-4">
+        <h2 className="text-lg font-bold text-gray-800 mb-1">Project Rewards</h2>
+        <p className="text-sm text-gray-600">Create reward tiers for your backers</p>
+      </div>
+      
+      {/* Scrollable container */}
+      <div className="flex-1 overflow-y-auto pr-2">
+        <div className="space-y-4 pb-4">
+          {/* Guidelines */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+            <div className="flex items-center mb-2">
+              <FiTarget className="w-4 h-4 text-blue-600 mr-2" />
+              <h3 className="text-sm font-semibold text-blue-800">Reward Guidelines</h3>
+            </div>
+            <ul className="text-xs text-blue-700 space-y-1">
+              <li>• Set clear reward amounts and descriptions</li>
+              <li>• Consider production and shipping costs</li>
+              <li>• Limit quantities for exclusive items</li>
+            </ul>
+          </div>
+
+          {/* Rewards List */}
+          {formData.rewards.length > 0 && (
+            <div className="space-y-4">
+              {formData.rewards.map((reward, index) => (
+                <div key={reward.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-gray-800">Reward #{index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeReward(reward.id)}
+                      className="text-red-500 hover:text-red-700 transition-colors"
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Reward Title */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Reward Title *</label>
+                      <input
+                        type="text"
+                        value={reward.title}
+                        onChange={(e) => updateReward(reward.id, 'title', e.target.value)}
+                        placeholder="e.g., Early Bird Special"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-color-b focus:ring-1 focus:ring-color-b/20 transition-all text-sm"
+                      />
+                    </div>
+
+                    {/* Reward Amount */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Pledge Amount (USD) *</label>
+                      <div className="relative">
+                        <FiDollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input
+                          type="number"
+                          value={reward.amount}
+                          onChange={(e) => updateReward(reward.id, 'amount', e.target.value)}
+                          placeholder="25"
+                          className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:border-color-b focus:ring-1 focus:ring-color-b/20 transition-all text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Reward Description */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Description *</label>
+                      <textarea
+                        value={reward.description}
+                        onChange={(e) => updateReward(reward.id, 'description', e.target.value)}
+                        placeholder="Describe what backers will receive..."
+                        rows="2"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-color-b focus:ring-1 focus:ring-color-b/20 transition-all text-sm resize-none"
+                      />
+                    </div>
+
+                    {/* Reward Type */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">Availability</label>
+                      <div className="flex space-x-4">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name={`rewardType_${reward.id}`}
+                            value="unlimited"
+                            checked={reward.type === 'unlimited'}
+                            onChange={(e) => updateReward(reward.id, 'type', e.target.value)}
+                            className="mr-2 text-color-b focus:ring-color-b"
+                          />
+                          <span className="text-xs text-gray-700">Unlimited</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name={`rewardType_${reward.id}`}
+                            value="limited"
+                            checked={reward.type === 'limited'}
+                            onChange={(e) => updateReward(reward.id, 'type', e.target.value)}
+                            className="mr-2 text-color-b focus:ring-color-b"
+                          />
+                          <span className="text-xs text-gray-700">Limited</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Quantity (if limited) */}
+                    {reward.type === 'limited' && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Total Quantity *</label>
+                        <input
+                          type="number"
+                          value={reward.quantity}
+                          onChange={(e) => updateReward(reward.id, 'quantity', e.target.value)}
+                          placeholder="100"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-color-b focus:ring-1 focus:ring-color-b/20 transition-all text-sm"
+                        />
+                      </div>
+                    )}
+
+                    {/* Reward Image */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">Reward Image</label>
+                      <div
+                        className={`relative w-full h-24 flex items-center justify-center rounded-lg border-2 border-dashed transition-all cursor-pointer ${
+                          reward.imageFile 
+                            ? "border-green-400 bg-green-50" 
+                            : "border-gray-300 hover:border-color-b hover:bg-blue-50"
+                        }`}
+                        onClick={() => document.getElementById(`rewardImage_${reward.id}`).click()}
+                      >
+                        {reward.imageFile ? (
+                          <div className="flex items-center justify-center w-full h-full">
+                            <img
+                              src={URL.createObjectURL(reward.imageFile)}
+                              alt="Reward Preview"
+                              className="max-h-20 max-w-full object-contain rounded"
+                            />
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <FiUpload className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+                            <p className="text-xs text-gray-500">Click to upload</p>
+                          </div>
+                        )}
+                        <input
+                          id={`rewardImage_${reward.id}`}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleRewardImageChange(reward.id, e.target.files[0])}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add Reward Button */}
+          <button
+            type="button"
+            onClick={addReward}
+            className="w-full py-3 px-4 border-2 border-dashed border-color-b text-color-b rounded-xl hover:bg-color-b/5 transition-all duration-300 flex items-center justify-center space-x-2 font-semibold"
+          >
+            <FiPlus className="w-5 h-5" />
+            <span>Add Reward Tier</span>
+          </button>
+
+          {formData.rewards.length === 0 && (
+            <div className="text-center py-8">
+              <FiTarget className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 mb-2">No rewards created yet</p>
+              <p className="text-xs text-gray-400">Click "Add Reward Tier" to get started</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+
+    // Step 8 - Preview & Submit (No changes)
     <div className="space-y-3 w-full h-full overflow-hidden flex flex-col relative bottom-10">
       <div className="text-center mb-2">
         <h2 className="text-lg font-bold text-gray-800 mb-1">Project Preview</h2>
@@ -826,7 +1083,7 @@ export default function CreateProjectForm() {
             ))}
           </div>
           <p className="text-center text-sm text-gray-600 mt-3 font-medium">
-            Step {activeStep} of 7: {getStepTitle(activeStep)}
+            Step {activeStep} of 8: {getStepTitle(activeStep)}
           </p>
         </div>
 
@@ -879,7 +1136,7 @@ export default function CreateProjectForm() {
               <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
                 <div 
                   className="bg-gradient-to-r from-color-b to-blue-600 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${(activeStep / 7) * 100}%` }}
+                  style={{ width: `${(activeStep / 8) * 100}%` }}
                 ></div>
               </div>
             </div>
@@ -901,9 +1158,9 @@ export default function CreateProjectForm() {
                 <span>Previous</span>
               </button>
               
-              {activeStep < 7 ? (
+              {activeStep < 8 ? (
                 <button
-                  onClick={() => setActiveStep(Math.min(7, activeStep + 1))}
+                  onClick={() => setActiveStep(Math.min(8, activeStep + 1))}
                   className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-color-b to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 shadow-lg"
                 >
                   <span>Next</span>
