@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
 import { getAuth } from 'firebase/auth';
-import { DollarSign, Calendar, TrendingUp, PieChart, Wallet, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { FiDollarSign, FiCalendar, FiTrendingUp, FiPieChart, FiPackage, FiChevronDown, FiChevronUp, FiExternalLink, FiLoader } from 'react-icons/fi';
 
-const MyInvestments = () => {
+const UserFunding = () => {
   const [fundings, setFundings] = useState({});
   const [loading, setLoading] = useState(true);
   const [expandedProjects, setExpandedProjects] = useState({});
@@ -48,96 +48,105 @@ const MyInvestments = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center pt-6">
+        <div className="text-center">
+          <FiLoader className="w-16 h-16 text-color-b mx-auto mb-4 animate-spin" />
+          <p className="text-gray-600 text-lg">Loading your funding activities...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-6xl mx-auto p-6">
+    <div className="min-h-screen bg-white p-6">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Portfolio Dashboard</h1>
-          <p className="text-gray-600">Track your investments and funding activities</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Fundings</h1>
+          <p className="text-gray-600">Track your contributions and funding activities</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Invested</p>
-                <p className="text-2xl font-bold text-gray-900">{totalInvested.toLocaleString()} birr</p>
+                <p className="text-xs font-medium text-gray-500 mb-1">Total Funded</p>
+                <p className="text-2xl font-bold text-gray-900">${totalInvested.toLocaleString()}</p>
               </div>
-              <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 bg-green-50 rounded-lg flex items-center justify-center">
+                <FiDollarSign className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Projects</p>
+                <p className="text-xs font-medium text-gray-500 mb-1">Funded Projects</p>
                 <p className="text-2xl font-bold text-gray-900">{totalProjects}</p>
               </div>
-              <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <PieChart className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                <FiPieChart className="h-6 w-6 text-color-b" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Funding Activities */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Funding Activities</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <FiPackage className="w-5 h-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Funding History</h2>
             </div>
             
             {Object.keys(fundings).length === 0 ? (
-              <div className="text-center py-12">
-                <Wallet className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No funding activities yet</h3>
-                <p className="text-gray-500">You haven't invested in any projects yet.</p>
+              <div className="text-center py-16">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FiPackage className="h-12 w-12 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Funding Activities Yet</h3>
+                <p className="text-gray-600 mb-6">You haven't funded any projects yet. Start supporting amazing projects today!</p>
+                <a href="/projects" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-color-b to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 shadow-lg hover:shadow-xl">
+                  Browse Projects
+                  <FiExternalLink className="w-4 h-4" />
+                </a>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {Object.entries(fundings).map(([projectId, projectData]) => (
-                  <div key={projectId} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
+                  <div key={projectId} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:border-color-b hover:shadow-sm transition-all duration-200">
                     {/* Project Header - Always Visible */}
                     <button
                       onClick={() => toggleProject(projectId)}
-                      className="w-full p-6 text-left hover:bg-gray-100 transition-colors duration-200"
+                      className="w-full p-4 text-left hover:bg-gray-100 transition-colors duration-150"
                     >
                       <div className="flex justify-between items-center">
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                              <h3 className="text-base font-semibold text-gray-900 mb-1">
                                 {projectData.projectTitle || "Unknown Project"}
                               </h3>
-                              <p className="text-sm text-gray-500">
-                                {projectData.contributions?.length || 0} transactions • Project ID: {projectId}
+                              <p className="text-xs text-gray-500 flex items-center gap-1">
+                                <FiCalendar className="w-3 h-3" />
+                                {projectData.contributions?.length || 0} transaction{projectData.contributions?.length !== 1 ? 's' : ''}
                               </p>
                             </div>
                             <div className="flex items-center gap-4">
                               <div className="text-right">
-                                <div className="flex items-center gap-2 text-green-600 font-semibold text-lg">
-                                  <TrendingUp className="h-5 w-5" />
-                                  {projectData.totalFundedPerProject?.toLocaleString() || 0} birr
+                                <div className="flex items-center gap-1 text-green-600 font-semibold text-lg">
+                                  <FiTrendingUp className="h-4 w-4" />
+                                  ${projectData.totalFundedPerProject?.toLocaleString() || 0}
                                 </div>
-                                <p className="text-sm text-gray-500">Total Contribution</p>
+                                <p className="text-xs text-gray-500">Total</p>
                               </div>
-                              <div className="ml-4">
+                              <div>
                                 {expandedProjects[projectId] ? (
-                                  <ChevronUp className="h-5 w-5 text-gray-400" />
+                                  <FiChevronUp className="h-5 w-5 text-color-b" />
                                 ) : (
-                                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                                  <FiChevronDown className="h-5 w-5 text-gray-400" />
                                 )}
                               </div>
                             </div>
@@ -148,32 +157,31 @@ const MyInvestments = () => {
 
                     {/* Expandable Transaction Details */}
                     {expandedProjects[projectId] && projectData.contributions && projectData.contributions.length > 0 && (
-                      <div className="border-t border-gray-200 bg-white p-6">
+                      <div className="border-t border-gray-200 bg-white p-4">
                         <div className="space-y-3">
-                          <h4 className="font-medium text-gray-900 text-sm flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            Transaction History
+                          <h4 className="font-medium text-gray-700 text-sm flex items-center gap-1">
+                            <FiCalendar className="h-4 w-4" />
+                            Transactions
                           </h4>
                           <div className="space-y-2">
                             {projectData.contributions.map((contrib, idx) => (
-                              <div key={idx} className="flex justify-between items-center bg-gray-50 rounded-md p-4 border border-gray-100">
+                              <div key={idx} className="flex justify-between items-center bg-gray-50 rounded-lg p-3 border border-gray-100">
                                 <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                                    <DollarSign className="h-4 w-4 text-green-600" />
+                                  <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <FiDollarSign className="h-4 w-4 text-green-600" />
                                   </div>
                                   <div>
-                                    <p className="font-medium text-gray-900">
-                                      {contrib.amount?.toLocaleString() || 0} birr
+                                    <p className="font-semibold text-gray-900 text-sm">
+                                      ${contrib.amount?.toLocaleString() || 0}
                                     </p>
                                     <p className="text-xs text-gray-500">Transaction #{idx + 1}</p>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <div className="flex items-center gap-2 text-gray-600 text-sm">
-                                    <Calendar className="h-4 w-4" />
-                                    {contrib.date ? new Date(contrib.date).toLocaleDateString() : 'Unknown date'}
-                                  </div>
-                                  <p className="text-xs text-gray-500">
+                                  <p className="text-xs text-gray-600">
+                                    {contrib.date ? new Date(contrib.date).toLocaleDateString() : 'Unknown'}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
                                     {contrib.date ? new Date(contrib.date).toLocaleTimeString() : ''}
                                   </p>
                                 </div>
@@ -182,13 +190,13 @@ const MyInvestments = () => {
                           </div>
                           
                           {/* Project Link Button */}
-                          <div className="pt-4 flex justify-end">
+                          <div className="pt-2 flex justify-end">
                             <a 
                               href={`/projectDet/${projectId}`} 
-                              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+                              className="inline-flex items-center gap-1 text-color-b text-sm font-medium hover:underline"
                             >
-                              View Project Details
-                              <ExternalLink className="h-4 w-4" />
+                              View Details
+                              <FiExternalLink className="h-3 w-3" />
                             </a>
                           </div>
                         </div>
@@ -197,19 +205,17 @@ const MyInvestments = () => {
 
                     {/* Empty state for no transactions */}
                     {expandedProjects[projectId] && (!projectData.contributions || projectData.contributions.length === 0) && (
-                      <div className="border-t border-gray-200 bg-white p-6">
-                        <div className="text-center py-4">
-                          <Calendar className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                          <p className="text-gray-500 text-sm">No transaction details available</p>
-                          <div className="pt-4 flex justify-end">
-                            <a 
-                              href={`/project/${projectId}`} 
-                              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
-                            >
-                              View Project Details
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </div>
+                      <div className="border-t-2 border-gray-200 bg-white p-6">
+                        <div className="text-center py-8">
+                          <FiCalendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-gray-600 font-medium mb-4">No transaction details available</p>
+                          <a 
+                            href={`/projectDet/${projectId}`} 
+                            className="inline-flex items-center gap-2 bg-gradient-to-r from-color-b to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 transition-all duration-300 shadow-lg hover:shadow-xl"
+                          >
+                            View Project Details
+                            <FiExternalLink className="h-5 w-5" />
+                          </a>
                         </div>
                       </div>
                     )}
@@ -224,4 +230,4 @@ const MyInvestments = () => {
   );
 };
 
-export default MyInvestments;
+export default UserFunding;

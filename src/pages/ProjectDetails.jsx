@@ -3,7 +3,7 @@ import { doc, updateDoc, arrayUnion, Timestamp, collection, query, where, getDoc
 
 import { db } from '../firebase/firebase-config';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users, Share2, Heart, Bookmark, MessageCircle, TrendingUp, Award, Shield, Star, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, DollarSign, Tag, Target, Users, Share2, Bookmark, MessageCircle, TrendingUp, Award, Shield, Star, ChevronDown, Flag } from 'lucide-react';
 import { getAuth } from 'firebase/auth';
 import { useAuth } from "../context/AuthContext";
 import { toast } from 'react-toastify';
@@ -20,7 +20,6 @@ const ProjectDetails = () => {
   const [commentsWithProfileImages, setCommentsWithProfileImages] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
 
-  const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showAnnouncements, setShowAnnouncements] = useState(true);
@@ -28,6 +27,7 @@ const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, profileComplete } = useAuth();
+  const auth = getAuth();
 
   // Real-time project listener (also derives announcements from project doc)
   useEffect(() => {
@@ -105,22 +105,23 @@ const ProjectDetails = () => {
   }, [id]);
 
 
-  // Fetch current user data
+  // Fetch current user data and check bookmark status
   useEffect(() => {
     const fetchCurrentUserData = async () => {
       try {
-        const auth = getAuth();
         const user = auth.currentUser;
 
         if (user) {
-          const usersRef = collection(db, 'users');
-          const q = query(usersRef, where('uid', '==', user.uid));
-          const querySnapshot = await getDocs(q);
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
 
-          if (!querySnapshot.empty) {
-            querySnapshot.forEach((doc) => {
-              setCurrentUserData(doc.data());
-            });
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setCurrentUserData(userData);
+            
+            // Check if project is bookmarked
+            const bookmarks = userData.bookmarkedProjects || [];
+            setIsBookmarked(bookmarks.includes(id));
           } else {
             setCurrentUserData({
               displayName: user.displayName || user.email || "Anonymous",
@@ -134,7 +135,51 @@ const ProjectDetails = () => {
     };
 
     fetchCurrentUserData();
-  }, []);
+  }, [id, auth]);
+
+  // Handle bookmark toggle
+  const handleBookmark = async () => {
+    if (!currentUser) {
+      toast.warning("Please sign in to bookmark projects.");
+      return;
+    }
+
+    try {
+      const user = auth.currentUser;
+      const userDocRef = doc(db, 'users', user.uid);
+      
+      if (isBookmarked) {
+        // Remove bookmark
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const bookmarks = userDoc.data().bookmarkedProjects || [];
+          const updatedBookmarks = bookmarks.filter(projectId => projectId !== id);
+          await updateDoc(userDocRef, { bookmarkedProjects: updatedBookmarks });
+          setIsBookmarked(false);
+          toast.success("Bookmark removed");
+        }
+      } else {
+        // Add bookmark
+        await updateDoc(userDocRef, {
+          bookmarkedProjects: arrayUnion(id)
+        });
+        setIsBookmarked(true);
+        toast.success("Project bookmarked!");
+      }
+    } catch (err) {
+      console.error("Error toggling bookmark:", err);
+      toast.error("Failed to update bookmark");
+    }
+  };
+
+  // Handle report
+  const handleReport = () => {
+    if (!currentUser) {
+      toast.warning("Please sign in to report projects.");
+      return;
+    }
+    toast.info("Report feature coming soon. Thank you for helping keep our community safe!");
+  };
 
   const handleClick = () => {
     const fundedPercentage = calculateFundingPercentage(project.fundedMoney, project.fundingGoal);
@@ -330,20 +375,18 @@ const ProjectDetails = () => {
             {/* Action Buttons */}
             <div className="absolute top-6 right-6 flex gap-2">
               <button
-                onClick={() => setIsLiked(!isLiked)}
-                className={`p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
-                  isLiked ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-600 hover:bg-red-50'
-                }`}
-              >
-                <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-              </button>
-              <button
-                onClick={() => setIsBookmarked(!isBookmarked)}
+                onClick={handleBookmark}
                 className={`p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
                   isBookmarked ? 'bg-color-b text-white' : 'bg-white/90 text-gray-600 hover:bg-color-b/10'
                 }`}
               >
                 <Bookmark className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`} />
+              </button>
+              <button
+                onClick={handleReport}
+                className="p-3 rounded-full bg-white/90 backdrop-blur-sm text-gray-600 hover:bg-red-50 hover:text-red-600 transition-all duration-300"
+              >
+                <Flag className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setShowShareModal(true)}
