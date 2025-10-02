@@ -8,12 +8,57 @@ import {
   serverTimestamp,
   increment,
   addDoc,
-  Timestamp
+  Timestamp,
+  getDocs,
+  query,
+  where
 } from "firebase/firestore";
 import { db } from "../firebase/firebase-config";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { toast } from "react-toastify";
+
+// Add slider styles
+const sliderStyles = `
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    cursor: pointer;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    transition: all 0.2s ease;
+  }
+  
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+  }
+  
+  input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    cursor: pointer;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    transition: all 0.2s ease;
+  }
+  
+  input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+  }
+  
+  input[type="range"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 
 const Support = () => {
   const [amount, setAmount] = useState("");
@@ -59,19 +104,19 @@ const Support = () => {
     e.preventDefault();
 
     if (!currentUser) {
-      alert("Please sign in to proceed.");
+      toast.error("Please sign in to proceed.");
       navigate(`/signing?redirectTo=/support/${id}`);
       return;
     }
     if (!profileComplete) {
-      alert("Please complete your profile to proceed.");
+      toast.warning("Please complete your profile to proceed.");
       navigate(`/manage-profile?redirectTo=/support/${id}`);
       return;
     }
 
     const numericAmount = parseFloat(amount);
     if (!numericAmount || numericAmount <= 0) {
-      alert("Please enter a valid amount.");
+      toast.error("Please enter a valid amount.");
       return;
     }
 
@@ -79,6 +124,11 @@ const Support = () => {
     setPaymentStatus(null);
 
     try {
+      // Store milestone data before transaction
+      let milestonesReached = [];
+      let previousFundedMoney = 0;
+      let allPreviousFunders = [];
+
       await runTransaction(db, async (transaction) => {
         // ---- ALL READS FIRST ----
         const projectRef = doc(db, "projects", id);
@@ -95,7 +145,10 @@ const Support = () => {
         const projectData = projectSnap.data();
         const userData = userSnap.data();
 
-        // 🚨 Prevent supporting own project
+        // Store previous funded amount for milestone checking
+        previousFundedMoney = projectData.fundedMoney ?? 0;
+
+        // Prevent supporting own project
         if (projectData.createdBy?.uid === currentUser.uid) {
           throw new Error("You cannot support your own project.");
         }
@@ -178,6 +231,50 @@ const Support = () => {
           updateData.roles = arrayUnion("Funder");
         }
 
+        // Check for milestone completion
+        const newFundedMoney = currentFunded + numericAmount;
+        const milestones = projectData.milestones || {};
+        
+        console.log('Checking milestones:', {
+          previousFunded: previousFundedMoney,
+          newFunded: newFundedMoney,
+          goal: fundingGoal,
+          milestones: milestones
+        });
+        
+        // Check which milestones are reached
+        [25, 50, 75, 100].forEach(percentage => {
+          if (milestones[percentage]) {
+            const milestoneAmount = (fundingGoal * percentage) / 100;
+            const previousPercentage = (previousFundedMoney / fundingGoal) * 100;
+            const newPercentage = (newFundedMoney / fundingGoal) * 100;
+            
+            console.log(`Milestone ${percentage}%:`, {
+              previousPercentage,
+              newPercentage,
+              crossed: previousPercentage < percentage && newPercentage >= percentage
+            });
+            
+            // If this milestone was just crossed
+            if (previousPercentage < percentage && newPercentage >= percentage) {
+              console.log(`✅ Milestone ${percentage}% reached!`);
+              milestonesReached.push({
+                percentage,
+                description: milestones[percentage].description,
+                amount: milestoneAmount
+              });
+              
+              // Update milestone status to completed
+              transaction.update(projectRef, {
+                [`milestones.${percentage}.status`]: 'completed',
+                [`milestones.${percentage}.completedAt`]: serverTimestamp()
+              });
+            }
+          }
+        });
+        
+        console.log('Milestones reached:', milestonesReached);
+
         // ---- ALL WRITES AFTER ----
         transaction.update(projectRef, {
           fundedMoney: increment(numericAmount),
@@ -198,6 +295,31 @@ const Support = () => {
           userId: currentUser.uid,
         });
       });
+
+      // Fetch all previous funders for milestone notifications
+      if (milestonesReached.length > 0) {
+        try {
+          const transactionsQuery = query(
+            collection(db, 'transactions'),
+            where('projectId', '==', id),
+            where('funding', '==', true)
+          );
+          const transactionsSnap = await getDocs(transactionsQuery);
+          const funderIds = new Set();
+          
+          transactionsSnap.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.userId && data.userId !== currentUser.uid) {
+              funderIds.add(data.userId);
+            }
+          });
+          
+          allPreviousFunders = Array.from(funderIds);
+          console.log('Previous funders found:', allPreviousFunders.length);
+        } catch (err) {
+          console.error("Error fetching previous funders:", err);
+        }
+      }
 
       setPaymentStatus('success');
 
@@ -231,9 +353,52 @@ const Support = () => {
         console.error("Failed to create notification:", notifErr);
       }
 
-      // Show success message after a brief delay
+      // Send milestone notifications if any milestones were reached
+      if (milestonesReached.length > 0) {
+        for (const milestone of milestonesReached) {
+          // Notify project creator about milestone completion
+          try {
+            await addDoc(collection(db, "notifications"), {
+              userId: project.createdBy.uid,
+              projectId: project.id,
+              projectTitle: project.title,
+              message: `🎉 Milestone Reached! Your project "${project.title}" has reached ${milestone.percentage}% funding ($${milestone.amount.toFixed(2)})! ${milestone.description}`,
+              type: "Milestone_Completed",
+              read: false,
+              createdAt: Timestamp.now()
+            });
+          } catch (notifErr) {
+            console.error("Failed to create milestone notification for creator:", notifErr);
+          }
+
+          // Notify all previous funders about milestone completion
+          for (const funderId of allPreviousFunders) {
+            try {
+              await addDoc(collection(db, "notifications"), {
+                userId: funderId,
+                projectId: project.id,
+                projectTitle: project.title,
+                message: `🎉 Great news! The project "${project.title}" you supported has reached ${milestone.percentage}% funding milestone! ${milestone.description}`,
+                type: "Milestone_Completed",
+                read: false,
+                createdAt: Timestamp.now()
+              });
+            } catch (notifErr) {
+              console.error(`Failed to create milestone notification for funder ${funderId}:`, notifErr);
+            }
+          }
+        }
+      }
+
+      // Show success message
+      const milestoneMessage = milestonesReached.length > 0 
+        ? ` 🎯 This contribution helped reach ${milestonesReached.map(m => m.percentage + '%').join(', ')} milestone(s)!`
+        : '';
+      toast.success(`🎉 You successfully supported with $${numericAmount}!${milestoneMessage}`, {
+        autoClose: 5000
+      });
+      
       setTimeout(() => {
-        alert(`🎉 You successfully supported with $${numericAmount}!`);
         setAmount("");
         setPaymentStatus(null);
       }, 1500);
@@ -242,9 +407,10 @@ const Support = () => {
       console.error("Error processing support:", err);
       setPaymentStatus('error');
       
-      // Show error message after a brief delay
+      // Show error message
+      toast.error(err.message || "Something went wrong. Please try again.");
+      
       setTimeout(() => {
-        alert(err.message || "Something went wrong. Please try again.");
         setPaymentStatus(null);
       }, 1500);
     } finally {
@@ -301,100 +467,210 @@ const Support = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center min-h-screen pt-20">
+        <Loader2 className="w-5 h-5 animate-spin mr-2" />
         <p className="text-gray-600 text-lg">Loading project...</p>
       </div>
     );
 
   if (error)
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center min-h-screen pt-20">
+        <XCircle className="w-5 h-5 mr-2" />
         <p className="text-red-600 text-lg">{error}</p>
       </div>
     );
 
   if (!project)
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center min-h-screen pt-20">
         <p className="text-gray-600 text-lg">No project data available</p>
       </div>
     );
 
   const isOwner = currentUser && project.createdBy?.uid === currentUser.uid;
+  const progress = ((project.fundedMoney ?? 0) / project.fundingGoal) * 100;
+  const remaining = project.fundingGoal - (project.fundedMoney ?? 0);
+  const maxSliderAmount = Math.max(remaining, 1); // Use remaining amount as max, minimum 1
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100 p-4">
-      <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4 text-center text-gray-800">
-          Support Project: {project.title}
-        </h1>
+    <>
+      <style>{sliderStyles}</style>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 pt-24 pb-12 px-4">
+        <div className="max-w-5xl mx-auto">
+    
 
-        <p className="text-center text-gray-600 mb-2">
-          Current Funding: ${project.fundedMoney ?? 0}
-        </p>
-        <p className="text-center text-gray-600 mb-6">
-          Remaining Amount: ${project.fundingGoal - (project.fundedMoney ?? 0)}
-        </p>
+        {/* Single Unified Card */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/40 p-8 md:p-10">
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Project Info Section */}
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">{project.title}</h2>
+                <p className="text-gray-600">{project.shortDescription || 'Support this amazing project'}</p>
+              </div>
 
-        {isOwner && (
-          <p className="text-center text-red-500 font-medium mb-4">
-            You cannot support your own project.
-          </p>
-        )}
+            {/* Progress Section */}
+            <div className="space-y-4 mb-6">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-600">Funding Progress</span>
+                  <span className="text-sm font-bold text-color-b">{progress.toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-color-b to-blue-600 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(progress, 100)}%` }}
+                  />
+                </div>
+              </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-gray-600 font-medium mb-2">
-              Enter Amount
-            </label>
-            <input
-              type="number"
-              min="1"
-              value={amount}
-              onChange={handleInputChange}
-              disabled={isOwner || processing}
-              className={`w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-                isOwner || processing ? "bg-gray-100 cursor-not-allowed" : ""
-              }`}
-              placeholder="Enter amount (e.g. 100)"
-            />
-          </div>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border-2 border-blue-200">
+                  <p className="text-xs text-gray-600 mb-1">Raised</p>
+                  <p className="text-2xl font-bold text-color-b">${(project.fundedMoney ?? 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 border-2 border-green-200">
+                  <p className="text-xs text-gray-600 mb-1">Goal</p>
+                  <p className="text-2xl font-bold text-green-600">${project.fundingGoal.toLocaleString()}</p>
+                </div>
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 border-2 border-purple-200">
+                  <p className="text-xs text-gray-600 mb-1">Remaining</p>
+                  <p className="text-xl font-bold text-purple-600">${remaining.toLocaleString()}</p>
+                </div>
+                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-4 border-2 border-orange-200">
+                  <p className="text-xs text-gray-600 mb-1">Backers</p>
+                  <p className="text-2xl font-bold text-orange-600">{project.backers || 0}</p>
+                </div>
+              </div>
+            </div>
 
-          <div>
-            <p className="text-gray-600 font-medium mb-2">Quick Select</p>
-            <div className="grid grid-cols-3 gap-3">
-              {templates.map((value) => (
+              {/* Project Image */}
+              {project.imageUrl && (
+                <div className="rounded-2xl overflow-hidden shadow-lg">
+                  <img 
+                    src={project.imageUrl} 
+                    alt={project.title}
+                    className="w-full h-48 object-cover"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Support Form Section */}
+            <div>
+            {isOwner ? (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <XCircle className="w-10 h-10 text-red-500" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Cannot Support Own Project</h3>
+                <p className="text-gray-600">You cannot support your own project.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-6">Choose Your Support</h3>
+                  
+                  {/* Quick Select Buttons */}
+                  <div className="mb-6">
+                    <p className="text-sm font-medium text-gray-600 mb-3">Quick Select Amount</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {templates.map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => handleTemplateClick(value)}
+                          disabled={processing}
+                          className={`relative py-4 px-3 rounded-2xl font-bold transition-all transform hover:scale-105 ${
+                            amount === value.toString()
+                              ? "bg-gradient-to-r from-color-b to-blue-600 text-white shadow-lg scale-105"
+                              : processing
+                              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                              : "bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 hover:shadow-lg border-2 border-gray-200 hover:border-color-b"
+                          }`}
+                        >
+                          <div className="text-xs mb-1">$</div>
+                          <div className="text-xl">{value.toLocaleString()}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Amount Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-2">
+                      Or Enter Custom Amount
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl font-bold">$</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={maxSliderAmount}
+                        value={amount}
+                        onChange={handleInputChange}
+                        disabled={processing}
+                        className={`w-full pl-10 pr-4 py-4 text-xl font-bold border-2 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-color-b focus:outline-none transition-all ${
+                          processing ? "bg-gray-100 cursor-not-allowed border-gray-200" : "bg-white border-gray-300"
+                        }`}
+                        placeholder="100"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Slider */}
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-600 mb-3">
+                      Adjust Amount with Slider
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="range"
+                        min="1"
+                        max={maxSliderAmount}
+                        value={amount || 0}
+                        onChange={(e) => setAmount(e.target.value)}
+                        disabled={processing}
+                        className="w-full h-3 bg-gradient-to-r from-blue-200 to-blue-300 rounded-full appearance-none cursor-pointer slider-thumb"
+                        style={{
+                          background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${((amount || 0) / maxSliderAmount) * 100}%, #E5E7EB ${((amount || 0) / maxSliderAmount) * 100}%, #E5E7EB 100%)`
+                        }}
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-2">
+                        <span>$1</span>
+                        <span className="font-bold text-color-b">${(amount || 0).toLocaleString()}</span>
+                        <span>${maxSliderAmount.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
                 <button
-                  key={value}
-                  type="button"
-                  onClick={() => handleTemplateClick(value)}
-                  disabled={isOwner || processing}
-                  className={`py-2 px-3 rounded-xl font-semibold transition-all ${
-                    isOwner || processing
-                      ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                      : "bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700"
+                  type="submit"
+                  disabled={processing || paymentStatus === 'success'}
+                  className={`w-full py-4 rounded-2xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg ${
+                    getButtonStyles()
                   }`}
                 >
-                  ${value}
+                  {getButtonContent()}
                 </button>
-              ))}
+
+                {/* Security Note */}
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 pt-4">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span>Secure payment processing</span>
+                </div>
+              </form>
+            )}
             </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={isOwner || processing || paymentStatus === 'success'}
-            className={`w-full py-3 rounded-xl font-semibold text-lg transition-all ${
-              isOwner
-                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                : getButtonStyles()
-            }`}
-          >
-            {isOwner ? "Not Allowed" : getButtonContent()}
-          </button>
-        </form>
+        </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
