@@ -3,6 +3,7 @@ import { auth, db } from "../firebase/firebase-config";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { Upload, X, Loader } from "lucide-react";
+import { toast } from 'react-toastify';
 
 const steps = [
   { label: "Phone Number", name: "phoneNumber", type: "text", milestone: "Phone" },
@@ -80,13 +81,13 @@ const ManageProfile = () => {
 
     // Check if file is an image
     if (!file.type.match('image.*')) {
-      alert("Please select an image file");
+      toast.error("Please select an image file");
       return;
     }
 
     // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert("Please select an image smaller than 5MB");
+      toast.error("Please select an image smaller than 5MB");
       return;
     }
 
@@ -151,7 +152,7 @@ const ManageProfile = () => {
         setFormData(prev => ({ ...prev, profileImageUrl: imageUrl }));
         setSelectedFile(null); // Clear selected file after successful upload
       } catch (error) {
-        alert('Failed to upload image. Please try again.');
+        toast.error('Failed to upload image. Please try again.');
         return; // Don't proceed to next step if upload fails
       }
     }
@@ -185,11 +186,11 @@ const ManageProfile = () => {
           .filter(Boolean),
       });
       
-      alert("Profile updated successfully!");
+      toast.success("Profile updated successfully!");
       navigate("/profile");
     } catch (error) {
       console.error("Error updating profile:", error);
-      alert("Failed to update profile");
+      toast.error("Failed to update profile");
     } finally {
       setLoading(false);
     }

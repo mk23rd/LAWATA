@@ -5,6 +5,7 @@ import { db } from '../firebase/firebase-config';
 import { useAuth } from "../context/AuthContext";
 import { ArrowLeft, DollarSign, TrendingUp, Shield, AlertCircle, Calculator } from 'lucide-react';
 import Navbar from "../components/NavBar";
+import { toast } from 'react-toastify';
 
 // Equity investment workflow for a specific project
 const InvestPage = () => {
@@ -102,31 +103,31 @@ const InvestPage = () => {
 
   const handleInvestment = async () => {
     if (!currentUser) {
-      alert("Please sign in to invest.");
+      toast.warning("Please sign in to invest.");
       navigate(`/signing?redirectTo=/invest/${id}`);
       return;
     }
 
     if (!profileComplete) {
-      alert("Please complete your profile to invest.");
+      toast.warning("Please complete your profile to invest.");
       navigate(`/manage-profile?redirectTo=/invest/${id}`);
       return;
     }
 
     const amount = parseFloat(investmentAmount);
     if (!amount || amount <= 0) {
-      alert("Please enter a valid investment amount.");
+      toast.error("Please enter a valid investment amount.");
       return;
     }
 
     if (amount < 100) {
-      alert("Minimum investment amount is $100.");
+      toast.error("Minimum investment amount is $100.");
       return;
     }
 
     // Validate against funding goal
     if (amount > project.fundingGoal) {
-      alert(`Investment amount cannot exceed project funding goal of ${formatCurrency(project.fundingGoal)}.`);
+      toast.error(`Investment amount cannot exceed project funding goal of ${formatCurrency(project.fundingGoal)}.`);
       return;
     }
 
@@ -134,7 +135,7 @@ const InvestPage = () => {
     const totalFunded = currentFunded + amount;
     if (totalFunded > project.fundingGoal) {
       const maxAvailable = project.fundingGoal - currentFunded;
-      alert(`Investment would exceed project funding goal. Maximum available: ${formatCurrency(maxAvailable)}`);
+      toast.error(`Investment would exceed project funding goal. Maximum available: ${formatCurrency(maxAvailable)}`);
       return;
     }
 
@@ -150,7 +151,7 @@ const InvestPage = () => {
 
     if (amount > maxAllowedByEquity) {
       const maxAvailable = maxAllowedByEquity;
-      alert(`Investment exceeds available equity. Maximum allowed: ${formatCurrency(maxAvailable)}.`);
+      toast.error(`Investment exceeds available equity. Maximum allowed: ${formatCurrency(maxAvailable)}.`);
       return;
     }
 
@@ -220,12 +221,12 @@ const InvestPage = () => {
       // Also update available equity state
       setAvailableEquity(newRemainingEquity);
 
-      alert(`Investment of $${amount.toLocaleString()} submitted successfully! You will receive ${investmentEquityPercentage.toFixed(2)}% equity.`);
+      toast.success(`Investment of $${amount.toLocaleString()} submitted successfully! You will receive ${investmentEquityPercentage.toFixed(2)}% equity.`);
       // navigate('/myInvestments');
 
     } catch (err) {
       console.error('Error processing investment:', err);
-      alert('Failed to process investment. Please try again. Error: ' + (err.message || err));
+      toast.error('Failed to process investment. Please try again. Error: ' + (err.message || err));
     } finally {
       setProcessing(false);
     }
