@@ -232,7 +232,7 @@ export default function CreateProjectForm() {
       setMessage("✅ Project submitted successfully!");
       
       try {
-        // Notify the owner so they know their submission is under review
+        
         await addDoc(collection(db, "notifications"), {
           userId: user.uid,
           projectId: projectRef.id,
