@@ -58,4 +58,5 @@ This platform isn’t just about raising money—it’s about building accountab
 
 ⚖️ License
 
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](LICENSE).
+
