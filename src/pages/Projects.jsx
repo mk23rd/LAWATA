@@ -4,8 +4,9 @@ import ViewMyProjects from "./ViewMyProjects";
 import Community from "./Community";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { FiMenu, FiX, FiPlus, FiEye, FiUsers, FiChevronRight } from "react-icons/fi";
-import MyInvestments from "./MyInvestments";
+import { FiMenu, FiX, FiPlus, FiEye, FiUsers, FiChevronRight, FiBookmark } from "react-icons/fi";
+import UserFunding from "./MyInvestments";
+import Bookmarks from "./Bookmarks";
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
@@ -13,60 +14,44 @@ const Projects = () => {
   const navigate = useNavigate();
   const { currentUser, profileComplete , isInvestor } = useAuth();
 
-const tabs = isInvestor 
-    ? [
-        {
-          id: "view",
-          label: "View Projects",
-          icon: FiEye,
-          description: "Browse all projects"
-        },
-        {
-          id: "create",
-          label: "Create Project",
-          icon: FiPlus,
-          description: "Start your own project",
-          requiresAuth: true
-        },
-        {
-          id: "community",
-          label: "Community",
-          icon: FiUsers,
-          description: "Connect with others"
-        },
-        {
-          id: "investments",
-          label: "Investments",
-          icon: FiEye,
-          description: "Check out your Investments"
-        },
-      ]
-    : [
-        {
-          id: "view",
-          label: "View Projects",
-          icon: FiEye,
-          description: "Browse all projects"
-        },
-        {
-          id: "create",
-          label: "Create Project",
-          icon: FiPlus,
-          description: "Start your own project",
-          requiresAuth: true
-        },
-        {
-          id: "community",
-          label: "Community",
-          icon: FiUsers,
-          description: "Connect with others"
-        },    
-      ];
+const tabs = [
+    {
+      id: "view",
+      label: "View Projects",
+      icon: FiEye,
+      description: "Browse all projects"
+    },
+    {
+      id: "create",
+      label: "Create Project",
+      icon: FiPlus,
+      description: "Start your own project",
+      requiresAuth: true
+    },
+    {
+      id: "bookmarks",
+      label: "Bookmarks",
+      icon: FiBookmark,
+      description: "Saved projects"
+    },
+    {
+      id: "community",
+      label: "Community",
+      icon: FiUsers,
+      description: "Connect with others"
+    },
+    {
+      id: "investments",
+      label: "My Fundings",
+      icon: FiEye,
+      description: "Track your contributions"
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 pt-20 md:pt-24">
       {/* Mobile Header */}
-      <div className="md:hidden bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-40">
+      <div className="md:hidden bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-20 z-40">
         <div className="flex items-center justify-between p-4">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -82,9 +67,9 @@ const tabs = isInvestor
       <div className="flex">
         {/* Sidebar */}
         <div
-          className={`fixed md:relative z-50 top-0 left-0 h-full md:h-auto w-80 bg-white/90 backdrop-blur-sm border-r border-gray-200/50 shadow-2xl transform ${
+          className={`fixed z-50 top-16 md:top-20 left-0 h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] w-80 bg-white/90 backdrop-blur-sm border-r border-gray-200/50 shadow-2xl transform ${
             isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } transition-all duration-500 ease-in-out md:translate-x-0`}
+          } transition-all duration-500 ease-in-out md:translate-x-0 overflow-y-auto flex flex-col`}
         >
           {/* Sidebar Header */}
           <div className="p-8 border-b border-gray-200/50">
@@ -95,7 +80,7 @@ const tabs = isInvestor
           </div>
 
           {/* Navigation */}
-          <nav className="p-6 space-y-3">
+          <nav className="p-6 space-y-3 flex-1 overflow-y-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -149,7 +134,7 @@ const tabs = isInvestor
           </nav>
 
           {/* Sidebar Footer */}
-          <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200/50">
+          <div className="flex-shrink-0 p-6 border-t border-gray-200/50">
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4">
               <h3 className="font-semibold text-gray-800 mb-1">Need Help?</h3>
               <p className="text-sm text-gray-600 mb-3">Check out our guide to get started</p>
@@ -169,14 +154,13 @@ const tabs = isInvestor
         )}
 
         {/* Main Content */}
-        <div className="flex-1 min-h-screen">
+        <div className="flex-1 min-h-screen md:ml-80">
           <div className="h-full">
             {activeTab === "view" && <ViewMyProjects />}
             {activeTab === "create" && <CreateProjectForm />}
+            {activeTab === "bookmarks" && <Bookmarks />}
             {activeTab === "community" && <Community />}
-            {activeTab === "investments" && <MyInvestments />}
-            
-       
+            {activeTab === "investments" && <UserFunding />}
           </div>
         </div>
       </div>

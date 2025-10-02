@@ -6,6 +6,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
 
 const HomeLogo = () => {
+  // Refs used to store DOM nodes for animation
   const letterRef = useRef([]);
 
 const sectionRef = useRef(null);
@@ -13,6 +14,7 @@ const sectionRef = useRef(null);
   const crowddivRefs = useRef([]);
 
   useEffect(() => {
+    // Scope animations to this component instance
     const ctx = gsap.context(() => {
       // Animate CREATE side upward
       createdivRefs.current.forEach((el, i) => {
@@ -51,15 +53,18 @@ const sectionRef = useRef(null);
       });
     }, sectionRef);
 
+    // Kill animations if component unmounts
     return () => ctx.revert();
   }, []);
 
+  // Track references for CREATE column letters
   const createaddToRefs = (el) => {
     if (el && !createdivRefs.current.includes(el)) {
       createdivRefs.current.push(el);
     }
   };
 
+  // Track references for CROWDFUND column letters
   const crowdaddToRefs = (el) => {
     if (el && !crowddivRefs.current.includes(el)) {
       crowddivRefs.current.push(el);
@@ -68,6 +73,7 @@ const sectionRef = useRef(null);
 
 
   const crowdhandleMouseEnter = () => {
+    // Expand each crowd element when hovered
     crowddivRefs.current?.forEach((el) => {
       gsap.to(el, {
         width: "135%",
@@ -78,6 +84,7 @@ const sectionRef = useRef(null);
   };
 
   const crowdhandleMouseLeave = () => {
+    // Return crowd elements to original size on hover exit
     crowddivRefs.current?.forEach((el) => {
       gsap.to(el, {
         width: "100%",
@@ -88,6 +95,7 @@ const sectionRef = useRef(null);
   };
 
   const createhandleMouseEnter = () => {
+    // Expand create elements when hovered
     createdivRefs.current?.forEach((el) => {
       gsap.to(el, {
         width: "135%",
@@ -98,6 +106,7 @@ const sectionRef = useRef(null);
   };
 
   const createhandleMouseLeave = () => {
+    // Return create elements to original size on hover exit
     createdivRefs.current?.forEach((el) => {
       gsap.to(el, {
         width: "100%",
@@ -111,6 +120,7 @@ const sectionRef = useRef(null);
 
   return (
     <>
+      {/* Desktop layout illustrating animated CREATE or CROWDFUND lettering */}
       <div ref={sectionRef} className='w-20/20 h-full gap-5 hidden md:flex'>
         <div className="w-1/20 h-full flex items-center justify-center relative">
           <div className="bg-color-b w-0.5 h-90 absolute top-10"></div>
@@ -225,6 +235,7 @@ const sectionRef = useRef(null);
         </div>
       </div>
       
+      {/* Mobile fallback layout stacks letters vertically for readability */}
       <div className='w-5/5 h-full gap-5 sm:gap-5 flex items-center justify-center md:hidden'>
         <div className="w-1/5 h-full flex items-center justify-center relative">
           <div className="bg-color-b w-0.5 h-90 absolute top-10"></div>

@@ -26,7 +26,7 @@
 git clone https://github.com/Korvowastaken/CrowdFundingproj.git
 
 # Move into the project folder
-cd CrowdFundingproj
+cd/CrowdFundingproj
 
 # Install dependencies
 npm install gsap/react
@@ -40,7 +40,9 @@ npm install gsap/react
     react-router
     react-router-dom
     tailwindcss
-
+```
+### More dependencies might be used in the future so check [packages.json](https://github.com/Korvowastaken/CrowdFundingproj/blob/main/package.json)
+```
 # Start development server
 npm run dev
 
@@ -56,4 +58,5 @@ This platform isn’t just about raising money—it’s about building accountab
 
 ⚖️ License
 
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](LICENSE).
+

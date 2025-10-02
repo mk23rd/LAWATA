@@ -14,14 +14,18 @@ import {
 } from 'firebase/firestore'
 import { useNavigate } from 'react-router-dom'
 
+// Dropdown bell displaying the latest notifications for the active user
 const NotificationBell = ({ containerClassName = '' }) => {
   const user = auth.currentUser
   const navigate = useNavigate()
+  // Local cache of notification documents for rendering
   const [notifications, setNotifications] = useState([])
+  // Control visibility of the dropdown panel
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (!user) return
+    // Build Firestore query for most recent notifications owned by the user
     const q = query(
       collection(db, 'notifications'),
       where('userId', '==', user.uid),
@@ -31,6 +35,7 @@ const NotificationBell = ({ containerClassName = '' }) => {
     const unsub = onSnapshot(
       q,
       (snap) => {
+        // Map snapshot into plain objects including document IDs
         const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
         setNotifications(items)
       },
@@ -38,6 +43,7 @@ const NotificationBell = ({ containerClassName = '' }) => {
         console.error('Notifications listener error:', err)
       }
     )
+    // Tear down listener when component unmounts or user changes
     return () => unsub()
   }, [user])
 
@@ -49,9 +55,11 @@ const NotificationBell = ({ containerClassName = '' }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Count notifications that haven't been marked as read
   const unreadCount = notifications.filter((n) => !n.read).length
   const clearNotifications = async () => {
     try {
+      // Batch-update all unread notifications to mark them as read
       const batch = writeBatch(db)
       notifications.forEach((n) => {
         if (!n.read) {
@@ -75,6 +83,7 @@ const NotificationBell = ({ containerClassName = '' }) => {
         <FiBell className='text-xl' />
       </button>
       {unreadCount > 0 && (
+        // Badge showing total unread notifications
         <span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full'>
           {unreadCount}
         </span>
@@ -97,6 +106,7 @@ const NotificationBell = ({ containerClassName = '' }) => {
               <p className='text-color-d text-sm px-2 py-3'>No notifications</p>
             )}
             {notifications.map((n) => (
+              // Each notification is clickable and optionally navigates to a project
               <button
                 key={n.id}
                 className={`w-full text-left px-3 py-2 rounded-md mb-1 ${
@@ -110,8 +120,19 @@ const NotificationBell = ({ containerClassName = '' }) => {
                     console.error('Failed to mark notification read', e)
                   } finally {
                     setOpen(false)
+                    // Navigate to specific project if projectId exists
                     if (n.projectId) {
-                      navigate('/projects')
+                      // Check notification type to determine which page to navigate to
+                      if (n.type === 'Your_project_Funded' || n.type === 'Milestone_Completed') {
+                        // Navigate to project info page for creator
+                        navigate(`/my-project-info/${n.projectId}`)
+                      } else if (n.type === 'You_Funded_a_project') {
+                        // Navigate to project details page for supporters
+                        navigate(`/projectDet/${n.projectId}`)
+                      } else {
+                        // Default to project details
+                        navigate(`/projectDet/${n.projectId}`)
+                      }
                     }
                   }
                 }}

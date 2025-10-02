@@ -8,7 +8,6 @@ import { useAuth } from "../context/AuthContext";
 import { toast } from 'react-toastify';
 import Comment from '../components/comment';
 import Navbar from "../components/NavBar";
-import MilestoneRoadmap from '../components/MilestoneRoadmap';
 
 const ProjectDetails = () => {
   const [project, setProject] = useState(null);
@@ -402,13 +401,51 @@ const ProjectDetails = () => {
             </div>
 
             {/* Milestones Section */}
-            {/* Milestones Section - Visual Roadmap */}
-            {project.milestones && Object.keys(project.milestones).length > 0 && (
-              <MilestoneRoadmap 
-                milestones={project.milestones} 
-                fundedPercentage={fundedPercentage} 
-              />
+            {project.milestones && project.milestones.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Target className="w-4 h-4 text-gray-600" />
+                  <h2 className="text-base font-semibold text-gray-900">Milestones</h2>
+                </div>
+                <div className="space-y-3">
+                  {project.milestones.map((milestone, index) => (
+                    <div key={milestone.id || index} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="text-sm font-medium text-gray-900">
+                              {milestone.title || `Milestone ${index + 1}`}
+                            </h4>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              milestone.milestoneStatus === "Complete" 
+                                ? "bg-green-100 text-green-700" 
+                                : "bg-yellow-100 text-yellow-700"
+                            }`}>
+                              {milestone.milestoneStatus || "Incomplete"}
+                            </span>
+                          </div>
+                          {milestone.description && (
+                            <p className="text-gray-600 text-xs mb-1">{milestone.description}</p>
+                          )}
+                          {milestone.date && (
+                            <div className="flex items-center text-xs text-gray-500">
+                              <Calendar className="w-3 h-3 mr-1" />
+                              {new Date(milestone.date).toLocaleDateString('en-US', {
+                                year: 'numeric', month: 'short', day: 'numeric'
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          milestone.milestoneStatus === "Complete" ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
+
             {/* Announcements */}
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <button
@@ -597,6 +634,17 @@ const ProjectDetails = () => {
                   <span className="text-gray-500">End Date</span>
                   <span className="text-gray-900 font-medium">{project.endDate || 'TBD'}</span>
                 </div>
+                {project.riskLevel && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500">Risk Level</span>
+                    <span className={`font-medium ${
+                      project.riskLevel === 'High' ? 'text-red-600' : 
+                      project.riskLevel === 'Medium' ? 'text-yellow-600' : 'text-green-600'
+                    }`}>
+                      {project.riskLevel}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

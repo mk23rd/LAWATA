@@ -17,11 +17,13 @@ import { Draggable } from "gsap/Draggable";
 import Arrow from "../assets/images/arrow-left.svg"
 
 
+// Landing page showcasing the brand hero, featured projects, and marketing sections
 const Home = () => {
   const navigate = useNavigate()
   const [userData, setUserData] = useState(null)
   const [showDropdown, setShowDropdown] = useState(false)
   const user = auth.currentUser
+  // Recently approved projects for the carousel
   const [freshProjects, setFreshProjects] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
@@ -93,22 +95,24 @@ const Home = () => {
 useEffect(() => {
   const fetchFreshProjects = async () => {
     try {
-  const projectsRef = collection(db, "projects");
-  const q = query(
-    projectsRef,
-    where("status", "==", "Approved"),
-    orderBy("createdAt", "desc"),
-    limit(7)
-  );
-  const querySnapshot = await getDocs(q);
-  const projectsData = querySnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-  setFreshProjects(projectsData);
-} catch (error) {
-  console.error("Error fetching fresh projects:", error);
-}
+      const projectsRef = collection(db, "projects");
+      const q = query(
+        projectsRef,
+        // Only show projects that have passed moderation
+        where("status", "==", "Approved"),
+        orderBy("createdAt", "desc"),
+        limit(7)
+      );
+      const querySnapshot = await getDocs(q);
+      const projectsData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      // Populate state for downstream rendering
+      setFreshProjects(projectsData);
+    } catch (error) {
+      console.error("Error fetching fresh projects:", error);
+    }
   };
 
   fetchFreshProjects();
@@ -117,10 +121,12 @@ useEffect(() => {
 const freshContainerRef = useRef(null);
 
 const scrollLeft = () => {
+  // Scroll the carousel to reveal previous cards
   freshContainerRef.current.scrollBy({ left: -300, behavior: "smooth" });
 };
 
 const scrollRight = () => {
+  // Scroll the carousel to reveal next cards
   freshContainerRef.current.scrollBy({ left: 300, behavior: "smooth" });
 };
 

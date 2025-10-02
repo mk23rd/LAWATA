@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
 
+// Diagnostic page used to verify Firestore connectivity at runtime
 const FirebaseTest = () => {
   const [status, setStatus] = useState('Testing Firebase connection...');
   const [collections, setCollections] = useState([]);

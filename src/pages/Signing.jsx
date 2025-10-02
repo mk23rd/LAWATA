@@ -103,6 +103,7 @@ const Signing = () => {
         email: signupformData.email,
         username: signupformData.username,
         roles: ["visitor"], 
+        walletBalance: 0,
         createdAt: new Date(),
         lastLogin: new Date(),
       });

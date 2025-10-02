@@ -6,13 +6,17 @@ import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import NotificationBell from "../components/NotificationBell";
 
+// Responsive navigation bar that adapts between desktop and mobile layouts
 const Navbar = () => {
   const navigate = useNavigate();
   const user = auth.currentUser;
 
+  // Store extended profile fields fetched from Firestore
   const [userData, setUserData] = useState(null);
+  // Track whether the desktop profile dropdown is visible
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // Control the hamburger menu open state on mobile
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
@@ -33,6 +37,7 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
+      // Sign out from Firebase auth and redirect home
       await signOut(auth);
       navigate("/");
     } catch (err) {
@@ -58,6 +63,7 @@ const Navbar = () => {
         setMenuOpen(false);
       }
     };
+    // Only attach the listener while the menu is open
     if (menuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -65,10 +71,12 @@ const Navbar = () => {
   }, [menuOpen]);
 
   return (
-    <nav className='fixed top-0 left-0 w-screen h-16 md:h-20 z-50 flex items-center bg-white shadow-sm'>
+    <nav className='fixed top-0 left-0 w-screen h-16 md:h-20 z-[100] flex items-center bg-white shadow-sm'>
       {/* Logo */}
       <div className='flex-1 md:w-1/6 h-full flex justify-center md:justify-center items-center'>
-        <p className='font-titan text-2xl md:text-5xl text-color-b pointer-events-none'>LAWATA</p>
+        <Link to="/" className='font-titan text-2xl md:text-5xl text-color-b hover:opacity-80 transition-opacity cursor-pointer'>
+          LAWATA
+        </Link>
       </div>
 
       {/* Desktop Navigation */}
@@ -115,6 +123,12 @@ const Navbar = () => {
                     >
                       Projects
                     </button>
+                    <button
+                    onClick={() => { navigate("/wallet"); toggleMenu(); }}
+                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                  >
+                    Wallet
+                  </button>
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
@@ -210,6 +224,12 @@ const Navbar = () => {
                     className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
                     Projects
+                  </button>
+                  <button
+                    onClick={() => { navigate("/wallet"); toggleMenu(); }}
+                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                  >
+                    Wallet
                   </button>
                   <button
                     onClick={() => { handleLogout(); toggleMenu(); }}
