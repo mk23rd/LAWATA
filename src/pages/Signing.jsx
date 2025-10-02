@@ -206,7 +206,7 @@ const Signing = () => {
   };
 
   return (
-    <div className='bg-color-d overflow-clip'>
+    <div className='bg-white overflow-clip'>
       <nav className='w-screen h-1/5'> 
         <div className='fixed flex w-screen pointer-events-none'> 
           <div className='w-1/6 h-full flex justify-center items-center'> 
