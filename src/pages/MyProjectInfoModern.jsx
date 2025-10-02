@@ -31,7 +31,8 @@ import {
   Button,
   AnnouncementManager,
   ProjectEditForm,
-  ProjectAnalytics
+  ProjectAnalytics,
+  RewardsList
 } from '../components/project';
 
 const auth = getAuth();
@@ -844,7 +845,8 @@ export default function MyProjectInfo() {
               { id: 'images', label: 'Images', icon: FiImage },
               { id: 'funders', label: 'Backers', icon: FiUsers, badge: funders.length },
               { id: 'announcements', label: 'Updates', icon: FiActivity },
-              { id: 'analytics', label: 'Analytics', icon: FiBarChart2 }
+              { id: 'analytics', label: 'Analytics', icon: FiBarChart2 },
+              { id: 'rewards', label: 'Rewards', icon: FiTarget }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -872,6 +874,12 @@ export default function MyProjectInfo() {
 
       {/* Tab Content */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 pb-16">
+        {activeTab === 'rewards' && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <RewardsList rewards={project.rewardsList || []} />
+          </div>
+        )}
+
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {isEditing ? (
