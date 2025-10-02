@@ -4,8 +4,9 @@ import ViewMyProjects from "./ViewMyProjects";
 import Community from "./Community";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { FiMenu, FiX, FiPlus, FiEye, FiUsers, FiChevronRight } from "react-icons/fi";
+import { FiMenu, FiX, FiPlus, FiEye, FiUsers, FiChevronRight, FiBookmark } from "react-icons/fi";
 import UserFunding from "./MyInvestments";
+import Bookmarks from "./Bookmarks";
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
@@ -26,6 +27,12 @@ const tabs = [
       icon: FiPlus,
       description: "Start your own project",
       requiresAuth: true
+    },
+    {
+      id: "bookmarks",
+      label: "Bookmarks",
+      icon: FiBookmark,
+      description: "Saved projects"
     },
     {
       id: "community",
@@ -151,10 +158,9 @@ const tabs = [
           <div className="h-full">
             {activeTab === "view" && <ViewMyProjects />}
             {activeTab === "create" && <CreateProjectForm />}
+            {activeTab === "bookmarks" && <Bookmarks />}
             {activeTab === "community" && <Community />}
             {activeTab === "investments" && <UserFunding />}
-            
-       
           </div>
         </div>
       </div>
