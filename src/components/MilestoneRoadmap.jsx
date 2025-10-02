@@ -38,7 +38,7 @@ const MilestoneRoadmap = ({ milestones, fundedPercentage }) => {
             strokeWidth="4"
             strokeLinecap="round"
             strokeDasharray="1000"
-            strokeDashoffset={1000 - (fundedPercentage / 100) * 1000}
+            strokeDashoffset={1000 - (Math.min(fundedPercentage, 100) / 100) * 1000}
             style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
           />
         </svg>
@@ -72,14 +72,14 @@ const MilestoneRoadmap = ({ milestones, fundedPercentage }) => {
                 {/* Milestone dot */}
                 <div className="relative">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                    className={`w-6 h-6 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
                       isReached
-                        ? 'bg-green-500 shadow-lg shadow-green-500/50'
-                        : 'bg-gray-900 hover:scale-110'
+                        ? 'bg-green-600'
+                        : 'bg-gray-900'
                     }`}
                   >
                     {isCompleted && (
-                      <Check className="w-4 h-4 text-white" />
+                      <Check className="w-3.5 h-3.5 text-white" />
                     )}
                   </div>
 
@@ -90,8 +90,8 @@ const MilestoneRoadmap = ({ milestones, fundedPercentage }) => {
 
                   {/* Hover tooltip */}
                   {hoveredMilestone === milestone.percentage && (
-                    <div className="absolute top-12 left-1/2 -translate-x-1/2 z-10 w-48 animate-fade-in">
-                      <div className="bg-gray-900 text-white rounded-lg p-3 shadow-xl">
+                    <div className="absolute top-10 left-1/2 -translate-x-1/2 z-10 w-48">
+                      <div className="bg-gray-900 text-white rounded-lg p-3 shadow-sm">
                         <div className="text-xs font-medium mb-1">
                           Milestone {milestone.percentage}%
                         </div>
@@ -99,7 +99,7 @@ const MilestoneRoadmap = ({ milestones, fundedPercentage }) => {
                           {milestone.description || 'No description'}
                         </div>
                         {milestone.completedAt && (
-                          <div className="text-xs text-green-400 mt-2">
+                          <div className="text-xs text-green-300 mt-2">
                             ✓ Completed
                           </div>
                         )}
@@ -127,7 +127,7 @@ const MilestoneRoadmap = ({ milestones, fundedPercentage }) => {
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-0.5 bg-green-500"></div>
-          <span>Progress ({Math.round(fundedPercentage)}%)</span>
+          <span>Progress ({Math.min(Math.round(fundedPercentage), 100)}%)</span>
         </div>
       </div>
     </div>

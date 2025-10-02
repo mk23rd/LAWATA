@@ -653,12 +653,12 @@ export default function MyProjectInfo() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-white">
         <div className="pt-20 flex justify-center items-center min-h-[80vh]">
           <div className="text-center">
-            <div className="w-16 h-16 border-4 border-color-b border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Loading Project Details</h2>
-            <p className="text-gray-600">Please wait while we fetch your project information...</p>
+            <div className="w-12 h-12 border-4 border-color-b border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Loading</h2>
+            <p className="text-sm text-gray-600">Fetching your project information...</p>
           </div>
         </div>
       </div>
@@ -667,14 +667,14 @@ export default function MyProjectInfo() {
 
   if (error || !project) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-white">
         <div className="pt-20 flex justify-center items-center min-h-[80vh]">
-          <div className="text-center bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl max-w-md border border-white/20">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FiAlertCircle className="w-8 h-8 text-red-500" />
+          <div className="text-center bg-white rounded-lg p-6 border border-gray-200 max-w-md">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <FiAlertCircle className="w-6 h-6 text-red-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Error</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Error</h2>
+            <p className="text-sm text-gray-600 mb-4">{error}</p>
             <Button
               variant="primary"
               icon={FiArrowLeft}
@@ -692,20 +692,19 @@ export default function MyProjectInfo() {
   const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Modern Hero Header */}
-      <div className="relative pt-20 pb-8 overflow-hidden bg-white border-b border-gray-200">
+      <div className="relative pt-20 pb-8 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <button
             onClick={() => navigate('/projects')}
-            className="flex items-center space-x-2 text-gray-700 hover:text-color-b transition-all group mb-6 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-xl"
+            className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors group mb-6 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg"
           >
             <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             <span className="font-medium">Back to Projects</span>
           </button>
           
-          <div className="bg-white rounded-3xl shadow-lg border border-gray-200 p-8">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
@@ -724,11 +723,11 @@ export default function MyProjectInfo() {
                   )}
                 </div>
                 
-                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-color-b via-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
                   {project.title}
                 </h1>
                 
-                <p className="text-gray-600 text-lg mb-6 line-clamp-2">
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
                   {project.shortDescription}
                 </p>
                 
@@ -792,7 +791,7 @@ export default function MyProjectInfo() {
       </div>
 
       {/* Modern Stats Grid */}
-      <div className="max-w-7xl mx-auto px-4 -mt-4 mb-8">
+      <div className="max-w-7xl mx-auto px-4 -mt-2 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             icon={FiTrendingUp}
@@ -837,10 +836,10 @@ export default function MyProjectInfo() {
       </div>
 
       {/* Modern Tabs */}
-      <div className="max-w-7xl mx-auto px-4 mb-8">
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-2">
+      <div className="max-w-7xl mx-auto px-4 mb-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-2">
           <div className="flex flex-wrap gap-2">
-            {[
+            {[ 
               { id: 'overview', label: 'Overview', icon: FiEye },
               { id: 'images', label: 'Images', icon: FiImage },
               { id: 'funders', label: 'Backers', icon: FiUsers, badge: funders.length },
@@ -850,10 +849,10 @@ export default function MyProjectInfo() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-color-b to-blue-600 text-white shadow-lg transform scale-105'
-                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 <tab.icon className="w-5 h-5" />
@@ -872,7 +871,7 @@ export default function MyProjectInfo() {
       </div>
 
       {/* Tab Content */}
-      <div className="max-w-7xl mx-auto px-4 pb-16">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 pb-16">
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {isEditing ? (
@@ -888,7 +887,7 @@ export default function MyProjectInfo() {
               <>
                 {/* Project Image */}
                 <ProjectCard>
-                  <div className="relative h-96 rounded-2xl overflow-hidden">
+                  <div className="relative h-96 rounded-lg overflow-hidden">
                     {project.imageUrl ? (
                       <img
                         src={project.imageUrl}
@@ -896,7 +895,7 @@ export default function MyProjectInfo() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                         <FiImage className="w-24 h-24 text-gray-400" />
                       </div>
                     )}
@@ -920,9 +919,9 @@ export default function MyProjectInfo() {
                         project.milestones[percentage]?.description && (
                           <div
                             key={percentage}
-                            className={`p-4 rounded-xl border-2 ${
+                            className={`p-4 rounded-lg border ${
                               progress >= percentage
-                                ? 'bg-green-50 border-green-300'
+                                ? 'bg-green-50 border-green-200'
                                 : 'bg-gray-50 border-gray-200'
                             }`}
                           >
@@ -955,8 +954,8 @@ export default function MyProjectInfo() {
                   <FiImage className="w-5 h-5 text-color-b" />
                   Main Project Image
                 </h3>
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border-2 border-gray-200">
-                  <div className="relative h-64 rounded-xl overflow-hidden mb-4">
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="relative h-64 rounded-lg overflow-hidden mb-3">
                     {previewMainImageUrl ? (
                       <img
                         src={previewMainImageUrl}
@@ -970,13 +969,13 @@ export default function MyProjectInfo() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                         <FiImage className="w-24 h-24 text-gray-400" />
                       </div>
                     )}
                   </div>
                   
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
                     <input
                       id="mainImageInput"
                       type="file"
@@ -1021,11 +1020,11 @@ export default function MyProjectInfo() {
                           <img
                             src={imgUrl}
                             alt={`Secondary ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                            className="w-full h-32 object-cover rounded-lg border border-gray-200"
                           />
                           <button
                             onClick={() => removeExistingSecondaryImage(index)}
-                            className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                            className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
                           >
                             <FiTrash2 className="w-4 h-4" />
                           </button>
@@ -1045,11 +1044,11 @@ export default function MyProjectInfo() {
                           <img
                             src={previewUrl}
                             alt={`New ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg border-2 border-blue-300"
+                            className="w-full h-32 object-cover rounded-lg border border-gray-200"
                           />
                           <button
                             onClick={() => removeNewSecondaryImage(index)}
-                            className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                            className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700"
                           >
                             <FiTrash2 className="w-4 h-4" />
                           </button>
@@ -1060,7 +1059,7 @@ export default function MyProjectInfo() {
                 )}
 
                 {/* Upload Button */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-dashed border-blue-300">
+                <div className="bg-white rounded-lg p-4 border border-dashed border-gray-200">
                   <input
                     id="secondaryImagesInput"
                     type="file"
@@ -1070,9 +1069,9 @@ export default function MyProjectInfo() {
                     className="hidden"
                   />
                   <div className="text-center">
-                    <FiPlus className="w-12 h-12 text-color-b mx-auto mb-3" />
-                    <p className="text-gray-700 font-medium mb-2">Add More Images</p>
-                    <p className="text-sm text-gray-500 mb-4">Upload multiple images to showcase your project</p>
+                    <FiPlus className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+                    <p className="text-sm text-gray-700 font-medium mb-1">Add More Images</p>
+                    <p className="text-xs text-gray-500 mb-3">Upload multiple images to showcase your project</p>
                     <Button
                       variant="primary"
                       icon={FiPlus}
@@ -1087,7 +1086,7 @@ export default function MyProjectInfo() {
               {/* Save Button */}
               {(mainImageFile || newSecondaryImageFiles.length > 0 || 
                 JSON.stringify(editForm.secondaryImages) !== JSON.stringify(project.secondaryImages)) && (
-                <div className="mt-6 flex justify-end gap-3 p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
+                <div className="mt-4 flex justify-end gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                   <Button
                     variant="ghost"
                     onClick={() => {
@@ -1126,26 +1125,26 @@ export default function MyProjectInfo() {
                 {funders.map((funder) => (
                   <div
                     key={funder.id}
-                    className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300 hover:scale-105"
+                    className="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-center gap-4 mb-4">
                       <img
                         src={funder.profileImage}
                         alt={funder.name}
-                        className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-md"
+                        className="w-12 h-12 rounded-full object-cover border border-gray-200"
                       />
                       <div>
-                        <h4 className="font-bold text-gray-900">{funder.name}</h4>
-                        <p className="text-sm text-gray-500">{funder.location}</p>
+                        <h4 className="text-base font-semibold text-gray-900">{funder.name}</h4>
+                        <p className="text-xs text-gray-500">{funder.location}</p>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Total Contribution</span>
-                        <span className="font-bold text-color-b">{formatCurrency(funder.totalAmount)}</span>
+                        <span className="text-xs text-gray-600">Total Contribution</span>
+                        <span className="font-semibold text-gray-900">{formatCurrency(funder.totalAmount)}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Contributions</span>
+                        <span className="text-xs text-gray-600">Contributions</span>
                         <span className="font-semibold text-gray-900">{funder.contributions.length}</span>
                       </div>
                     </div>

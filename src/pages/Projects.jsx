@@ -49,17 +49,17 @@ const tabs = [
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 pt-20 md:pt-24">
+    <div className="min-h-screen bg-white pt-20 md:pt-24">
       {/* Mobile Header */}
-      <div className="md:hidden bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-20 z-40">
+      <div className="md:hidden bg-white border-b border-gray-200 sticky top-20 z-40">
         <div className="flex items-center justify-between p-4">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 rounded-xl bg-color-b text-white shadow-lg hover:shadow-xl transition-all duration-300"
+            className="p-2 rounded-lg bg-gray-900 text-white"
           >
             {isSidebarOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
           </button>
-          <h1 className="text-xl font-bold text-gray-800">Projects</h1>
+          <h1 className="text-xl font-bold text-gray-900">Projects</h1>
           <div className="w-10"></div>
         </div>
       </div>
@@ -67,20 +67,18 @@ const tabs = [
       <div className="flex">
         {/* Sidebar */}
         <div
-          className={`fixed z-50 top-16 md:top-20 left-0 h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] w-80 bg-white/90 backdrop-blur-sm border-r border-gray-200/50 shadow-2xl transform ${
+          className={`fixed z-50 top-16 md:top-20 left-0 h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] w-80 bg-white border-r border-gray-200 transform ${
             isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } transition-all duration-500 ease-in-out md:translate-x-0 overflow-y-auto flex flex-col`}
+          } transition-transform duration-300 md:translate-x-0 overflow-y-auto flex flex-col`}
         >
           {/* Sidebar Header */}
-          <div className="p-8 border-b border-gray-200/50">
-            <h2 className="text-3xl font-titan bg-gradient-to-r from-color-b to-blue-600 bg-clip-text text-transparent">
-              Projects Hub
-            </h2>
-            <p className="text-gray-600 mt-2">Manage and explore projects</p>
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Projects Hub</h2>
+            <p className="text-sm text-gray-600 mt-1">Manage and explore projects</p>
           </div>
 
           {/* Navigation */}
-          <nav className="p-6 space-y-3 flex-1 overflow-y-auto">
+          <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -102,43 +100,37 @@ const tabs = [
                     setActiveTab(tab.id);
                     setIsSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between p-4 rounded-2xl font-semibold text-left transition-all duration-300 group ${
+                  className={`w-full flex items-center justify-between p-3 rounded-lg text-sm font-medium text-left transition-colors ${
                     isActive
-                      ? "bg-gradient-to-r from-color-b to-blue-600 text-white shadow-lg scale-105"
-                      : "text-gray-700 hover:bg-white/80 hover:shadow-lg hover:scale-105"
+                      ? "bg-gray-900 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-xl ${
-                      isActive ? "bg-white/20" : "bg-gray-100 group-hover:bg-color-b/10"
+                    <div className={`p-2 rounded-lg ${
+                      isActive ? "bg-white/20" : "bg-gray-200"
                     }`}>
-                      <Icon className={`w-5 h-5 ${
-                        isActive ? "text-white" : "text-gray-600 group-hover:text-color-b"
-                      }`} />
+                      <Icon className={`w-5 h-5 ${isActive ? "text-gray-900" : "text-gray-600"}`} />
                     </div>
                     <div>
-                      <div className="font-semibold">{tab.label}</div>
-                      <div className={`text-sm ${
-                        isActive ? "text-white/80" : "text-gray-500"
-                      }`}>
+                      <div className="font-medium">{tab.label}</div>
+                      <div className={`text-xs ${isActive ? "text-white/80" : "text-gray-500"}`}>
                         {tab.description}
                       </div>
                     </div>
                   </div>
-                  <FiChevronRight className={`w-5 h-5 transition-transform duration-300 ${
-                    isActive ? "rotate-90 text-white" : "text-gray-400 group-hover:text-color-b"
-                  }`} />
+                  <FiChevronRight className={`w-4 h-4 ${isActive ? "text-white" : "text-gray-400"}`} />
                 </button>
               );
             })}
           </nav>
 
           {/* Sidebar Footer */}
-          <div className="flex-shrink-0 p-6 border-t border-gray-200/50">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4">
-              <h3 className="font-semibold text-gray-800 mb-1">Need Help?</h3>
-              <p className="text-sm text-gray-600 mb-3">Check out our guide to get started</p>
-              <button className="w-full py-2 px-4 bg-color-b text-white rounded-xl hover:bg-blue-600 transition-colors text-sm font-medium">
+          <div className="flex-shrink-0 p-4 border-t border-gray-200">
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">Need Help?</h3>
+              <p className="text-xs text-gray-600 mb-3">Check out our guide to get started</p>
+              <button className="w-full py-2 px-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">
                 View Guide
               </button>
             </div>

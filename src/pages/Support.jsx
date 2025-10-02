@@ -13,50 +13,74 @@ import {
   query,
   where
 } from "firebase/firestore";
-import { db } from "../firebase/firebase-config";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 
-// Add slider styles
+// Slider styles for the range input
 const sliderStyles = `
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: #e5e7eb;
+    outline: none;
+    transition: background 0.2s ease;
+  }
+
+  input[type="range"]:focus {
+    background: #d1d5db;
+  }
+  
   input[type="range"]::-webkit-slider-thumb {
-    appearance: none;
-    width: 24px;
-    height: 24px;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    background: #111827;
     cursor: pointer;
-    border: 3px solid white;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-    transition: all 0.2s ease;
+    border: 2px solid white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.1s ease;
+    margin-top: -6px;
   }
   
   input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+    transform: scale(1.1);
   }
   
   input[type="range"]::-moz-range-thumb {
-    width: 24px;
-    height: 24px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    background: #111827;
     cursor: pointer;
-    border: 3px solid white;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-    transition: all 0.2s ease;
-  }
-  
-  input[type="range"]::-moz-range-thumb:hover {
-    transform: scale(1.2);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+    border: 2px solid white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.1s ease;
   }
   
   input[type="range"]:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+  
+  input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: #e5e7eb;
+    border-radius: 2px;
+  }
+  
+  input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: #e5e7eb;
+    border-radius: 2px;
   }
 `;
 

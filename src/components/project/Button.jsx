@@ -17,21 +17,21 @@ export const Button = ({
   className = '',
   type = 'button'
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-color-b disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variantClasses = {
-    primary: 'bg-gradient-to-r from-color-b to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white shadow-md hover:shadow-lg focus:ring-blue-500',
-    secondary: 'bg-white border-2 border-color-b text-color-b hover:bg-blue-50 focus:ring-blue-500',
-    danger: 'bg-red-500 hover:bg-red-600 text-white shadow-md hover:shadow-lg focus:ring-red-500',
-    success: 'bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg focus:ring-green-500',
-    ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 focus:ring-gray-500',
-    outline: 'bg-transparent border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-500'
+    primary: 'bg-gray-900 hover:bg-gray-800 text-white',
+    secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+    danger: 'bg-red-600 hover:bg-red-700 text-white',
+    success: 'bg-green-600 hover:bg-green-700 text-white',
+    ghost: 'bg-transparent hover:bg-gray-100 text-gray-700',
+    outline: 'bg-transparent border border-gray-200 text-gray-700 hover:bg-gray-50'
   };
   
   const sizeClasses = {
     sm: 'px-3 py-2 text-sm gap-1.5',
-    md: 'px-4 py-2.5 text-base gap-2',
-    lg: 'px-6 py-3 text-lg gap-2.5'
+    md: 'px-4 py-2.5 text-sm gap-2',
+    lg: 'px-5 py-3 text-base gap-2'
   };
 
   return (
@@ -76,13 +76,13 @@ export const IconButton = ({
   className = '',
   ariaLabel
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClasses = 'inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-color-b disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variantClasses = {
-    primary: 'bg-color-b hover:bg-blue-600 text-white focus:ring-blue-500',
-    secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-700 focus:ring-gray-500',
-    danger: 'bg-red-500 hover:bg-red-600 text-white focus:ring-red-500',
-    ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 focus:ring-gray-500'
+    primary: 'bg-gray-900 hover:bg-gray-800 text-white',
+    secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-700',
+    danger: 'bg-red-600 hover:bg-red-700 text-white',
+    ghost: 'bg-transparent hover:bg-gray-100 text-gray-700'
   };
   
   const sizeClasses = {
