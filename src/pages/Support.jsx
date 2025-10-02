@@ -156,12 +156,12 @@ const Support = () => {
         // Gate: profile completeness check
         const hasProfile = Boolean(
           userData &&
-          userData.phoneNumber &&
-          userData.profileImageUrl &&
-          userData.bio &&
-          userData.location &&
-          userData.location.city &&
-          userData.location.country
+            userData.phoneNumber &&
+            userData.profileImageUrl &&
+            userData.bio &&
+            userData.location &&
+            userData.location.city &&
+            userData.location.country
         );
         if (!hasProfile) {
           throw new Error("Please complete your profile before supporting a project.");
@@ -176,21 +176,24 @@ const Support = () => {
         }
 
         // ---- PREPARE DATA LOCALLY ----
-        const fundings = userData.fundings ? { ...userData.fundings } : {};
+        // Determine if this is the user's first time funding this project
+        const userFundings = userData.fundings ? { ...userData.fundings } : {};
+        const isFirstContributionToProject = !userData.fundings || !userData.fundings[id];
+
         const nowISO = new Date().toISOString();
 
-        if (fundings[id]) {
-          fundings[id] = {
-            ...fundings[id],
+        if (userFundings[id]) {
+          userFundings[id] = {
+            ...userFundings[id],
             contributions: [
-              ...(fundings[id].contributions || []),
+              ...(userFundings[id].contributions || []),
               { amount: numericAmount, date: nowISO },
             ],
             totalFundedPerProject:
-              (fundings[id].totalFundedPerProject ?? 0) + numericAmount,
+              (userFundings[id].totalFundedPerProject ?? 0) + numericAmount,
           };
         } else {
-          fundings[id] = {
+          userFundings[id] = {
             projectTitle: projectData.title || "Untitled",
             totalFundedPerProject: numericAmount,
             contributions: [{ amount: numericAmount, date: nowISO }],
@@ -205,11 +208,11 @@ const Support = () => {
           (newFundingCounter >= 100 || newTotalFunded >= 750000) &&
           !userData.roles?.includes("Investor");
 
-        // Prepare update data
+        // Prepare update data for user
         const updateData = {
           totalFunded: newTotalFunded,
           fundingCounter: newFundingCounter,
-          fundings,
+          fundings: userFundings,
         };
 
         // Add Investor role if conditions are met
@@ -234,27 +237,27 @@ const Support = () => {
         // Check for milestone completion
         const newFundedMoney = currentFunded + numericAmount;
         const milestones = projectData.milestones || {};
-        
+
         console.log('Checking milestones:', {
           previousFunded: previousFundedMoney,
           newFunded: newFundedMoney,
           goal: fundingGoal,
           milestones: milestones
         });
-        
+
         // Check which milestones are reached
         [25, 50, 75, 100].forEach(percentage => {
           if (milestones[percentage]) {
             const milestoneAmount = (fundingGoal * percentage) / 100;
             const previousPercentage = (previousFundedMoney / fundingGoal) * 100;
             const newPercentage = (newFundedMoney / fundingGoal) * 100;
-            
+
             console.log(`Milestone ${percentage}%:`, {
               previousPercentage,
               newPercentage,
               crossed: previousPercentage < percentage && newPercentage >= percentage
             });
-            
+
             // If this milestone was just crossed
             if (previousPercentage < percentage && newPercentage >= percentage) {
               console.log(`✅ Milestone ${percentage}% reached!`);
@@ -263,7 +266,7 @@ const Support = () => {
                 description: milestones[percentage].description,
                 amount: milestoneAmount
               });
-              
+
               // Update milestone status to completed
               transaction.update(projectRef, {
                 [`milestones.${percentage}.status`]: 'completed',
@@ -272,16 +275,23 @@ const Support = () => {
             }
           }
         });
-        
+
         console.log('Milestones reached:', milestonesReached);
 
         // ---- ALL WRITES AFTER ----
-        transaction.update(projectRef, {
+        // Build project update (fundedMoney, and backers if first contribution)
+        const projectUpdate = {
           fundedMoney: increment(numericAmount),
-        });
+        };
+        if (isFirstContributionToProject) {
+          projectUpdate.backers = increment(1);
+        }
+        transaction.update(projectRef, projectUpdate);
 
+        // Update user record
         transaction.update(userRef, updateData);
 
+        // Create transaction record
         const transactionsCol = collection(db, "transactions");
         const newTransRef = doc(transactionsCol);
         transaction.set(newTransRef, {
@@ -306,14 +316,14 @@ const Support = () => {
           );
           const transactionsSnap = await getDocs(transactionsQuery);
           const funderIds = new Set();
-          
+
           transactionsSnap.forEach(docSnap => {
             const data = docSnap.data();
             if (data.userId && data.userId !== currentUser.uid) {
               funderIds.add(data.userId);
             }
           });
-          
+
           allPreviousFunders = Array.from(funderIds);
           console.log('Previous funders found:', allPreviousFunders.length);
         } catch (err) {
@@ -397,7 +407,7 @@ const Support = () => {
       toast.success(`🎉 You successfully supported with $${numericAmount}!${milestoneMessage}`, {
         autoClose: 5000
       });
-      
+
       setTimeout(() => {
         setAmount("");
         setPaymentStatus(null);
@@ -406,10 +416,10 @@ const Support = () => {
     } catch (err) {
       console.error("Error processing support:", err);
       setPaymentStatus('error');
-      
+
       // Show error message
       toast.error(err.message || "Something went wrong. Please try again.");
-      
+
       setTimeout(() => {
         setPaymentStatus(null);
       }, 1500);
@@ -417,6 +427,7 @@ const Support = () => {
       setProcessing(false);
     }
   };
+
 
   const getButtonContent = () => {
     if (processing) {

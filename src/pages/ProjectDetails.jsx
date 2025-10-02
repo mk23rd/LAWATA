@@ -528,7 +528,7 @@ const ProjectDetails = () => {
                 
                 <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
                   <div
-                    className="h-2 rounded-full bg-gray-900 transition-all"
+                    className = {(fundedPercentage==100) ? "h-2 rounded-full bg-green-600 transition-all" : "h-2 rounded-full bg-color-b transition-all"}
                     style={{ width: `${fundedPercentage}%` }}
                   />
                 </div>
@@ -576,7 +576,7 @@ const ProjectDetails = () => {
                   className={`w-full py-3 px-4 rounded-lg font-medium transition-all text-sm ${
                     isFullyFunded
                       ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-gray-900 text-white hover:bg-gray-800'
+                      : 'bg-color-b text-white hover:bg-blue-500'
                   }`}
                 >
                   {isFullyFunded ? 'View Rewards' : 'Support This Project'}
