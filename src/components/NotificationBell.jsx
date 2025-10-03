@@ -125,7 +125,7 @@ const NotificationBell = ({ containerClassName = '' }) => {
                       // Check notification type to determine which page to navigate to
                       if (n.type === 'Your_project_Funded' || n.type === 'Milestone_Completed') {
                         // Navigate to project info page for creator
-                        navigate(`/my-project-info/${n.projectId}`)
+                        navigate(`/projectDet/${n.projectId}`)
                       } else if (n.type === 'You_Funded_a_project') {
                         // Navigate to project details page for supporters
                         navigate(`/projectDet/${n.projectId}`)

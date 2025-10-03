@@ -65,13 +65,18 @@ function App() {
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
-        newestOnTop={false}
+        newestOnTop={true}
         closeOnClick
         rtl={false}
         pauseOnFocusLoss
         draggable
         pauseOnHover
         theme="light"
+        toastClassName="!bg-white !border !border-gray-200 !rounded-lg !shadow-sm !text-sm !font-medium"
+        bodyClassName="!text-gray-900 !p-3"
+        progressClassName="!bg-gray-900"
+        closeButton={false}
+        icon={false}
       />
     </>
   )

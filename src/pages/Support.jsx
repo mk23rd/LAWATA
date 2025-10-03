@@ -16,47 +16,73 @@ import {
 import { db } from "../firebase/firebase-config";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Target, ChevronDown } from "lucide-react";
 import { toast } from "react-toastify";
+import RewardsList from "../components/project/RewardsList";
 
-// Add slider styles
+// Slider styles for the range input
 const sliderStyles = `
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: #e5e7eb;
+    outline: none;
+    transition: background 0.2s ease;
+  }
+
+  input[type="range"]:focus {
+    background: #d1d5db;
+  }
+  
   input[type="range"]::-webkit-slider-thumb {
-    appearance: none;
-    width: 24px;
-    height: 24px;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    background: #111827;
     cursor: pointer;
-    border: 3px solid white;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-    transition: all 0.2s ease;
+    border: 2px solid white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.1s ease;
+    margin-top: -6px;
   }
   
   input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+    transform: scale(1.1);
   }
   
   input[type="range"]::-moz-range-thumb {
-    width: 24px;
-    height: 24px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    background: #111827;
     cursor: pointer;
-    border: 3px solid white;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-    transition: all 0.2s ease;
-  }
-  
-  input[type="range"]::-moz-range-thumb:hover {
-    transform: scale(1.2);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+    border: 2px solid white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.1s ease;
   }
   
   input[type="range"]:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+  
+  input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: #e5e7eb;
+    border-radius: 2px;
+  }
+  
+  input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: #e5e7eb;
+    border-radius: 2px;
   }
 `;
 
@@ -67,6 +93,8 @@ const Support = () => {
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(null); // 'success', 'error', or null
+  const [showRewards, setShowRewards] = useState(false);
+  const [selectedReward, setSelectedReward] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, profileComplete } = useAuth();
@@ -156,12 +184,12 @@ const Support = () => {
         // Gate: profile completeness check
         const hasProfile = Boolean(
           userData &&
-          userData.phoneNumber &&
-          userData.profileImageUrl &&
-          userData.bio &&
-          userData.location &&
-          userData.location.city &&
-          userData.location.country
+            userData.phoneNumber &&
+            userData.profileImageUrl &&
+            userData.bio &&
+            userData.location &&
+            userData.location.city &&
+            userData.location.country
         );
         if (!hasProfile) {
           throw new Error("Please complete your profile before supporting a project.");
@@ -176,21 +204,24 @@ const Support = () => {
         }
 
         // ---- PREPARE DATA LOCALLY ----
-        const fundings = userData.fundings ? { ...userData.fundings } : {};
+        // Determine if this is the user's first time funding this project
+        const userFundings = userData.fundings ? { ...userData.fundings } : {};
+        const isFirstContributionToProject = !userData.fundings || !userData.fundings[id];
+
         const nowISO = new Date().toISOString();
 
-        if (fundings[id]) {
-          fundings[id] = {
-            ...fundings[id],
+        if (userFundings[id]) {
+          userFundings[id] = {
+            ...userFundings[id],
             contributions: [
-              ...(fundings[id].contributions || []),
+              ...(userFundings[id].contributions || []),
               { amount: numericAmount, date: nowISO },
             ],
             totalFundedPerProject:
-              (fundings[id].totalFundedPerProject ?? 0) + numericAmount,
+              (userFundings[id].totalFundedPerProject ?? 0) + numericAmount,
           };
         } else {
-          fundings[id] = {
+          userFundings[id] = {
             projectTitle: projectData.title || "Untitled",
             totalFundedPerProject: numericAmount,
             contributions: [{ amount: numericAmount, date: nowISO }],
@@ -205,11 +236,11 @@ const Support = () => {
           (newFundingCounter >= 100 || newTotalFunded >= 750000) &&
           !userData.roles?.includes("Investor");
 
-        // Prepare update data
+        // Prepare update data for user
         const updateData = {
           totalFunded: newTotalFunded,
           fundingCounter: newFundingCounter,
-          fundings,
+          fundings: userFundings,
         };
 
         // Add Investor role if conditions are met
@@ -234,27 +265,27 @@ const Support = () => {
         // Check for milestone completion
         const newFundedMoney = currentFunded + numericAmount;
         const milestones = projectData.milestones || {};
-        
+
         console.log('Checking milestones:', {
           previousFunded: previousFundedMoney,
           newFunded: newFundedMoney,
           goal: fundingGoal,
           milestones: milestones
         });
-        
+
         // Check which milestones are reached
         [25, 50, 75, 100].forEach(percentage => {
           if (milestones[percentage]) {
             const milestoneAmount = (fundingGoal * percentage) / 100;
             const previousPercentage = (previousFundedMoney / fundingGoal) * 100;
             const newPercentage = (newFundedMoney / fundingGoal) * 100;
-            
+
             console.log(`Milestone ${percentage}%:`, {
               previousPercentage,
               newPercentage,
               crossed: previousPercentage < percentage && newPercentage >= percentage
             });
-            
+
             // If this milestone was just crossed
             if (previousPercentage < percentage && newPercentage >= percentage) {
               console.log(`✅ Milestone ${percentage}% reached!`);
@@ -263,7 +294,7 @@ const Support = () => {
                 description: milestones[percentage].description,
                 amount: milestoneAmount
               });
-              
+
               // Update milestone status to completed
               transaction.update(projectRef, {
                 [`milestones.${percentage}.status`]: 'completed',
@@ -272,16 +303,23 @@ const Support = () => {
             }
           }
         });
-        
+
         console.log('Milestones reached:', milestonesReached);
 
         // ---- ALL WRITES AFTER ----
-        transaction.update(projectRef, {
+        // Build project update (fundedMoney, and backers if first contribution)
+        const projectUpdate = {
           fundedMoney: increment(numericAmount),
-        });
+        };
+        if (isFirstContributionToProject) {
+          projectUpdate.backers = increment(1);
+        }
+        transaction.update(projectRef, projectUpdate);
 
+        // Update user record
         transaction.update(userRef, updateData);
 
+        // Create transaction record
         const transactionsCol = collection(db, "transactions");
         const newTransRef = doc(transactionsCol);
         transaction.set(newTransRef, {
@@ -306,14 +344,14 @@ const Support = () => {
           );
           const transactionsSnap = await getDocs(transactionsQuery);
           const funderIds = new Set();
-          
+
           transactionsSnap.forEach(docSnap => {
             const data = docSnap.data();
             if (data.userId && data.userId !== currentUser.uid) {
               funderIds.add(data.userId);
             }
           });
-          
+
           allPreviousFunders = Array.from(funderIds);
           console.log('Previous funders found:', allPreviousFunders.length);
         } catch (err) {
@@ -397,7 +435,7 @@ const Support = () => {
       toast.success(`🎉 You successfully supported with $${numericAmount}!${milestoneMessage}`, {
         autoClose: 5000
       });
-      
+
       setTimeout(() => {
         setAmount("");
         setPaymentStatus(null);
@@ -406,10 +444,10 @@ const Support = () => {
     } catch (err) {
       console.error("Error processing support:", err);
       setPaymentStatus('error');
-      
+
       // Show error message
       toast.error(err.message || "Something went wrong. Please try again.");
-      
+
       setTimeout(() => {
         setPaymentStatus(null);
       }, 1500);
@@ -417,6 +455,7 @@ const Support = () => {
       setProcessing(false);
     }
   };
+
 
   const getButtonContent = () => {
     if (processing) {
@@ -552,7 +591,7 @@ const Support = () => {
                   <img 
                     src={project.imageUrl} 
                     alt={project.title}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-48 object-contain"
                   />
                 </div>
               )}
@@ -647,6 +686,103 @@ const Support = () => {
                   </div>
                 </div>
 
+                {/* Reward Selection */}
+                {project.rewardsList && project.rewardsList.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-gray-600 mb-3">Select a Reward (Optional)</h4>
+                    <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
+                      {project.rewardsList.map((reward, index) => {
+                        const numericAmount = parseFloat(amount) || 0;
+                        const rewardAmount = parseFloat(reward.amount) || 0;
+                        const remainingQuantity = reward.type === 'limited' ? (reward.quantity - (reward.claimed || 0)) : Infinity;
+                        const isEligible = numericAmount >= rewardAmount && remainingQuantity > 0;
+                        const isSelected = selectedReward?.index === index;
+                        
+                        return (
+                          <div
+                            key={index}
+                            onClick={() => {
+                              if (isEligible && !processing) {
+                                setSelectedReward(isSelected ? null : { ...reward, index });
+                              }
+                            }}
+                            className={`relative p-3 border-2 rounded-xl transition-all cursor-pointer ${
+                              isSelected
+                                ? "border-blue-500 bg-blue-50 shadow-md"
+                                : isEligible
+                                ? "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
+                                : "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {reward.imageUrl && (
+                                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                                  <img
+                                    src={reward.imageUrl}
+                                    alt={reward.title}
+                                    className={`w-full h-full object-cover ${
+                                      isEligible ? "" : "grayscale"
+                                    }`}
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h5 className={`font-medium text-sm truncate ${
+                                  isEligible ? "text-gray-900" : "text-gray-400"
+                                }`}>
+                                  {reward.title}
+                                </h5>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`text-xs font-medium ${
+                                    isEligible ? "text-green-600" : "text-gray-400"
+                                  }`}>
+                                    ${rewardAmount.toLocaleString()}
+                                  </span>
+                                  {reward.type === 'limited' && (
+                                    <span className={`text-xs ${
+                                      isEligible ? "text-gray-500" : "text-gray-400"
+                                    }`}>
+                                      {remainingQuantity} left
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <CheckCircle className="w-3 h-3 text-white" />
+                                </div>
+                              )}
+                            </div>
+                            {!isEligible && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 rounded-xl">
+                                <span className="text-xs text-gray-500 font-medium">
+                                  {numericAmount < rewardAmount
+                                    ? `Requires $${rewardAmount.toLocaleString()}`
+                                    : "Out of Stock"
+                                  }
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {selectedReward && (
+                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-900">
+                            Selected: {selectedReward.title}
+                          </span>
+                        </div>
+                        <p className="text-xs text-blue-700 mt-1">
+                          {selectedReward.description}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Submit Button */}
                 <button
                   type="submit"
@@ -668,7 +804,31 @@ const Support = () => {
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Rewards Section */}
+        {project.rewardsList && project.rewardsList.length > 0 && (
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/40 p-8 md:p-10 mt-8">
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setShowRewards(!showRewards)}
+                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-gray-600" />
+                  <h2 className="text-base font-semibold text-gray-900">Rewards ({project.rewardsList.length})</h2>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showRewards ? 'rotate-180' : ''}`} />
+              </button>
+              {showRewards && (
+                <div className="p-4 border-t border-gray-200">
+                  <RewardsList rewards={project.rewardsList} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        </div>
       </div>
     </>
   );

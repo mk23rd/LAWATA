@@ -124,47 +124,47 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
     <div className="space-y-6">
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border-2 border-blue-200">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <FiDollarSign className="w-8 h-8 text-blue-600" />
-            <span className="text-xs font-medium text-blue-600 bg-blue-200 px-2 py-1 rounded-full">
+            <FiDollarSign className="w-5 h-5 text-gray-600" />
+            <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
               Per Day
             </span>
           </div>
-          <p className="text-sm text-gray-600 mb-1">Avg Funding/Day</p>
+          <p className="text-xs text-gray-500 mb-1">Avg Funding/Day</p>
           <p className="text-2xl font-bold text-gray-900">{formatCurrency(analytics.fundingPerDay)}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border-2 border-green-200">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <FiUsers className="w-8 h-8 text-green-600" />
-            <span className="text-xs font-medium text-green-600 bg-green-200 px-2 py-1 rounded-full">
+            <FiUsers className="w-5 h-5 text-gray-600" />
+            <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
               Average
             </span>
           </div>
-          <p className="text-sm text-gray-600 mb-1">Avg Pledge</p>
+          <p className="text-xs text-gray-500 mb-1">Avg Pledge</p>
           <p className="text-2xl font-bold text-gray-900">{formatCurrency(analytics.averagePledge)}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-6 border-2 border-purple-200">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <FiTrendingUp className="w-8 h-8 text-purple-600" />
-            <span className="text-xs font-medium text-purple-600 bg-purple-200 px-2 py-1 rounded-full">
+            <FiTrendingUp className="w-5 h-5 text-gray-600" />
+            <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
               Growth
             </span>
           </div>
-          <p className="text-sm text-gray-600 mb-1">Progress Rate</p>
+          <p className="text-xs text-gray-500 mb-1">Progress Rate</p>
           <p className="text-2xl font-bold text-gray-900">{formatNumber(analytics.progressRate)}%/day</p>
         </div>
 
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-6 border-2 border-orange-200">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <FiCalendar className="w-8 h-8 text-orange-600" />
-            <span className="text-xs font-medium text-orange-600 bg-orange-200 px-2 py-1 rounded-full">
+            <FiCalendar className="w-5 h-5 text-gray-600" />
+            <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
               Active
             </span>
           </div>
-          <p className="text-sm text-gray-600 mb-1">Days Active</p>
+          <p className="text-xs text-gray-500 mb-1">Days Active</p>
           <p className="text-2xl font-bold text-gray-900">{analytics.daysActive}</p>
         </div>
       </div>
@@ -178,7 +178,7 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
           </div>
           
           {analytics.fundingByDate.length > 0 ? (
-            <div className="relative h-64 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4">
+            <div className="relative h-64 bg-white rounded-lg p-4 border border-gray-200">
               {/* Y-axis labels - More values */}
               <div className="absolute left-0 top-0 bottom-0 w-16 flex flex-col justify-between text-xs text-gray-500 pr-2">
                 <span>{formatCurrency(maxFunding)}</span>
@@ -220,7 +220,7 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
                     return (
                       <div
                         key={index}
-                        className="flex-1 bg-gradient-to-t from-color-b to-blue-400 rounded-t hover:from-blue-600 hover:to-blue-500 transition-all cursor-pointer group relative"
+                        className="flex-1 bg-gray-900 rounded-t hover:bg-gray-800 transition-colors cursor-pointer group relative"
                         style={{ height: `${height}%`, maxWidth: '96px' }}
                       >
                         <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20">
@@ -252,7 +252,7 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
       {/* Backers Growth Chart - BAR CHART */}
       <ProjectCard title="Backers Growth" icon={FiBarChart2}>
         {analytics.backersOverTime.length > 0 ? (
-          <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4">
+          <div className="relative h-48 bg-white rounded-lg p-4 border border-gray-200">
             {/* Y-axis - More values */}
             <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-xs text-gray-500 pr-2">
               <span>{maxBackers}</span>
@@ -284,7 +284,7 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
                   return (
                     <div
                       key={index}
-                      className="flex-1 bg-gradient-to-t from-purple-500 to-purple-400 rounded-t hover:from-purple-600 hover:to-purple-500 transition-all cursor-pointer group relative"
+                      className="flex-1 bg-purple-600 rounded-t hover:bg-purple-700 transition-colors cursor-pointer group relative"
                       style={{ height: `${height}%`, maxWidth: '96px' }}
                     >
                       <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20">
@@ -321,7 +321,7 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
                 <div key={backer.id} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-color-b to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                      <div className="w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center font-bold text-sm">
                         {index + 1}
                       </div>
                       <div>
@@ -336,7 +336,7 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
-                      className="bg-gradient-to-r from-color-b to-blue-600 h-2 rounded-full transition-all duration-500"
+                      className="bg-gray-900 h-2 rounded-full transition-all duration-500"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
@@ -377,7 +377,7 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
       {/* Insights */}
       <ProjectCard title="Project Insights" icon={FiTrendingUp}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+          <div className="p-4 bg-white rounded-lg border border-gray-200">
             <h4 className="font-semibold text-gray-900 mb-2">Funding Velocity</h4>
             <p className="text-sm text-gray-600 mb-2">
               At the current rate, you're raising {formatCurrency(analytics.fundingPerDay)} per day.
@@ -391,7 +391,7 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
             )}
           </div>
 
-          <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+          <div className="p-4 bg-white rounded-lg border border-gray-200">
             <h4 className="font-semibold text-gray-900 mb-2">Backer Engagement</h4>
             <p className="text-sm text-gray-600 mb-2">
               Average of {formatNumber(analytics.totalFunding / analytics.totalBackers || 0)} per backer
@@ -403,7 +403,7 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
             </p>
           </div>
 
-          <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+          <div className="p-4 bg-white rounded-lg border border-gray-200">
             <h4 className="font-semibold text-gray-900 mb-2">Campaign Progress</h4>
             <p className="text-sm text-gray-600 mb-2">
               {formatNumber((project.fundedMoney / project.fundingGoal) * 100)}% funded
@@ -413,7 +413,7 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
             </p>
           </div>
 
-          <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
+          <div className="p-4 bg-white rounded-lg border border-gray-200">
             <h4 className="font-semibold text-gray-900 mb-2">Time Efficiency</h4>
             <p className="text-sm text-gray-600 mb-2">
               {formatNumber((project.fundedMoney / project.fundingGoal) / analytics.daysActive * 100)}% progress per day
@@ -426,4 +426,5 @@ export const ProjectAnalytics = ({ project, funders = [] }) => {
       </ProjectCard>
     </div>
   );
-};
+}
+;

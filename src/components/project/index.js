@@ -10,3 +10,4 @@ export { FormInput, FormTextarea, FormSelect } from './FormInput';
 export { AnnouncementManager } from './AnnouncementManager';
 export { ProjectEditForm } from './ProjectEditForm';
 export { ProjectAnalytics } from './ProjectAnalytics';
+export { default as RewardsList } from './RewardsList';
