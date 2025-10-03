@@ -16,8 +16,9 @@ import {
 import { db } from "../firebase/firebase-config";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Target, ChevronDown } from "lucide-react";
 import { toast } from "react-toastify";
+import RewardsList from "../components/project/RewardsList";
 
 // Slider styles for the range input
 const sliderStyles = `
@@ -92,6 +93,7 @@ const Support = () => {
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(null); // 'success', 'error', or null
+  const [showRewards, setShowRewards] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, profileComplete } = useAuth();
@@ -588,7 +590,7 @@ const Support = () => {
                   <img 
                     src={project.imageUrl} 
                     alt={project.title}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-48 object-contain"
                   />
                 </div>
               )}
@@ -704,7 +706,31 @@ const Support = () => {
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Rewards Section */}
+        {project.rewardsList && project.rewardsList.length > 0 && (
+          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/40 p-8 md:p-10 mt-8">
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setShowRewards(!showRewards)}
+                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-gray-600" />
+                  <h2 className="text-base font-semibold text-gray-900">Rewards ({project.rewardsList.length})</h2>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showRewards ? 'rotate-180' : ''}`} />
+              </button>
+              {showRewards && (
+                <div className="p-4 border-t border-gray-200">
+                  <RewardsList rewards={project.rewardsList} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        </div>
       </div>
     </>
   );

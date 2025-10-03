@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import Comment from '../components/Comment';
 import Navbar from "../components/NavBar";
 import MilestoneRoadmap from '../components/MilestoneRoadmap';
+import RewardsList from '../components/project/RewardsList';
 
 const ProjectDetails = () => {
   const [project, setProject] = useState(null);
@@ -23,6 +24,7 @@ const ProjectDetails = () => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showAnnouncements, setShowAnnouncements] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showRewards, setShowRewards] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageLoading, setImageLoading] = useState(true);
   
@@ -399,6 +401,27 @@ const ProjectDetails = () => {
                   {project.longDescription || 'No detailed description available.'}
                 </div>
               </div>
+
+              {/* Rewards Section */}
+              {project.rewardsList && project.rewardsList.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setShowRewards(!showRewards)}
+                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-gray-600" />
+                      <h2 className="text-base font-semibold text-gray-900">Rewards ({project.rewardsList.length})</h2>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showRewards ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showRewards && (
+                    <div className="p-4 border-t border-gray-200">
+                      <RewardsList rewards={project.rewardsList} />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Milestones Section */}

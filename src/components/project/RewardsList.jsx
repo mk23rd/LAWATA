@@ -3,15 +3,17 @@ import { FiBox, FiDollarSign, FiUsers } from 'react-icons/fi';
 
 const RewardCard = ({ reward }) => {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col lg:flex-row gap-6">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col sm:flex-row gap-4">
       {reward.imageUrl && (
-        <div className="lg:w-1/3">
-          <img src={reward.imageUrl} alt={reward.title} className="w-full h-48 object-cover rounded-lg" />
+        <div className="sm:w-1/4">
+          <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+            <img src={reward.imageUrl} alt={reward.title} className="w-full h-full object-contain rounded-lg" />
+          </div>
         </div>
       )}
       <div className="flex-1">
-        <h3 className="text-xl font-bold text-gray-900 mb-2">{reward.title}</h3>
-        <p className="text-gray-600 mb-4">{reward.description}</p>
+        <h3 className="text-lg font-bold text-gray-900 mb-1">{reward.title}</h3>
+        <p className="text-sm text-gray-600 mb-3">{reward.description}</p>
         <div className="flex items-center gap-4 text-sm text-gray-700">
           <div className="flex items-center bg-gray-100 px-3 py-1.5 rounded-full">
             <FiDollarSign className="w-4 h-4 mr-1.5 text-green-600" />
