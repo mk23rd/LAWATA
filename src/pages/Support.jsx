@@ -94,6 +94,7 @@ const Support = () => {
   const [processing, setProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(null); // 'success', 'error', or null
   const [showRewards, setShowRewards] = useState(false);
+  const [selectedReward, setSelectedReward] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, profileComplete } = useAuth();
@@ -684,6 +685,103 @@ const Support = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Reward Selection */}
+                {project.rewardsList && project.rewardsList.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-gray-600 mb-3">Select a Reward (Optional)</h4>
+                    <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
+                      {project.rewardsList.map((reward, index) => {
+                        const numericAmount = parseFloat(amount) || 0;
+                        const rewardAmount = parseFloat(reward.amount) || 0;
+                        const remainingQuantity = reward.type === 'limited' ? (reward.quantity - (reward.claimed || 0)) : Infinity;
+                        const isEligible = numericAmount >= rewardAmount && remainingQuantity > 0;
+                        const isSelected = selectedReward?.index === index;
+                        
+                        return (
+                          <div
+                            key={index}
+                            onClick={() => {
+                              if (isEligible && !processing) {
+                                setSelectedReward(isSelected ? null : { ...reward, index });
+                              }
+                            }}
+                            className={`relative p-3 border-2 rounded-xl transition-all cursor-pointer ${
+                              isSelected
+                                ? "border-blue-500 bg-blue-50 shadow-md"
+                                : isEligible
+                                ? "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
+                                : "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {reward.imageUrl && (
+                                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                                  <img
+                                    src={reward.imageUrl}
+                                    alt={reward.title}
+                                    className={`w-full h-full object-cover ${
+                                      isEligible ? "" : "grayscale"
+                                    }`}
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h5 className={`font-medium text-sm truncate ${
+                                  isEligible ? "text-gray-900" : "text-gray-400"
+                                }`}>
+                                  {reward.title}
+                                </h5>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`text-xs font-medium ${
+                                    isEligible ? "text-green-600" : "text-gray-400"
+                                  }`}>
+                                    ${rewardAmount.toLocaleString()}
+                                  </span>
+                                  {reward.type === 'limited' && (
+                                    <span className={`text-xs ${
+                                      isEligible ? "text-gray-500" : "text-gray-400"
+                                    }`}>
+                                      {remainingQuantity} left
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <CheckCircle className="w-3 h-3 text-white" />
+                                </div>
+                              )}
+                            </div>
+                            {!isEligible && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 rounded-xl">
+                                <span className="text-xs text-gray-500 font-medium">
+                                  {numericAmount < rewardAmount
+                                    ? `Requires $${rewardAmount.toLocaleString()}`
+                                    : "Out of Stock"
+                                  }
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {selectedReward && (
+                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-900">
+                            Selected: {selectedReward.title}
+                          </span>
+                        </div>
+                        <p className="text-xs text-blue-700 mt-1">
+                          {selectedReward.description}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Submit Button */}
                 <button
