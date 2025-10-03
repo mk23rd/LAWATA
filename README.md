@@ -23,10 +23,10 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/Korvowastaken/CrowdFundingproj.git
+git clone https://github.com/mk23rd/Risk_Integrated_Crowdfunding_and_Investment_Platform.git
 
 # Move into the project folder
-cd/CrowdFundingproj
+cd/Risk_Integrated_Crowdfunding_and_Investment_Platform
 
 # Install dependencies
 npm install gsap/react
@@ -41,13 +41,13 @@ npm install gsap/react
     react-router-dom
     tailwindcss
 ```
-### More dependencies might be used in the future so check [packages.json](https://github.com/Korvowastaken/CrowdFundingproj/blob/main/package.json)
+### More dependencies might be used in the future so check [package.json](https://github.com/mk23rd/Risk_Integrated_Crowdfunding_and_Investment_Platform/blob/main/package.json)
 ```
 # Start development server
 npm run dev
 
 👉 The app will run at http://localhost:5173
-
+```
 
 🌟 Vision
 
@@ -59,4 +59,3 @@ This platform isn’t just about raising money—it’s about building accountab
 ⚖️ License
 
 This project is licensed under the [MIT License](LICENSE).
-
