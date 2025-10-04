@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, arrayUnion, Timestamp, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, Timestamp, onSnapshot, getDoc, addDoc, collection } from 'firebase/firestore';
 import { db } from '../firebase/firebase-config';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, DollarSign, Target, Users, Share2, Bookmark, MessageCircle, ChevronDown, Flag, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
@@ -27,6 +27,12 @@ const ProjectDetails = () => {
   const [showRewards, setShowRewards] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageLoading, setImageLoading] = useState(true);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [showUserReportModal, setShowUserReportModal] = useState(false);
+  const [userToReport, setUserToReport] = useState(null);
   
   const { id } = useParams();
   const navigate = useNavigate();
@@ -173,7 +179,88 @@ const ProjectDetails = () => {
       toast.warning("Please sign in to report projects.");
       return;
     }
-    toast.info("Report feature coming soon. Thank you for helping keep our community safe!");
+    setShowReportModal(true);
+  };
+
+  // Submit project report
+  const handleSubmitReport = async () => {
+    if (!reportReason.trim()) {
+      toast.warning("Please select a reason for reporting.");
+      return;
+    }
+    
+    setReportSubmitting(true);
+    try {
+      await addDoc(collection(db, "reports"), {
+        type: "proj-report",
+        projectId: id,
+        projectTitle: project.title,
+        projectCreatorId: project.createdBy?.uid,
+        projectCreatorName: project.createdBy?.name,
+        reportedBy: currentUser.uid,
+        reportedByName: currentUserData?.displayName || currentUser.displayName || currentUser.email,
+        reason: reportReason,
+        details: reportDetails,
+        createdAt: Timestamp.now(),
+        status: "pending"
+      });
+      
+      toast.success("Report submitted successfully. Thank you for helping keep our community safe!");
+      setShowReportModal(false);
+      setReportReason('');
+      setReportDetails('');
+    } catch (err) {
+      console.error("Error submitting report:", err);
+      toast.error("Failed to submit report. Please try again.");
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
+  // Handle user report from comment
+  const handleUserReport = (user) => {
+    if (!currentUser) {
+      toast.warning("Please sign in to report users.");
+      return;
+    }
+    setUserToReport(user);
+    setShowUserReportModal(true);
+  };
+
+  // Submit user report
+  const handleSubmitUserReport = async () => {
+    if (!reportReason.trim()) {
+      toast.warning("Please select a reason for reporting.");
+      return;
+    }
+    
+    setReportSubmitting(true);
+    try {
+      await addDoc(collection(db, "reports"), {
+        type: "user-report",
+        reportedUserId: userToReport.userId,
+        reportedUserName: userToReport.username,
+        projectId: id,
+        projectTitle: project.title,
+        reportedBy: currentUser.uid,
+        reportedByName: currentUserData?.displayName || currentUser.displayName || currentUser.email,
+        reason: reportReason,
+        details: reportDetails,
+        createdAt: Timestamp.now(),
+        status: "pending"
+      });
+      
+      toast.success("Report submitted successfully. Thank you for helping keep our community safe!");
+      setShowUserReportModal(false);
+      setReportReason('');
+      setReportDetails('');
+      setUserToReport(null);
+    } catch (err) {
+      console.error("Error submitting user report:", err);
+      toast.error("Failed to submit report. Please try again.");
+    } finally {
+      setReportSubmitting(false);
+    }
   };
 
   const handleClick = () => {
@@ -383,7 +470,18 @@ const ProjectDetails = () => {
 
               {/* Creator Info */}
               <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
-                <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center">
+                {project.createdBy?.profileImageUrl ? (
+                  <img 
+                    src={project.createdBy.profileImageUrl} 
+                    alt={project.createdBy?.name || 'Creator'}
+                    className="w-10 h-10 rounded-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextElementSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className={`w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center ${project.createdBy?.profileImageUrl ? 'hidden' : ''}`}>
                   <span className="text-white font-bold text-sm">
                     {project.createdBy?.name?.charAt(0) || 'A'}
                   </span>
@@ -479,16 +577,23 @@ const ProjectDetails = () => {
               </button>
               {showComments && (
                 <div className="p-4 border-t border-gray-200">
-                  <div className="space-y-4 mb-4">
-                    {commentsWithProfileImages.map((instance, index) => (
-                      <Comment 
-                        key={`${instance.userId}-${instance.createdAt?.seconds || index}`}
-                        username={instance.username}
-                        createdAt={formatFirebaseTimestamp(instance.createdAt)}
-                        pfpImage={instance.resolvedPfp}
-                        comment={instance.comment}
-                      />
-                    ))}
+                  <div className="space-y-3 mb-4">
+                    {commentsWithProfileImages.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">No comments yet. Be the first to comment!</p>
+                    ) : (
+                      commentsWithProfileImages.map((instance, index) => (
+                        <Comment 
+                          key={`${instance.userId}-${instance.createdAt?.seconds || index}`}
+                          username={instance.username}
+                          createdAt={formatFirebaseTimestamp(instance.createdAt)}
+                          pfpImage={instance.resolvedPfp}
+                          comment={instance.comment}
+                          userId={instance.userId}
+                          currentUserId={currentUser?.uid}
+                          onReport={handleUserReport}
+                        />
+                      ))
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <input 
@@ -647,6 +752,153 @@ const ProjectDetails = () => {
                 className="px-4 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 text-sm"
               >
                 Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Project Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowReportModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-4">
+              <Flag className="w-5 h-5 text-red-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Report Project</h3>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Help us keep our community safe by reporting projects that violate our guidelines.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Reason for reporting <span className="text-red-600">*</span>
+                </label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all text-sm"
+                  disabled={reportSubmitting}
+                >
+                  <option value="">Select a reason</option>
+                  <option value="spam">Spam or misleading</option>
+                  <option value="inappropriate">Inappropriate content</option>
+                  <option value="scam">Potential scam or fraud</option>
+                  <option value="copyright">Copyright violation</option>
+                  <option value="offensive">Offensive or harmful content</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Additional details (optional)
+                </label>
+                <textarea
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder="Please provide any additional information that might help us review this report..."
+                  rows={4}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all text-sm resize-none"
+                  disabled={reportSubmitting}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportReason('');
+                  setReportDetails('');
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-all text-sm"
+                disabled={reportSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitReport}
+                disabled={reportSubmitting || !reportReason.trim()}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {reportSubmitting ? 'Submitting...' : 'Submit Report'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Report Modal */}
+      {showUserReportModal && userToReport && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowUserReportModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-4">
+              <Flag className="w-5 h-5 text-red-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Report User</h3>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Reporting <span className="font-semibold">{userToReport.username}</span> for violating community guidelines.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Reason for reporting <span className="text-red-600">*</span>
+                </label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all text-sm"
+                  disabled={reportSubmitting}
+                >
+                  <option value="">Select a reason</option>
+                  <option value="harassment">Harassment or bullying</option>
+                  <option value="spam">Spam</option>
+                  <option value="inappropriate">Inappropriate content</option>
+                  <option value="hate-speech">Hate speech</option>
+                  <option value="impersonation">Impersonation</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Additional details (optional)
+                </label>
+                <textarea
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder="Please provide any additional information that might help us review this report..."
+                  rows={4}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all text-sm resize-none"
+                  disabled={reportSubmitting}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowUserReportModal(false);
+                  setReportReason('');
+                  setReportDetails('');
+                  setUserToReport(null);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-all text-sm"
+                disabled={reportSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitUserReport}
+                disabled={reportSubmitting || !reportReason.trim()}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {reportSubmitting ? 'Submitting...' : 'Submit Report'}
               </button>
             </div>
           </div>

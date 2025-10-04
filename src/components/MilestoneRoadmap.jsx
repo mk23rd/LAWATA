@@ -28,6 +28,7 @@ const MilestoneRoadmap = ({ milestones, fundedPercentage }) => {
             stroke="#E5E7EB"
             strokeWidth="4"
             strokeLinecap="round"
+            pathLength="100"
           />
           
           {/* Progress path (green) - fills based on funding percentage */}
@@ -37,9 +38,10 @@ const MilestoneRoadmap = ({ milestones, fundedPercentage }) => {
             stroke="#10B981"
             strokeWidth="4"
             strokeLinecap="round"
-            strokeDasharray="1000"
-            strokeDashoffset={1000 - (Math.min(fundedPercentage, 100) / 100) * 1000}
-            style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
+            pathLength="100"
+            strokeDasharray="100"
+            strokeDashoffset={100 - Math.min(Math.max(fundedPercentage, 0), 100)}
+            style={{ transition: 'stroke-dashoffset 0.5s ease-in-out' }}
           />
         </svg>
 
