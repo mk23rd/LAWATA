@@ -25,8 +25,6 @@ const Navbar = () => {
     { label: "Browse", to: "/browse" },
     { label: "Community", to: "/community" },
     { label: "Projects", to: "/projects" },
-    { label: "My Projects", to: "/view-my-projects" },
-    { label: "Investments", to: "/myInvestments" },
     { label: "Wallet", to: "/wallet" }
   ];
 
@@ -103,9 +101,6 @@ const Navbar = () => {
           <Link to="/" className="font-titan text-2xl md:text-4xl text-color-b hover:opacity-80 transition-opacity">
             LAWATA
           </Link>
-          <span className="hidden md:block text-xs font-semibold uppercase tracking-widest text-color-c/70">
-            Crowdfunding
-          </span>
         </div>
 
         {/* Desktop Navigation */}
