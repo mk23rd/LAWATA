@@ -1,0 +1,19 @@
+{
+    "lastLogin": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1759603894,
+      "nanoseconds": 542000000
+    },
+    "uid": "3SgZWcF783YwrZ7HZb5VQsxhOZT2",
+    "walletBalance": 0,
+    "username": "korvospotify",
+    "roles": [
+      "visitor"
+    ],
+    "email": "korvospotify@gmail.com",
+    "createdAt": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1759603894,
+      "nanoseconds": 542000000
+    }
+  }

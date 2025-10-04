@@ -1,6 +1,6 @@
 // components/Navbar.jsx
 import { useState, useEffect } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase/firebase-config";
 import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
@@ -19,29 +19,6 @@ const Navbar = () => {
   // Control the hamburger menu open state on mobile
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
-
-  const primaryNavLinks = [
-    { label: "Home", to: "/home" },
-    { label: "Browse", to: "/browse" },
-    { label: "Community", to: "/community" },
-    { label: "Projects", to: "/projects" },
-    { label: "Wallet", to: "/wallet" }
-  ];
-
-  const accountMenuLinks = [
-    { label: "Profile", action: () => navigate("/profile") },
-    { label: "Manage Profile", action: () => navigate("/manage-profile") },
-    { label: "Create Project", action: () => navigate("/create") },
-    { label: "My Projects", action: () => navigate("/view-my-projects") },
-    { label: "My Investments", action: () => navigate("/myInvestments") },
-    { label: "Bookmarks", action: () => navigate("/bookmarks") },
-    { label: "Wallet", action: () => navigate("/wallet") }
-  ];
-
-  const guestMenuLinks = [
-    { label: "Sign Up", action: () => navigate("/signing", { state: { panel: "signup" } }) },
-    { label: "Login", action: () => navigate("/signing", { state: { panel: "login" } }) }
-  ];
 
   // Fetch user data
   useEffect(() => {
@@ -94,197 +71,190 @@ const Navbar = () => {
   }, [menuOpen]);
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-[100] bg-white/95 backdrop-blur border-b border-gray-100">
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 md:px-6 md:py-4">
-        {/* Logo & Mobile Menu */}
-        <div className="flex flex-1 items-center gap-2">
-          <button
-            onClick={toggleMenu}
-            className="md:hidden rounded-md p-2 text-color-b hover:bg-gray-100 transition-colors"
-            aria-label="Toggle menu"
-          >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {menuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
+    <nav className='fixed top-0 left-0 w-screen h-16 md:h-20 z-[100] flex items-center bg-white shadow-sm'>
+      {/* Logo */}
+      <div className='flex-1 md:w-1/6 h-full flex justify-center md:justify-center items-center'>
+        <Link to="/" className='font-titan text-2xl md:text-5xl text-color-b hover:opacity-80 transition-opacity cursor-pointer'>
+          LAWATA
+        </Link>
+      </div>
 
-          <Link to="/" className="font-titan text-2xl md:text-4xl text-color-b hover:opacity-80 transition-opacity">
-            LAWATA
-          </Link>
-        </div>
-
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex flex-1 items-center justify-center">
-          <div className="flex flex-wrap items-center justify-center gap-1 rounded-full bg-color-e px-3 py-2">
-            {primaryNavLinks.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                className={({ isActive }) =>
-                  `px-3 py-2 text-sm font-semibold transition-colors rounded-full ${
-                    isActive
-                      ? "bg-color-b text-white shadow"
-                      : "text-white hover:text-color-b hover:bg-color-b/10"
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-        </div>
-
-        {/* Actions and Logo */}
-        <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
-          <div className="hidden md:flex items-center gap-3">
-            <Link
-              to="/view-my-projects"
-              className="inline-flex items-center gap-2 rounded-full bg-color-b px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 transition-colors"
-            >
-              My Projects
-            </Link>
-            <NotificationBell />
-
-            {/* User Profile Dropdown */}
-            <div className="relative user-dropdown">
-              <button
-                onClick={toggleDropdown}
-                className="flex items-center gap-2 rounded-full bg-color-e px-3 py-2 text-sm font-semibold text-white hover:bg-opacity-80 transition-colors"
-              >
-                <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-color-b/10 text-xs font-bold uppercase text-color-b">
-                  {userData?.profileImageUrl ? (
-                    <img src={userData.profileImageUrl} alt="Profile avatar" className="h-full w-full object-cover" />
-                  ) : (
-                    (userData?.username || user?.email || "U").charAt(0)
-                  )}
-                </span>
-                <span className="max-w-[120px] truncate">
-                  {userData?.username || user?.email || "Account"}
-                </span>
-              </button>
-
-              {showDropdown && (
-                <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5">
-                  <div className="border-b border-gray-100 bg-color-e/60 px-4 py-3 text-sm text-white">
-                    <p className="font-semibold truncate">{userData?.username || "User"}</p>
-                    <p className="truncate text-xs text-white/70">{user?.email}</p>
-                  </div>
-                  <div className="py-1 text-sm">
-                    {(user ? accountMenuLinks : guestMenuLinks).map((item) => (
-                      <button
-                        key={item.label}
-                        onClick={() => {
-                          item.action();
-                          setShowDropdown(false);
-                        }}
-                        className="block w-full px-4 py-2 text-left text-color-e hover:bg-color-b/10 transition-colors"
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                    {user ? (
-                      <button
-                        onClick={() => {
-                          handleLogout();
-                          setShowDropdown(false);
-                        }}
-                        className="block w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        Logout
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 md:hidden">
-            <NotificationBell />
-            <button
-              onClick={toggleDropdown}
-              className="flex items-center gap-2 rounded-full bg-color-e px-3 py-2 text-sm font-semibold text-white hover:bg-opacity-80 transition-colors"
-            >
-              <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-color-b/10 text-xs font-bold uppercase text-color-b">
-                {userData?.profileImageUrl ? (
-                  <img src={userData.profileImageUrl} alt="Profile avatar" className="h-full w-full object-cover" />
-                ) : (
-                  (userData?.username || user?.email || "U").charAt(0)
-                )}
-              </span>
-            </button>
-          </div>
+      {/* Desktop Navigation */}
+      <div className='hidden md:flex w-4/6 h-full justify-center items-center'>
+        <div className='bg-color-e rounded-2xl w-2xl h-13 gap-40 flex items-center justify-evenly'>
+          <Link to="/projects" className='text-color-d text-2xl hover:underline'>Create</Link>
+          <Link to="/browse" className='text-color-d text-2xl hover:underline'>Browse Works</Link>
+          <Link to="/about" className='text-color-d text-2xl hover:underline'>About</Link>
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {menuOpen && (
-        <div className="md:hidden border-t border-gray-200 bg-white shadow-xl">
-          <div className="space-y-6 px-4 py-6">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Explore</p>
-              <div className="mt-3 grid grid-cols-1 gap-2">
-                {primaryNavLinks.map((link) => (
-                  <Link
-                    key={link.to}
-                    to={link.to}
-                    onClick={toggleMenu}
-                    className="rounded-lg border border-gray-100 px-3 py-2 text-sm font-semibold text-color-e hover:border-color-b hover:bg-color-b/5"
+      {/* Desktop User Section */}
+      <div className='hidden md:flex w-1/6 h-full justify-end items-center gap-3 pr-4'>
+        <NotificationBell />
+
+        {/* User Profile Dropdown */}
+        <div className="relative user-dropdown">
+          <button 
+            onClick={toggleDropdown}
+            className='bg-color-e rounded-2xl w-35 h-10 flex items-center justify-center text-color-d font-medium hover:bg-opacity-90 transition-colors px-4 truncate'
+          >
+            {userData?.username || user?.email || 'User'}
+          </button>
+          
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-48 bg-color-e rounded-md shadow-lg z-10">
+              <div className="py-1">
+                {user ? (
+                  <>
+                    {/* If user IS logged in */}
+                    <div className="px-4 py-2 text-sm text-color-d border-b border-color-d border-opacity-20">
+                      <p className="font-medium truncate">{userData?.username || 'User'}</p>
+                      <p className="truncate text-opacity-80">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={() => navigate("/profile")}
+                      className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    >
+                      Profile
+                    </button>
+                    <button
+                      onClick={() => navigate("/projects")}
+                      className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    >
+                      Projects
+                    </button>
+                    <button
+                    onClick={() => { navigate("/wallet"); toggleMenu(); }}
+                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
-                    {link.label}
-                  </Link>
-                ))}
+                    Wallet
+                  </button>
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* If user is NOT logged in */}
+                    <button
+                      onClick={() => navigate("/signing", { state: { panel: "signup" } })}
+                      className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    >
+                      Sign Up
+                    </button>
+                    <button
+                      onClick={() => navigate("/signing", { state: { panel: "login" } })}
+                      className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    >
+                      Login
+                    </button>
+                  </>
+                )}
               </div>
             </div>
+          )}
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <Link
-                to="/create"
-                onClick={toggleMenu}
-                className="block rounded-lg bg-color-b px-4 py-3 text-center text-sm font-semibold text-white shadow hover:bg-blue-700"
-              >
-                Start a Project
-              </Link>
-              <Link
-                to="/browse"
-                onClick={toggleMenu}
-                className="block rounded-lg border border-color-b/20 px-4 py-3 text-center text-sm font-semibold text-color-b hover:border-color-b hover:bg-color-b/5"
-              >
-                Browse Projects
-              </Link>
-            </div>
+      {/* Mobile Menu Button */}
+      <div className='md:hidden flex items-center gap-2 pr-4'>
+        <NotificationBell />
+        <button
+          onClick={toggleMenu}
+          className='p-2 rounded-md text-color-b hover:bg-gray-100 transition-colors'
+          aria-label="Toggle menu"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {menuOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
+      </div>
 
-            <div className="border-t border-gray-200 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Account</p>
-              <div className="mt-3 space-y-2">
-                {(user ? accountMenuLinks : guestMenuLinks).map((item) => (
+      {/* Mobile Menu Dropdown */}
+      {menuOpen && (
+        <div className="md:hidden absolute top-16 right-0 left-0 bg-white shadow-lg border-t border-gray-200 z-40">
+          <div className="px-4 py-6 space-y-4">
+            {/* Mobile Navigation Links */}
+            <Link 
+              to="/projects" 
+              className='block text-color-d text-xl hover:underline py-2'
+              onClick={toggleMenu}
+            >
+              Create
+            </Link>
+            <Link 
+              to="/browse" 
+              className='block text-color-d text-xl hover:underline py-2'
+              onClick={toggleMenu}
+            >
+              Browse Works
+            </Link>
+            <Link 
+              to="/about" 
+              className='block text-color-d text-xl hover:underline py-2'
+              onClick={toggleMenu}
+            >
+              About
+            </Link>
+            
+            {/* Mobile User Section */}
+            <div className="border-t border-gray-200 pt-4 mt-4">
+              {user ? (
+                <>
+                  {/* If user IS logged in */}
+                  <div className="px-2 py-2 text-sm text-color-d border-b border-color-d border-opacity-20 mb-2">
+                    <p className="font-medium truncate">{userData?.username || 'User'}</p>
+                    <p className="truncate text-opacity-80">{user?.email}</p>
+                  </div>
                   <button
-                    key={item.label}
-                    onClick={() => {
-                      item.action();
-                      toggleMenu();
-                    }}
-                    className="block w-full rounded-lg border border-gray-100 px-3 py-2 text-left text-sm font-semibold text-color-e hover:border-color-b hover:bg-color-b/5"
+                    onClick={() => { navigate("/profile"); toggleMenu(); }}
+                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
-                    {item.label}
+                    Profile
                   </button>
-                ))}
-                {user ? (
                   <button
-                    onClick={() => {
-                      handleLogout();
-                      toggleMenu();
-                    }}
-                    className="block w-full rounded-lg border border-red-200 px-3 py-2 text-left text-sm font-semibold text-red-500 hover:bg-red-50"
+                    onClick={() => { navigate("/projects"); toggleMenu(); }}
+                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                  >
+                    Projects
+                  </button>
+                  <button
+                    onClick={() => { navigate("/wallet"); toggleMenu(); }}
+                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                  >
+                    Wallet
+                  </button>
+                  <button
+                    onClick={() => { handleLogout(); toggleMenu(); }}
+                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
                     Logout
                   </button>
-                ) : null}
-              </div>
+                </>
+              ) : (
+                <>
+                  {/* If user is NOT logged in */}
+                  <button
+                    onClick={() => { navigate("/signing", { state: { panel: "signup" } }); toggleMenu(); }}
+                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                  <button
+                    onClick={() => { navigate("/signing", { state: { panel: "login" } }); toggleMenu(); }}
+                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                  >
+                    Login
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
