@@ -110,7 +110,7 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
   <div className="hidden md:flex flex-1 items-center justify-center">
-          <div className="flex flex-wrap items-center justify-center gap-1 rounded-full bg-color-e/80 px-2 py-1 shadow-sm">
+          <div className="flex flex-wrap items-center justify-center gap-1 rounded-full bg-black px-2 py-1">
             {primaryNavLinks.map((link) => (
               <NavLink
                 key={link.to}
