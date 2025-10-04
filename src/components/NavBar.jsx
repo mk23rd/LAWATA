@@ -95,16 +95,30 @@ const Navbar = () => {
 
   return (
     <nav className="fixed top-0 left-0 w-full z-[100] bg-white/95 backdrop-blur border-b border-gray-100">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:py-4">
-        {/* Logo */}
-        <div className="flex items-center gap-3">
+      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 md:px-6 md:py-4">
+        {/* Logo & Mobile Menu */}
+        <div className="flex flex-1 items-center gap-2">
+          <button
+            onClick={toggleMenu}
+            className="md:hidden rounded-md p-2 text-color-b hover:bg-gray-100 transition-colors"
+            aria-label="Toggle menu"
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {menuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+
           <Link to="/" className="font-titan text-2xl md:text-4xl text-color-b hover:opacity-80 transition-opacity">
             LAWATA
           </Link>
         </div>
 
         {/* Desktop Navigation */}
-  <div className="hidden md:flex flex-1 items-center justify-center">
+        <div className="hidden md:flex flex-1 items-center justify-center">
           <div className="flex flex-wrap items-center justify-center gap-1 rounded-full bg-color-e px-3 py-2">
             {primaryNavLinks.map((link) => (
               <NavLink
@@ -124,18 +138,73 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-3">
-          <Link
-            to="/create"
-            className="hidden md:inline-flex items-center gap-2 rounded-full bg-color-b px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 transition-colors"
-          >
-            Start a Project
-          </Link>
-          <NotificationBell />
+        {/* Actions and Logo */}
+        <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
+          <div className="hidden md:flex items-center gap-3">
+            <Link
+              to="/view-my-projects"
+              className="inline-flex items-center gap-2 rounded-full bg-color-b px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700 transition-colors"
+            >
+              My Projects
+            </Link>
+            <NotificationBell />
 
-          {/* User Profile Dropdown */}
-          <div className="relative user-dropdown">
+            {/* User Profile Dropdown */}
+            <div className="relative user-dropdown">
+              <button
+                onClick={toggleDropdown}
+                className="flex items-center gap-2 rounded-full bg-color-e px-3 py-2 text-sm font-semibold text-white hover:bg-opacity-80 transition-colors"
+              >
+                <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-color-b/10 text-xs font-bold uppercase text-color-b">
+                  {userData?.profileImageUrl ? (
+                    <img src={userData.profileImageUrl} alt="Profile avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    (userData?.username || user?.email || "U").charAt(0)
+                  )}
+                </span>
+                <span className="max-w-[120px] truncate">
+                  {userData?.username || user?.email || "Account"}
+                </span>
+              </button>
+
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5">
+                  <div className="border-b border-gray-100 bg-color-e/60 px-4 py-3 text-sm text-white">
+                    <p className="font-semibold truncate">{userData?.username || "User"}</p>
+                    <p className="truncate text-xs text-white/70">{user?.email}</p>
+                  </div>
+                  <div className="py-1 text-sm">
+                    {(user ? accountMenuLinks : guestMenuLinks).map((item) => (
+                      <button
+                        key={item.label}
+                        onClick={() => {
+                          item.action();
+                          setShowDropdown(false);
+                        }}
+                        className="block w-full px-4 py-2 text-left text-color-e hover:bg-color-b/10 transition-colors"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                    {user ? (
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setShowDropdown(false);
+                        }}
+                        className="block w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        Logout
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 md:hidden">
+            <NotificationBell />
             <button
               onClick={toggleDropdown}
               className="flex items-center gap-2 rounded-full bg-color-e px-3 py-2 text-sm font-semibold text-white hover:bg-opacity-80 transition-colors"
@@ -147,63 +216,8 @@ const Navbar = () => {
                   (userData?.username || user?.email || "U").charAt(0)
                 )}
               </span>
-              <span className="max-w-[120px] truncate">
-                {userData?.username || user?.email || "Account"}
-              </span>
             </button>
-
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5">
-                <div className="border-b border-gray-100 bg-color-e/60 px-4 py-3 text-sm text-white">
-                  <p className="font-semibold truncate">{userData?.username || "User"}</p>
-                  <p className="truncate text-xs text-white/70">{user?.email}</p>
-                </div>
-                <div className="py-1 text-sm">
-                  {(user ? accountMenuLinks : guestMenuLinks).map((item) => (
-                    <button
-                      key={item.label}
-                      onClick={() => {
-                        item.action();
-                        setShowDropdown(false);
-                      }}
-                      className="block w-full px-4 py-2 text-left text-color-e hover:bg-color-b/10 transition-colors"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                  {user ? (
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setShowDropdown(false);
-                      }}
-                      className="block w-full px-4 py-2 text-left text-red-500 hover:bg-red-50 transition-colors"
-                    >
-                      Logout
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            )}
           </div>
-        </div>
-
-        {/* Mobile Menu Button */}
-        <div className="md:hidden flex items-center gap-2">
-          <NotificationBell />
-          <button
-            onClick={toggleMenu}
-            className="rounded-md p-2 text-color-b hover:bg-gray-100 transition-colors"
-            aria-label="Toggle menu"
-          >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {menuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
         </div>
       </div>
 
