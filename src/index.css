@@ -14,7 +14,24 @@
   *{
     box-sizing: border-box;
     margin: 0;
-    font-family: 'Sofia';
+    font-family: var(--font-sofia);
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--color-background);
+    color: var(--color-color-a);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a,
+  button,
+  input,
+  textarea,
+  select {
+    color: inherit;
+    font: inherit;
   }
 }
 
@@ -22,11 +39,14 @@
   --font-titan: 'Titan', sans-serif;
   --font-sofia: 'Sofia', sans-serif;
 
-  --color-color-a: #000000;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+
+  --color-color-a: #0f172a;
   --color-color-b: #1C5EDD;
-  --color-color-c: #575757;
-  --color-color-d: #CBCBCB;
-  --color-color-e: #272626;
+  --color-color-c: #475569;
+  --color-color-d: #f3f4f6;
+  --color-color-e: #111827;
 }
 
 @layer utilities {

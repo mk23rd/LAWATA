@@ -62,6 +62,7 @@ const UserFunding = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
+          <br /><br /><br />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Fundings</h1>
           <p className="text-gray-600">Track your contributions and funding activities</p>
         </div>
