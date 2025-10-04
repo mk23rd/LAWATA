@@ -4,20 +4,19 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 // Page-level route components import for centralised routing configuration
 import Registration from "./pages/registration"
-import Loading from "./pages/Loading";
 import Home from './pages/Home';
 import CreateProjectForm from "./pages/CreateProjectForm"
 import Browse from "./pages/Browse"
 import ProjectDetails from "./pages/ProjectDetails"
 import Signing from "./pages/Signing";
-import Profile from "./pages/Profile";
-import ManageProfile from "./pages/ManageProfile";
+import Profile from "./pages/Profile_new";
+import ManageProfile from "./pages/ManageProfile_new";
 import Projects from "./pages/Projects";
 import ViewMyProjects from "./pages/ViewMyProjects";
 import MyProjectInfo from "./pages/MyProjectInfoModern";
 import Rewards from "./pages/Rewards";
 import Support from "./pages/Support";
-import Community from "./pages/Community"
+import Community from "./pages/Community";
 import MyInvestments from "./pages/MyInvestments";
 import InvestPage from "./pages/InvestPage";
 import Wallet from "./pages/Wallet";
@@ -52,8 +51,8 @@ function App() {
         <Route path="/projectDet/:id" element={<ProjectDetails />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/manage-profile" element={<ManageProfile />} />
-        <Route path="/projects" element={<Projects />} />
-  <Route path="/bookmarks" element={<Bookmarks />} />
+        <Route path="/manage" element={<Projects />} />
+        <Route path="/bookmarks" element={<Bookmarks />} />
         <Route path="/view-my-projects" element={<ViewMyProjects />} />
         <Route path="/my-project-info/:id" element={<MyProjectInfo />} />
         <Route path="/myInvestments" element={<MyInvestments />} />

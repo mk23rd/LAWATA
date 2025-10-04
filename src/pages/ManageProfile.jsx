@@ -2,18 +2,9 @@ import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebase/firebase-config";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { Upload, X, Loader } from "lucide-react";
+import { Upload, X, Loader, User, Phone, MapPin, Tag, FileText, Camera, Save, Eye } from "lucide-react";
 import { toast } from 'react-toastify';
 
-const steps = [
-  { label: "Phone Number", name: "phoneNumber", type: "text", milestone: "Phone" },
-  { label: "Profile Image", name: "profileImageUrl", type: "file", milestone: "Profile Image" },
-  { label: "Bio", name: "bio", type: "textarea", milestone: "Bio" },
-  { label: "Location", name: ["city", "country"], type: "location", milestone: "Location" },
-  { label: "Preferred Categories", name: "preferredCategories", type: "text", milestone: "Preferences" },
-];
-
-// Guided wizard that helps creators complete the required profile fields
 const ManageProfile = () => {
   const navigate = useNavigate();
   const user = auth.currentUser;
@@ -27,17 +18,11 @@ const ManageProfile = () => {
     preferredCategories: "",
   });
 
-  const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState("");
-
-  // Debug: Check if API key is loaded
-  useEffect(() => {
-    console.log('API Key:', import.meta.env.VITE_IMGBB_API_KEY ? 'Present' : 'Missing');
-  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -58,13 +43,15 @@ const ManageProfile = () => {
             preferredCategories: (data.preferredCategories || []).join(", "),
           });
           
-          // Set file preview if profile image exists
           if (data.profileImageUrl) {
             setFilePreview(data.profileImageUrl);
           }
         }
       } catch (error) {
         console.error("Error loading profile:", error);
+        toast.error("Failed to load profile data");
+      } finally {
+        setInitialLoading(false);
       }
     };
     fetchProfile();
@@ -75,17 +62,14 @@ const ManageProfile = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
+  const handleFileSelect = (file) => {
     if (!file) return;
 
-    // Check if file is an image
     if (!file.type.match('image.*')) {
       toast.error("Please select an image file");
       return;
     }
 
-    // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Please select an image smaller than 5MB");
       return;
@@ -93,7 +77,6 @@ const ManageProfile = () => {
 
     setSelectedFile(file);
     
-    // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
       setFilePreview(e.target.result);
@@ -101,35 +84,50 @@ const ManageProfile = () => {
     reader.readAsDataURL(file);
   };
 
-  const removeSelectedFile = () => {
-    setSelectedFile(null);
-    setFilePreview("");
+  const handleFileInputChange = (e) => {
+    handleFileSelect(e.target.files[0]);
   };
 
-  // Upload helper for profile pictures using the ImgBB API
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    handleFileSelect(file);
+  };
+
+  const removeSelectedFile = () => {
+    setSelectedFile(null);
+    setFilePreview(formData.profileImageUrl || "");
+  };
+
   const uploadToImageBB = async (file) => {
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append('image', file);
       
-      // Use import.meta.env for Vite environment variables
       const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
-      console.log('Uploading with API key:', apiKey ? 'Present' : 'Missing');
       
       if (!apiKey) {
         throw new Error('ImageBB API key is not configured');
       }
       
-      // Upload to ImageBB
       const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
         method: 'POST',
         body: formData
       });
       
-      console.log('Upload response status:', response.status);
       const data = await response.json();
-      console.log('Upload response data:', data);
       
       if (data.success) {
         return data.data.url;
@@ -144,34 +142,31 @@ const ManageProfile = () => {
     }
   };
 
-  const handleNext = async () => {
-    // If we're on the profile image step and a new file is selected, upload it first
-    if (currentStep === 1 && selectedFile) {
-      try {
-        const imageUrl = await uploadToImageBB(selectedFile);
-        setFormData(prev => ({ ...prev, profileImageUrl: imageUrl }));
-        setSelectedFile(null); // Clear selected file after successful upload
-      } catch (error) {
-        toast.error('Failed to upload image. Please try again.');
-        return; // Don't proceed to next step if upload fails
-      }
-    }
-    
-    if (currentStep < steps.length - 1) setCurrentStep((prev) => prev + 1);
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 0) setCurrentStep((prev) => prev - 1);
-  };
-
   const handleSave = async () => {
     if (!user) return;
+
+    // Basic validation
+    if (!formData.phoneNumber.trim()) {
+      toast.error("Phone number is required");
+      return;
+    }
+
+    if (!formData.bio.trim()) {
+      toast.error("Bio is required");
+      return;
+    }
+
+    if (!formData.city.trim() || !formData.country.trim()) {
+      toast.error("Location is required");
+      return;
+    }
+
     setLoading(true);
     try {
       let profileImageUrl = formData.profileImageUrl;
       
-      // If there's a selected file but we haven't uploaded it yet (user clicked Save directly)
       if (selectedFile) {
+        toast.info("Uploading image...");
         profileImageUrl = await uploadToImageBB(selectedFile);
       }
 
@@ -187,7 +182,7 @@ const ManageProfile = () => {
       });
       
       toast.success("Profile updated successfully!");
-      navigate("/profile");
+      setTimeout(() => navigate("/profile"), 1000);
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error("Failed to update profile");
@@ -196,7 +191,16 @@ const ManageProfile = () => {
     }
   };
 
-  const step = steps[currentStep];
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader className="w-8 h-8 animate-spin text-gray-900" />
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white min-h-screen flex flex-col items-center justify-start p-6 text-black">

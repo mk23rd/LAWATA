@@ -95,7 +95,7 @@ const Rewards = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign In Required</h2>
           <p className="text-gray-600 mb-6">Please sign in to view your claimed rewards.</p>
           <button
-            onClick={() => navigate('/signing?redirectTo=/projects')}
+            onClick={() => navigate('/signing?redirectTo=/manage')}
             className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors font-medium"
           >
             Sign In

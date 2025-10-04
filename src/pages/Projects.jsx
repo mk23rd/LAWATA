@@ -4,10 +4,11 @@ import ViewMyProjects from "./ViewMyProjects";
 import Community from "./Community";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { FiMenu, FiX, FiPlus, FiEye, FiUsers, FiChevronRight, FiBookmark, FiGift } from "react-icons/fi";
+import { FiMenu, FiX, FiPlus, FiEye, FiUsers, FiChevronRight, FiBookmark, FiGift, FiUser } from "react-icons/fi";
 import UserFunding from "./MyInvestments";
 import Bookmarks from "./Bookmarks";
 import Rewards from "./Rewards";
+import ManageProfile from "./ManageProfile_new";
 
 const Projects = () => {
   const [activeTab, setActiveTab] = useState("view"); // default to view projects
@@ -16,11 +17,19 @@ const Projects = () => {
   const { currentUser, profileComplete , isInvestor } = useAuth();
 
 const tabs = [
+    
     {
       id: "view",
       label: "View Projects",
       icon: FiEye,
       description: "Browse all projects"
+    },
+    {
+      id: "profile",
+      label: "Profile Management",
+      icon: FiUser,
+      description: "Manage your profile",
+      requiresAuth: true
     },
     {
       id: "create",
@@ -54,6 +63,7 @@ const tabs = [
       description: "View claimed rewards",
       requiresAuth: true
     },
+    
   ];
 
   return (
@@ -97,12 +107,12 @@ const tabs = [
                   onClick={() => {
                     if (tab.requiresAuth && !currentUser) {
                       alert("Please sign in to proceed.");
-                      navigate(`/signing?redirectTo=/projects`);
+                      navigate(`/signing?redirectTo=/manage`);
                       return;
                     }
                     if (tab.requiresAuth && !profileComplete) {
                       alert("Please complete your profile to proceed.");
-                      navigate(`/manage-profile?redirectTo=/projects`);
+                      navigate(`/manage-profile?redirectTo=/manage`);
                       return;
                     }
                     setActiveTab(tab.id);
@@ -162,6 +172,7 @@ const tabs = [
             {activeTab === "community" && <Community />}
             {activeTab === "investments" && <UserFunding />}
             {activeTab === "rewards" && <Rewards />}
+            {activeTab === "profile" && <ManageProfile />}
           </div>
         </div>
       </div>

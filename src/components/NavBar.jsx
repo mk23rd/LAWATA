@@ -1,14 +1,15 @@
 // components/Navbar.jsx
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { auth, db } from "../firebase/firebase-config";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import NotificationBell from "../components/NotificationBell";
 
 // Responsive navigation bar that adapts between desktop and mobile layouts
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = auth.currentUser;
 
   // Store extended profile fields fetched from Firestore
@@ -20,19 +21,30 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
-  // Fetch user data
+  // Real-time listener for user data
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) setUserData(userDoc.data());
-        } catch (err) {
-          console.error("Error fetching user data:", err);
+    if (!user) {
+      setUserData(null);
+      return;
+    }
+
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(
+      doc(db, "users", user.uid),
+      (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          setUserData(docSnapshot.data());
+        } else {
+          setUserData(null);
         }
+      },
+      (error) => {
+        console.error("Error listening to user data:", error);
       }
-    };
-    fetchUserData();
+    );
+
+    // Cleanup listener on unmount or when user changes
+    return () => unsubscribe();
   }, [user]);
 
   const handleLogout = async () => {
@@ -81,10 +93,37 @@ const Navbar = () => {
 
       {/* Desktop Navigation */}
       <div className='hidden md:flex w-4/6 h-full justify-center items-center'>
-        <div className='bg-color-e rounded-2xl w-2xl h-13 gap-40 flex items-center justify-evenly'>
-          <Link to="/projects" className='text-color-d text-2xl hover:underline'>Create</Link>
-          <Link to="/browse" className='text-color-d text-2xl hover:underline'>Browse Works</Link>
-          <Link to="/about" className='text-color-d text-2xl hover:underline'>About</Link>
+        <div className='bg-color-e rounded-2xl w-2xl h-13 gap-6 flex items-center justify-evenly px-4'>
+          <Link 
+            to="/home" 
+            className={`text-2xl font-semibold transition-all px-6 py-2 rounded-full ${
+              location.pathname === '/manage' 
+                ? 'bg-color-b text-white shadow-md'
+                : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
+            }`}
+          >
+            Home
+          </Link>
+          <Link 
+            to="/browse" 
+            className={`text-2xl font-semibold transition-all px-6 py-2 rounded-full ${
+              location.pathname === '/browse' 
+                ? 'bg-color-b text-white shadow-md'
+                : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
+            }`}
+          >
+            Browse Works
+          </Link>
+          <Link 
+            to="/about" 
+            className={`text-2xl font-semibold transition-all px-6 py-2 rounded-full ${
+              location.pathname === '/about' 
+                ? 'bg-color-b text-white shadow-md'
+                : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
+            }`}
+          >
+            About
+          </Link>
         </div>
       </div>
 
@@ -96,9 +135,20 @@ const Navbar = () => {
         <div className="relative user-dropdown">
           <button 
             onClick={toggleDropdown}
-            className='bg-color-e rounded-2xl w-35 h-10 flex items-center justify-center text-color-d font-medium hover:bg-opacity-90 transition-colors px-4 truncate'
+            className='bg-color-w rounded-2xl h-14 flex items-center justify-center text-color-d font-medium hover:bg-opacity-90 transition-colors px-4 gap-6'
           >
-            {userData?.username || user?.email || 'User'}
+            {userData?.profileImageUrl ? (
+              <img 
+                src={userData.profileImageUrl} 
+                alt="Profile" 
+                className="w-14 h-14 rounded-full object-cover border-3 border-color-b"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-color-b flex items-center justify-center text-white font-bold text-sm">
+                {(userData?.username || user?.email || 'U').charAt(0).toUpperCase()}
+              </div>
+            )}
+            
           </button>
           
           {showDropdown && (
@@ -112,20 +162,15 @@ const Navbar = () => {
                       <p className="truncate text-opacity-80">{user?.email}</p>
                     </div>
                     <button
-                      onClick={() => navigate("/profile")}
+                      onClick={() => navigate("/manage")}
                       className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                     >
-                      Profile
-                    </button>
-                    <button
-                      onClick={() => navigate("/projects")}
-                      className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
-                    >
-                      Projects
+                      Manage
                     </button>
                     <button
                     onClick={() => { navigate("/wallet"); toggleMenu(); }}
-                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+
                   >
                     Wallet
                   </button>
@@ -183,22 +228,34 @@ const Navbar = () => {
           <div className="px-4 py-6 space-y-4">
             {/* Mobile Navigation Links */}
             <Link 
-              to="/projects" 
-              className='block text-color-d text-xl hover:underline py-2'
+              to="/home" 
+              className={`block text-lg font-semibold py-2 px-4 rounded-lg transition-all ${
+                location.pathname === '/manage' 
+                  ? 'bg-color-b text-white shadow-md' 
+                  : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
+              }`}
               onClick={toggleMenu}
             >
-              Create
+              Home
             </Link>
             <Link 
               to="/browse" 
-              className='block text-color-d text-xl hover:underline py-2'
+              className={`block text-lg font-semibold py-2 px-4 rounded-lg transition-all ${
+                location.pathname === '/browse' 
+                  ? 'bg-color-b text-white shadow-md' 
+                  : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
+              }`}
               onClick={toggleMenu}
             >
               Browse Works
             </Link>
             <Link 
               to="/about" 
-              className='block text-color-d text-xl hover:underline py-2'
+              className={`block text-lg font-semibold py-2 px-4 rounded-lg transition-all ${
+                location.pathname === '/about' 
+                  ? 'bg-color-b text-white shadow-md' 
+                  : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
+              }`}
               onClick={toggleMenu}
             >
               About
@@ -209,9 +266,22 @@ const Navbar = () => {
               {user ? (
                 <>
                   {/* If user IS logged in */}
-                  <div className="px-2 py-2 text-sm text-color-d border-b border-color-d border-opacity-20 mb-2">
-                    <p className="font-medium truncate">{userData?.username || 'User'}</p>
-                    <p className="truncate text-opacity-80">{user?.email}</p>
+                  <div className="px-2 py-2 text-sm text-color-d border-b border-color-d border-opacity-20 mb-2 flex items-center gap-2">
+                    {userData?.profileImageUrl ? (
+                      <img 
+                        src={userData.profileImageUrl} 
+                        alt="Profile" 
+                        className="w-10 h-10 rounded-full object-cover border-2 border-color-b"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-color-b flex items-center justify-center text-white font-bold">
+                        {(userData?.username || user?.email || 'U').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{userData?.username || 'User'}</p>
+                      <p className="truncate text-opacity-80 text-xs">{user?.email}</p>
+                    </div>
                   </div>
                   <button
                     onClick={() => { navigate("/profile"); toggleMenu(); }}
@@ -220,10 +290,10 @@ const Navbar = () => {
                     Profile
                   </button>
                   <button
-                    onClick={() => { navigate("/projects"); toggleMenu(); }}
+                    onClick={() => { navigate("/manage"); toggleMenu(); }}
                     className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
-                    Projects
+                    Manage
                   </button>
                   <button
                     onClick={() => { navigate("/wallet"); toggleMenu(); }}
