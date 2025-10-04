@@ -21,6 +21,7 @@ import Community from "./pages/Community"
 import MyInvestments from "./pages/MyInvestments";
 import InvestPage from "./pages/InvestPage";
 import Wallet from "./pages/Wallet";
+import Bookmarks from "./pages/Bookmarks";
 import Navbar from "./components/NavBar";
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/manage-profile" element={<ManageProfile />} />
         <Route path="/projects" element={<Projects />} />
+  <Route path="/bookmarks" element={<Bookmarks />} />
         <Route path="/view-my-projects" element={<ViewMyProjects />} />
         <Route path="/my-project-info/:id" element={<MyProjectInfo />} />
         <Route path="/myInvestments" element={<MyInvestments />} />

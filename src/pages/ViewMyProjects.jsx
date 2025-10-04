@@ -3,7 +3,7 @@ import { db } from "../firebase/firebase-config";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { FiImage, FiDollarSign, FiCalendar, FiTag, FiEye, FiEdit, FiTrash2, FiPlus, FiTrendingUp, FiUsers, FiClock } from "react-icons/fi";
+import { FiImage, FiDollarSign, FiCalendar, FiTag, FiEye, FiEdit, FiTrash2, FiPlus, FiTrendingUp, FiUsers, FiClock, FiFolder } from "react-icons/fi";
 
 export default function ViewMyProjects() {
   const [projects, setProjects] = useState([]);
@@ -70,12 +70,44 @@ export default function ViewMyProjects() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Projects</h1>
-          <p className="text-gray-600">{projects.length} projects total</p>
+    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-slate-100 px-6 lg:px-12 pb-16 pt-28">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
+          <div>
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-color-b">
+              <FiFolder className="w-4 h-4" />
+              Creator Dashboard
+            </span>
+            <h1 className="text-3xl sm:text-4xl font-bold text-color-a mt-3">
+              Your Projects
+            </h1>
+            <p className="text-base text-gray-600 mt-8">
+              Track performance across {projects.length} projects total
+            </p>
+          </div>
+
+          {/* Filter Tabs - Moved here for better alignment */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: "all", label: "All", count: projects.length },
+              { id: "pending", label: "Pending", count: projects.filter(p => p.status?.toLowerCase() === 'pending').length },
+              { id: "active", label: "Active", count: projects.filter(p => p.status?.toLowerCase() === 'active').length },
+              { id: "approved", label: "Approved", count: projects.filter(p => p.status?.toLowerCase() === 'approved').length },
+              { id: "declined", label: "Declined", count: projects.filter(p => p.status?.toLowerCase() === 'declined').length }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setFilter(tab.id)}
+                className={`px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                  filter === tab.id
+                    ? "bg-gray-900 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {tab.label} ({tab.count})
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -133,29 +165,6 @@ export default function ViewMyProjects() {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {[
-            { id: "all", label: "All", count: projects.length },
-            { id: "pending", label: "Pending", count: projects.filter(p => p.status?.toLowerCase() === 'pending').length },
-            { id: "active", label: "Active", count: projects.filter(p => p.status?.toLowerCase() === 'active').length },
-            { id: "approved", label: "Approved", count: projects.filter(p => p.status?.toLowerCase() === 'approved').length },
-            { id: "declined", label: "Declined", count: projects.filter(p => p.status?.toLowerCase() === 'declined').length }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setFilter(tab.id)}
-              className={`px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                filter === tab.id
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {tab.label} ({tab.count})
-            </button>
-          ))}
         </div>
 
         {/* Projects Grid */}
