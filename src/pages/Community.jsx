@@ -92,9 +92,11 @@ const Community = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
+          <br /><br /><br />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Announcements
           </h1>
+          
           <p className="text-gray-600">Share updates with your project supporters</p>
         </div>
 

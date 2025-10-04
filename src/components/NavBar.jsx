@@ -103,7 +103,7 @@ const Navbar = () => {
           <Link to="/" className="font-titan text-2xl md:text-4xl text-color-b hover:opacity-80 transition-opacity">
             LAWATA
           </Link>
-          <span className="hidden md:block text-xs font-semibold uppercase tracking-widest text-color-d/60">
+          <span className="hidden md:block text-xs font-semibold uppercase tracking-widest text-color-c/70">
             Crowdfunding
           </span>
         </div>
@@ -117,7 +117,9 @@ const Navbar = () => {
                 to={link.to}
                 className={({ isActive }) =>
                   `px-3 py-2 text-sm font-semibold transition-colors rounded-full ${
-                    isActive ? "bg-color-b text-white shadow" : "text-color-d hover:bg-color-b/10"
+                    isActive
+                      ? "bg-color-b text-white shadow"
+                      : "text-white hover:text-color-b hover:bg-color-b/10"
                   }`
                 }
               >
@@ -141,7 +143,7 @@ const Navbar = () => {
           <div className="relative user-dropdown">
             <button
               onClick={toggleDropdown}
-              className="flex items-center gap-2 rounded-full bg-color-e px-3 py-2 text-sm font-semibold text-color-d hover:bg-opacity-80 transition-colors"
+              className="flex items-center gap-2 rounded-full bg-color-e px-3 py-2 text-sm font-semibold text-white hover:bg-opacity-80 transition-colors"
             >
               <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-color-b/10 text-xs font-bold uppercase text-color-b">
                 {userData?.profileImageUrl ? (
@@ -157,9 +159,9 @@ const Navbar = () => {
 
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5">
-                <div className="border-b border-gray-100 bg-color-e/60 px-4 py-3 text-sm text-color-d">
+                <div className="border-b border-gray-100 bg-color-e/60 px-4 py-3 text-sm text-white">
                   <p className="font-semibold truncate">{userData?.username || "User"}</p>
-                  <p className="truncate text-xs text-color-d/70">{user?.email}</p>
+                  <p className="truncate text-xs text-white/70">{user?.email}</p>
                 </div>
                 <div className="py-1 text-sm">
                   {(user ? accountMenuLinks : guestMenuLinks).map((item) => (
@@ -169,7 +171,7 @@ const Navbar = () => {
                         item.action();
                         setShowDropdown(false);
                       }}
-                      className="block w-full px-4 py-2 text-left text-color-d hover:bg-color-b/10 transition-colors"
+                      className="block w-full px-4 py-2 text-left text-color-e hover:bg-color-b/10 transition-colors"
                     >
                       {item.label}
                     </button>
@@ -222,7 +224,7 @@ const Navbar = () => {
                     key={link.to}
                     to={link.to}
                     onClick={toggleMenu}
-                    className="rounded-lg border border-gray-100 px-3 py-2 text-sm font-semibold text-color-d hover:border-color-b hover:bg-color-b/5"
+                    className="rounded-lg border border-gray-100 px-3 py-2 text-sm font-semibold text-color-e hover:border-color-b hover:bg-color-b/5"
                   >
                     {link.label}
                   </Link>
@@ -257,7 +259,7 @@ const Navbar = () => {
                       item.action();
                       toggleMenu();
                     }}
-                    className="block w-full rounded-lg border border-gray-100 px-3 py-2 text-left text-sm font-semibold text-color-d hover:border-color-b hover:bg-color-b/5"
+                    className="block w-full rounded-lg border border-gray-100 px-3 py-2 text-left text-sm font-semibold text-color-e hover:border-color-b hover:bg-color-b/5"
                   >
                     {item.label}
                   </button>
