@@ -105,26 +105,40 @@ const Support = () => {
   const templates = [100, 500, 1000, 3000, 5000, 10000];
 
   // Fetch project details
-  useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        setLoading(true);
-        const docRef = doc(db, "projects", id);
-        const docSnap = await getDoc(docRef);
+  const fetchProject = async () => {
+    try {
+      setLoading(true);
+      const docRef = doc(db, "projects", id);
+      const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-          setProject({ id: docSnap.id, ...docSnap.data() });
-        } else {
-          setError("Project not found");
-        }
-      } catch (err) {
-        console.error("Error fetching project:", err);
-        setError("Failed to load project");
-      } finally {
-        setLoading(false);
+      if (docSnap.exists()) {
+        setProject({ id: docSnap.id, ...docSnap.data() });
+      } else {
+        setError("Project not found");
       }
-    };
+    } catch (err) {
+      console.error("Error fetching project:", err);
+      setError("Failed to load project");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Refresh project data without showing loading state
+  const refreshProjectData = async () => {
+    try {
+      const docRef = doc(db, "projects", id);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        setProject({ id: docSnap.id, ...docSnap.data() });
+      }
+    } catch (err) {
+      console.error("Error refreshing project data:", err);
+    }
+  };
+
+  useEffect(() => {
     fetchProject();
   }, [id]);
 
@@ -141,12 +155,25 @@ const Support = () => {
       const txRef = params.get('tx_ref');
       const status = params.get('status');
       const supportAmount = params.get('amount');
+      const rewardIndex = params.get('reward_index');
+      const rewardTitle = params.get('reward_title');
+      const rewardType = params.get('reward_type');
       
       if (status === 'success' && txRef && txRef.startsWith('sp-') && supportAmount) {
         paymentProcessedRef.current = true;
         try {
-          // Process the support transaction
-          await processSupport(parseFloat(supportAmount));
+          // Reconstruct selected reward if it was in the URL
+          let reconstructedReward = null;
+          if (rewardIndex !== null && rewardTitle && rewardType && project.rewardsList) {
+            const index = parseInt(rewardIndex);
+            const originalReward = project.rewardsList[index];
+            if (originalReward && originalReward.title === rewardTitle) {
+              reconstructedReward = { ...originalReward, index };
+            }
+          }
+          
+          // Process the support transaction with the reconstructed reward
+          await processSupport(parseFloat(supportAmount), reconstructedReward);
           
           // Clean URL
           const cleanUrl = window.location.pathname;
@@ -167,7 +194,10 @@ const Support = () => {
   const handleInputChange = (e) => setAmount(e.target.value);
 
   // Process support transaction after successful payment
-  const processSupport = async (numericAmount) => {
+  const processSupport = async (numericAmount, rewardFromUrl = null) => {
+    // Use reward from URL if provided, otherwise use current selectedReward state
+    const rewardToProcess = rewardFromUrl || selectedReward;
+    console.log('processSupport called with:', { numericAmount, selectedReward, rewardFromUrl, rewardToProcess });
     setProcessing(true);
     setPaymentStatus(null);
 
@@ -223,6 +253,26 @@ const Support = () => {
           throw new Error(`You can only fund up to $${remaining}.`);
         }
 
+        // Validate reward selection if applicable
+        if (rewardToProcess) {
+          const rewardFromProject = projectData.rewardsList?.[rewardToProcess.index];
+          if (!rewardFromProject) {
+            throw new Error("Selected reward no longer exists.");
+          }
+          
+          const rewardAmount = parseFloat(rewardFromProject.amount) || 0;
+          if (numericAmount < rewardAmount) {
+            throw new Error(`Your contribution of $${numericAmount} is insufficient for the selected reward (requires $${rewardAmount}).`);
+          }
+          
+          if (rewardFromProject.type === 'limited') {
+            const remainingQuantity = rewardFromProject.quantity - (rewardFromProject.claimed || 0);
+            if (remainingQuantity <= 0) {
+              throw new Error("Selected reward is out of stock.");
+            }
+          }
+        }
+
         // ---- PREPARE DATA LOCALLY ----
         // Determine if this is the user's first time funding this project
         const userFundings = userData.fundings ? { ...userData.fundings } : {};
@@ -262,6 +312,24 @@ const Support = () => {
           fundingCounter: newFundingCounter,
           fundings: userFundings,
         };
+
+        // Add reward to user's myRewards if a reward was selected
+        if (rewardToProcess) {
+          const rewardData = {
+            rewardId: rewardToProcess.id || `reward_${rewardToProcess.index}_${Date.now()}`,
+            description: rewardToProcess.description,
+            imageUrl: rewardToProcess.imageUrl,
+            title: rewardToProcess.title,
+            type: rewardToProcess.type,
+            projectId: id,
+            projectTitle: projectData.title,
+            claimedAt: Timestamp.now(),
+            amount: rewardToProcess.amount
+          };
+
+          // Initialize myRewards array if it doesn't exist, then add the new reward
+          updateData.myRewards = arrayUnion(rewardData);
+        }
 
         // Add Investor role if conditions are met
         if (shouldAddInvestorRole) {
@@ -334,6 +402,26 @@ const Support = () => {
         if (isFirstContributionToProject) {
           projectUpdate.backers = increment(1);
         }
+
+        // Handle reward selection if a reward was chosen
+        if (rewardToProcess && rewardToProcess.type === 'limited') {
+          console.log('Processing reward selection:', rewardToProcess);
+          // Update the specific reward quantity in the rewardsList array
+          const rewardIndex = rewardToProcess.index;
+          const updatedRewardsList = [...(projectData.rewardsList || [])];
+          if (updatedRewardsList[rewardIndex]) {
+            const currentQuantity = updatedRewardsList[rewardIndex].quantity || 0;
+            const newQuantity = Math.max(0, currentQuantity - 1);
+            console.log(`Updating reward ${rewardIndex}: ${currentQuantity} -> ${newQuantity}`);
+            
+            updatedRewardsList[rewardIndex] = {
+              ...updatedRewardsList[rewardIndex],
+              quantity: newQuantity
+            };
+            projectUpdate.rewardsList = updatedRewardsList;
+          }
+        }
+
         transaction.update(projectRef, projectUpdate);
 
         // Update user record
@@ -398,17 +486,38 @@ const Support = () => {
 
       // Notification to the supporter
       try {
+        const supportMessage = rewardToProcess 
+          ? `You donated ${numericAmount}$ to ${project.title} and claimed the reward: ${rewardToProcess.title}!`
+          : `You donated ${numericAmount}$ to a project called ${project.title}.`;
+          
         await addDoc(collection(db, "notifications"), {
           userId: currentUser.uid,
           projectId: project.id,
           projectTitle: project.title,
-          message: `You donated ${numericAmount}$ to a project called ${project.title}.`,
+          message: supportMessage,
           type: "You_Funded_a_project",
           read: false,
           createdAt: Timestamp.now()
         });
       } catch (notifErr) {
         console.error("Failed to create notification:", notifErr);
+      }
+
+      // Reward claimed notification if applicable
+      if (rewardToProcess) {
+        try {
+          await addDoc(collection(db, "notifications"), {
+            userId: currentUser.uid,
+            projectId: project.id,
+            projectTitle: project.title,
+            message: `🎁 Reward Claimed! You've successfully claimed "${rewardToProcess.title}" from ${project.title}. Check your rewards in your profile!`,
+            type: "Reward_Claimed",
+            read: false,
+            createdAt: Timestamp.now()
+          });
+        } catch (notifErr) {
+          console.error("Failed to create reward notification:", notifErr);
+        }
       }
 
       // Send milestone notifications if any milestones were reached
@@ -448,16 +557,23 @@ const Support = () => {
         }
       }
 
+      // Refresh project data to show updated funding info
+      await refreshProjectData();
+
       // Show success message
       const milestoneMessage = milestonesReached.length > 0 
         ? ` 🎯 This contribution helped reach ${milestonesReached.map(m => m.percentage + '%').join(', ')} milestone(s)!`
         : '';
-      toast.success(`🎉 You successfully supported with $${numericAmount}!${milestoneMessage}`, {
+      const rewardMessage = rewardToProcess 
+        ? ` 🎁 Reward "${rewardToProcess.title}" claimed!`
+        : '';
+      toast.success(`🎉 You successfully supported with $${numericAmount}!${rewardMessage}${milestoneMessage}`, {
         autoClose: 5000
       });
 
       setTimeout(() => {
         setAmount("");
+        setSelectedReward(null); // Clear selected reward
         setPaymentStatus(null);
       }, 1500);
 
@@ -567,6 +683,13 @@ const Support = () => {
       tx_ref: txRef,
       amount: numericAmount
     });
+
+    // Add selected reward info to return params if a reward is selected
+    if (selectedReward) {
+      returnParams.set('reward_index', selectedReward.index);
+      returnParams.set('reward_title', selectedReward.title);
+      returnParams.set('reward_type', selectedReward.type);
+    }
     
     const fields = {
       'public_key': CHAPA_PUBLIC_KEY,
