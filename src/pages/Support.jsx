@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   doc,
   getDoc,
@@ -19,6 +19,8 @@ import { useAuth } from "../context/AuthContext";
 import { CheckCircle, XCircle, Loader2, Target, ChevronDown } from "lucide-react";
 import { toast } from "react-toastify";
 import RewardsList from "../components/project/RewardsList";
+
+const CHAPA_PUBLIC_KEY = import.meta.env.VITE_CHAPA_API_KEY;
 
 // Slider styles for the range input
 const sliderStyles = `
@@ -98,6 +100,7 @@ const Support = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, profileComplete } = useAuth();
+  const paymentProcessedRef = useRef(false);
 
   const templates = [100, 500, 1000, 3000, 5000, 10000];
 
@@ -125,29 +128,46 @@ const Support = () => {
     fetchProject();
   }, [id]);
 
+  // Handle payment return from Chapa
+  useEffect(() => {
+    const handlePaymentReturn = async () => {
+      if (paymentProcessedRef.current) {
+        return;
+      }
+      const currentUrl = window.location.href;
+      const decodedUrl = currentUrl.replace(/&amp;/g, '&');
+      const url = new URL(decodedUrl);
+      const params = new URLSearchParams(url.search);
+      const txRef = params.get('tx_ref');
+      const status = params.get('status');
+      const supportAmount = params.get('amount');
+      
+      if (status === 'success' && txRef && txRef.startsWith('sp-') && supportAmount) {
+        paymentProcessedRef.current = true;
+        try {
+          // Process the support transaction
+          await processSupport(parseFloat(supportAmount));
+          
+          // Clean URL
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        } catch (error) {
+          console.error('Error processing payment return:', error);
+          toast.error('Failed to process payment return');
+        }
+      }
+    };
+    
+    if (currentUser && project) {
+      handlePaymentReturn();
+    }
+  }, [currentUser, project]);
+
   const handleTemplateClick = (value) => setAmount(value);
   const handleInputChange = (e) => setAmount(e.target.value);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!currentUser) {
-      toast.error("Please sign in to proceed.");
-      navigate(`/signing?redirectTo=/support/${id}`);
-      return;
-    }
-    if (!profileComplete) {
-      toast.warning("Please complete your profile to proceed.");
-      navigate(`/manage-profile?redirectTo=/support/${id}`);
-      return;
-    }
-
-    const numericAmount = parseFloat(amount);
-    if (!numericAmount || numericAmount <= 0) {
-      toast.error("Please enter a valid amount.");
-      return;
-    }
-
+  // Process support transaction after successful payment
+  const processSupport = async (numericAmount) => {
     setProcessing(true);
     setPaymentStatus(null);
 
@@ -454,6 +474,130 @@ const Support = () => {
     } finally {
       setProcessing(false);
     }
+  };
+
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!currentUser) {
+      toast.error("Please sign in to proceed.");
+      navigate(`/signing?redirectTo=/support/${id}`);
+      return;
+    }
+    if (!profileComplete) {
+      toast.warning("Please complete your profile to proceed.");
+      navigate(`/manage-profile?redirectTo=/support/${id}`);
+      return;
+    }
+
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      toast.error("Please enter a valid amount.");
+      return;
+    }
+
+    // Basic validation before redirecting to payment
+    try {
+      const projectRef = doc(db, "projects", id);
+      const userRef = doc(db, "users", currentUser.uid);
+      
+      const [projectSnap, userSnap] = await Promise.all([
+        getDoc(projectRef),
+        getDoc(userRef),
+      ]);
+
+      if (!projectSnap.exists()) {
+        toast.error("Project not found");
+        return;
+      }
+      if (!userSnap.exists()) {
+        toast.error("User not found in database.");
+        return;
+      }
+
+      const projectData = projectSnap.data();
+      const userData = userSnap.data();
+
+      // Prevent supporting own project
+      if (projectData.createdBy?.uid === currentUser.uid) {
+        toast.error("You cannot support your own project.");
+        return;
+      }
+
+      // Gate: profile completeness check
+      const hasProfile = Boolean(
+        userData &&
+          userData.phoneNumber &&
+          userData.profileImageUrl &&
+          userData.bio &&
+          userData.location &&
+          userData.location.city &&
+          userData.location.country
+      );
+      if (!hasProfile) {
+        toast.error("Please complete your profile before supporting a project.");
+        return;
+      }
+
+      const currentFunded = projectData.fundedMoney ?? 0;
+      const fundingGoal = projectData.fundingGoal ?? Infinity;
+      const remaining = fundingGoal - currentFunded;
+
+      if (numericAmount > remaining) {
+        toast.error(`You can only fund up to $${remaining}.`);
+        return;
+      }
+
+    } catch (error) {
+      console.error("Validation error:", error);
+      toast.error("Failed to validate request. Please try again.");
+      return;
+    }
+
+    // Create Chapa payment form
+    const tempForm = document.createElement('form');
+    tempForm.method = 'POST';
+    tempForm.action = 'https://api.chapa.co/v1/hosted/pay';
+    
+    const txRef = `sp-${Date.now()}-${currentUser.uid.substring(0, 8)}`;
+    const baseUrl = window.location.origin;
+    const returnParams = new URLSearchParams({
+      status: 'success',
+      tx_ref: txRef,
+      amount: numericAmount
+    });
+    
+    const fields = {
+      'public_key': CHAPA_PUBLIC_KEY,
+      'tx_ref': txRef,
+      'amount': numericAmount,
+      'currency': 'ETB',
+      'email': currentUser.email || '',
+      'first_name': currentUser.displayName?.split(' ')[0] || 'User',
+      'last_name': currentUser.displayName?.split(' ')[1] || '',
+      'title': `Support: ${project.title}`,
+      'description': `Supporting ${project.title} with $${numericAmount}`,
+      'logo': 'https://your-logo-url.com/logo.png',
+      'return_url': `${baseUrl}/support/${id}?${returnParams.toString()}`,
+      'callback_url': `${baseUrl}/api/verify-payment`,
+      'meta[title]': 'project-support',
+      'meta[user_id]': currentUser.uid,
+      'meta[project_id]': id,
+      'meta[amount]': numericAmount
+    };
+    
+    Object.entries(fields).forEach(([key, value]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = value;
+      tempForm.appendChild(input);
+    });
+    
+    document.body.appendChild(tempForm);
+    tempForm.submit();
+    document.body.removeChild(tempForm);
   };
 
 
