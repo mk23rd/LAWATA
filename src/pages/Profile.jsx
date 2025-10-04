@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
-import { auth, db } from "../firebase/firebase-config";
-import { doc, getDoc } from "firebase/firestore";
+import { auth, db, storage } from "../firebase/firebase-config";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -14,8 +15,10 @@ import {
   MdPerson,
   MdAttachMoney,
   MdVisibility,
-  MdArrowBack
+  MdArrowBack,
+  MdCameraAlt
 } from "react-icons/md";
+import { toast } from "react-toastify";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -55,6 +58,9 @@ const Profile = () => {
   const rolesRef = useRef(null);
   const infoRef = useRef(null);
   const buttonRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -129,6 +135,66 @@ const Profile = () => {
     }
   }, [userData]);
 
+  const handleAvatarUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be smaller than 5MB.");
+      event.target.value = "";
+      return;
+    }
+
+    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const storageRef = ref(storage, `profile-images/${user.uid}/${Date.now()}.${extension}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        if (snapshot.totalBytes) {
+          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          setUploadProgress(progress);
+        }
+      },
+      (error) => {
+        console.error("Error uploading avatar:", error);
+        toast.error("Failed to upload profile picture. Please try again.");
+        setIsUploading(false);
+        setUploadProgress(0);
+        event.target.value = "";
+      },
+      async () => {
+        try {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          await updateDoc(doc(db, "users", user.uid), {
+            profileImageUrl: downloadUrl
+          });
+          setUserData((prev) => (prev ? { ...prev, profileImageUrl: downloadUrl } : prev));
+          toast.success("Profile picture updated!");
+        } catch (err) {
+          console.error("Error saving avatar URL:", err);
+          toast.error("Unable to save profile picture. Please try again.");
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+          event.target.value = "";
+        }
+      }
+    );
+  };
+
   if (!userData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
@@ -198,7 +264,29 @@ const Profile = () => {
                       <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5zm0 2c-3.33 0-10 1.667-10 5v3h20v-3c0-3.333-6.67-5-10-5z"/>
                     </svg>
                   )}
+                  {isUploading && (
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center text-white text-xs font-medium">
+                      <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full mb-2"></div>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                  )}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute -bottom-2 right-4 flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-color-b shadow-md transition hover:bg-color-b hover:text-white"
+                  disabled={isUploading}
+                >
+                  <MdCameraAlt className="text-sm" />
+                  {isUploading ? "Uploading" : "Change"}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
               </div>
 
               {/* User Info */}
