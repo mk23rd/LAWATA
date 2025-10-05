@@ -3,13 +3,11 @@ import { auth, db, storage } from "../firebase/firebase-config";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { useNavigate } from "react-router-dom";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { 
-  MdEmail, 
-  MdLocationOn, 
-  MdDateRange, 
-  MdEdit, 
+import {
+  MdEmail,
+  MdLocationOn,
+  MdDateRange,
+  MdEdit,
   MdVerified,
   MdTrendingUp,
   MdPerson,
@@ -19,20 +17,6 @@ import {
   MdCameraAlt
 } from "react-icons/md";
 import { toast } from "react-toastify";
-
-gsap.registerPlugin(ScrollTrigger);
-
-const roleColors = {
-  creator: "from-green-400 to-emerald-500 text-white",
-  investor: "from-emerald-500 to-teal-600 text-white", 
-  funder: "from-yellow-500 to-amber-600 text-white",
-  visitor: "from-gray-500 to-slate-600 text-white",
-  // Handle case variations
-  Creator: "from-green-400 to-emerald-500 text-white",
-  Investor: "from-emerald-500 to-teal-600 text-white", 
-  Funder: "from-yellow-500 to-amber-600 text-white",
-  Visitor: "from-gray-500 to-slate-600 text-white"
-};
 
 const roleIcons = {
   creator: MdPerson,
@@ -50,14 +34,6 @@ const Profile = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const user = auth.currentUser;
-  const containerRef = useRef(null);
-  const profileCardRef = useRef(null);
-  const avatarRef = useRef(null);
-  const nameRef = useRef(null);
-  const bioRef = useRef(null);
-  const rolesRef = useRef(null);
-  const infoRef = useRef(null);
-  const buttonRef = useRef(null);
   const fileInputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -79,61 +55,6 @@ const Profile = () => {
     };
     fetchUserData();
   }, [user, navigate]);
-
-  useEffect(() => {
-    if (userData && containerRef.current) {
-      // Simple, subtle animations
-      gsap.from(profileCardRef.current, {
-        opacity: 0,
-        y: 30,
-        duration: 0.8,
-        ease: "power2.out"
-      });
-
-      gsap.from(avatarRef.current, {
-        opacity: 0,
-        scale: 0.9,
-        duration: 0.6,
-        delay: 0.2,
-        ease: "power2.out"
-      });
-
-      gsap.from([nameRef.current, bioRef.current], {
-        opacity: 0,
-        y: 20,
-        duration: 0.6,
-        delay: 0.4,
-        stagger: 0.1,
-        ease: "power2.out"
-      });
-
-      gsap.from(rolesRef.current?.children, {
-        opacity: 0,
-        y: 15,
-        duration: 0.5,
-        delay: 0.6,
-        stagger: 0.05,
-        ease: "power2.out"
-      });
-
-      gsap.from(infoRef.current?.children, {
-        opacity: 0,
-        x: -20,
-        duration: 0.5,
-        delay: 0.8,
-        stagger: 0.1,
-        ease: "power2.out"
-      });
-
-      gsap.from(buttonRef.current, {
-        opacity: 0,
-        y: 15,
-        duration: 0.5,
-        delay: 1,
-        ease: "power2.out"
-      });
-    }
-  }, [userData]);
 
   const handleAvatarUpload = (event) => {
     const file = event.target.files?.[0];
@@ -197,57 +118,36 @@ const Profile = () => {
 
   if (!userData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-color-b border-t-transparent mx-auto mb-4"></div>
-          <p className="text-xl text-gray-700 font-medium">Loading your profile...</p>
+          <div className="mx-auto mb-4 h-8 w-8 rounded-full border-4 border-gray-300 border-t-gray-600 animate-spin"></div>
+          <p className="text-sm text-gray-600">Loading your profile...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className="max-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden flex items-center justify-center py-8">
-      {/* Subtle Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-color-b/10 to-purple-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-emerald-400/10 to-color-b/10 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-lg mx-auto px-4">
-        {/* Back to Home Link */}
-        <div className="w-full flex justify-start mb-4">
+    <div className="min-h-screen bg-white">
+      <div className="max-w-3xl mx-auto px-4 py-10">
+        <div className="flex items-center gap-3 mb-8">
           <button
             onClick={() => navigate("/home")}
-            className="flex items-center gap-2 text-color-b hover:text-blue-700 font-medium transition-colors duration-300"
+            className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
           >
-            <MdArrowBack className="text-lg" />
-            <span className="text-sm">Back to Home</span>
+            <MdArrowBack className="w-4 h-4" />
+            Back to Home
           </button>
+          <div className="h-4 w-px bg-gray-200" aria-hidden="true"></div>
+          <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
         </div>
 
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-4xl md:text-4xl font-titan font-bold text-color-b mb-2 mt-2">
-            My Profile
-          </h1>
-          <div className="w-16 h-1 bg-color-b mx-auto rounded-full"></div>
-        </div>
-
-        {/* Main Profile Card */}
-        <div
-          ref={profileCardRef}
-          className="glass bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl w-full border border-white/20 overflow-hidden"
-        >
-          <div className="p-6 md:p-8">
-            {/* Profile Header - Centered */}
-            <div className="flex flex-col items-center text-center mb-5">
-              {/* Avatar Section */}
-              <div className="relative group mb-3">
-                <div
-                  ref={avatarRef}
-                  className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-4 border-white shadow-xl relative z-10 bg-gradient-to-br from-color-b to-purple-600 flex items-center justify-center mx-auto"
-                >
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          {/* Profile header */}
+          <div className="px-6 py-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full border border-gray-200 bg-gray-100 flex items-center justify-center overflow-hidden">
                   {userData.profileImageUrl ? (
                     <img
                       src={userData.profileImageUrl}
@@ -255,30 +155,22 @@ const Profile = () => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-12 h-12 md:w-14 md:h-14 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5zm0 2c-3.33 0-10 1.667-10 5v3h20v-3c0-3.333-6.67-5-10-5z"/>
-                    </svg>
+                    <MdPerson className="w-10 h-10 text-gray-400" />
                   )}
                   {isUploading && (
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center text-white text-xs font-medium">
-                      <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full mb-2"></div>
-                      <span>{uploadProgress}%</span>
+                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white text-xs">
+                      <div className="mb-1 h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+                      {uploadProgress}%
                     </div>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-2 right-4 flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-color-b shadow-md transition hover:bg-color-b hover:text-white"
+                  className="absolute -bottom-1 -right-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 text-white hover:bg-gray-800 transition-colors"
                   disabled={isUploading}
                 >
-                  <MdCameraAlt className="text-sm" />
-                  {isUploading ? "Uploading" : "Change"}
+                  <MdCameraAlt className="w-3.5 h-3.5" />
                 </button>
                 <input
                   ref={fileInputRef}
@@ -289,103 +181,108 @@ const Profile = () => {
                 />
               </div>
 
-              {/* User Info */}
-              <div ref={nameRef} className="mb-3">
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center justify-center">
-                  {userData.username}
-                  <MdVerified className="text-color-b text-xl" />
-                </h2>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-semibold text-gray-900">{userData.username}</h2>
+                  <MdVerified className="w-4 h-4 text-gray-500" aria-hidden="true" />
+                </div>
                 {userData.bio && (
-                  <p ref={bioRef} className="text-base text-gray-600 font-medium leading-relaxed">
-                    {userData.bio}
-                  </p>
+                  <p className="mt-1 text-sm text-gray-600">{userData.bio}</p>
                 )}
               </div>
             </div>
 
-            {/* Roles and Categories */}
-            <div ref={rolesRef} className="mb-5">
-              <h3 className="text-lg font-bold text-gray-800 mb-2 text-center">Roles & Interests</h3>
-              <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigate("/manage-profile")}
+                className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors"
+              >
+                Edit Profile
+              </button>
+              <button
+                onClick={() => navigate("/manage")}
+                className="px-4 py-2.5 rounded-lg bg-gray-900 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
+              >
+                Manage Projects
+              </button>
+            </div>
+          </div>
+
+          {/* Roles & interests */}
+          <div className="px-6 py-6 border-b border-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-semibold text-gray-900">Roles & Interests</span>
+            </div>
+            {userData.roles?.length || userData.preferredCategories?.length ? (
+              <div className="flex flex-wrap gap-2">
                 {userData.roles?.map((role) => {
                   const IconComponent = roleIcons[role] || MdPerson;
-                  const roleKey = role.toLowerCase();
-                  const colorClass = roleColors[role] || roleColors[roleKey] || "from-gray-400 to-slate-500 text-white";
-                  
                   return (
                     <span
                       key={role}
-                      className={`px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r ${colorClass} shadow-md flex items-center gap-2`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700"
                     >
-                      <IconComponent size={16} />
+                      <IconComponent className="w-3 h-3" />
                       {role.charAt(0).toUpperCase() + role.slice(1)}
                     </span>
                   );
                 })}
-
                 {userData.preferredCategories?.map((cat) => (
                   <span
                     key={cat}
-                    className="bg-gradient-to-r from-color-b to-blue-600 text-white px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 shadow-md"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700"
                   >
-                    <MdDateRange size={16} /> 
+                    <MdDateRange className="w-3 h-3" />
                     {cat.charAt(0).toUpperCase() + cat.slice(1)}
                   </span>
                 ))}
               </div>
-            </div>
+            ) : (
+              <p className="text-sm text-gray-500">No interests added yet.</p>
+            )}
+          </div>
 
-            {/* Contact Information */}
-            <div ref={infoRef} className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl mb-5">
-              <div className="space-y-0">
-                <div className="flex items-center gap-3 p-2 bg-white/60 rounded-lg">
-                  <div className="w-8 h-8 bg-gradient-to-r from-color-b to-blue-600 rounded-full flex items-center justify-center">
-                    <MdEmail className="text-white text-sm" />
-                  </div>
-                  <span className="text-gray-700 font-medium text-sm">{userData.email}</span>
-                </div>
-                
-                {userData.location?.city && userData.location?.country && (
-                  <div className="flex items-center gap-3 p-2 bg-white/60 rounded-lg">
-                    <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-green-600 rounded-full flex items-center justify-center">
-                      <MdLocationOn className="text-white text-sm" />
-                    </div>
-                    <span className="text-gray-700 font-medium text-sm">
-                      {userData.location.city}, {userData.location.country}
-                    </span>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-3 p-2 bg-white/60 rounded-lg">
-                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
-                    <MdDateRange className="text-white text-sm" />
-                  </div>
-                  <span className="text-gray-700 font-medium text-sm">
-                    Joined: {userData.createdAt?.toDate?.().toLocaleDateString() || userData.createdAt}
-                  </span>
-                </div>
+          {/* Contact information */}
+          <div className="px-6 py-6 border-b border-gray-100">
+            <span className="block text-sm font-semibold text-gray-900 mb-4">Contact Information</span>
+            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border border-gray-200 p-4">
+                <dt className="flex items-center gap-2 text-xs font-medium text-gray-500 mb-2">
+                  <MdEmail className="w-4 h-4 text-gray-500" />
+                  Email Address
+                </dt>
+                <dd className="text-sm text-gray-700 break-words">{userData.email}</dd>
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <button
-                ref={buttonRef}
-                onClick={() => navigate("/manage-profile")}
-                className="bg-color-b hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg shadow-md flex items-center justify-center gap-2 text-sm"
-              >
-                <MdEdit className="text-base" />
-                Manage Profile
-              </button>
-              
-              <button
-                onClick={() => navigate("/manage")}
-                className="bg-white hover:bg-gray-50 text-color-b font-bold px-4 py-2 rounded-lg shadow-md flex items-center justify-center gap-2 text-sm border-2 border-color-b/20 hover:border-color-b/40"
-              >
-                <MdTrendingUp className="text-base" />
-                Manage Projects
-              </button>
-            </div>
+              {userData.location?.city && userData.location?.country && (
+                <div className="rounded-lg border border-gray-200 p-4">
+                  <dt className="flex items-center gap-2 text-xs font-medium text-gray-500 mb-2">
+                    <MdLocationOn className="w-4 h-4 text-gray-500" />
+                    Location
+                  </dt>
+                  <dd className="text-sm text-gray-700">
+                    {userData.location.city}, {userData.location.country}
+                  </dd>
+                </div>
+              )}
+
+              <div className="rounded-lg border border-gray-200 p-4">
+                <dt className="flex items-center gap-2 text-xs font-medium text-gray-500 mb-2">
+                  <MdDateRange className="w-4 h-4 text-gray-500" />
+                  Member Since
+                </dt>
+                <dd className="text-sm text-gray-700">
+                  {userData.createdAt?.toDate?.().toLocaleDateString() || userData.createdAt}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Additional context */}
+          <div className="px-6 py-6">
+            <p className="text-sm text-gray-500">
+              Keep your profile information up to date so the community can connect with you easily.
+            </p>
           </div>
         </div>
       </div>

@@ -98,48 +98,32 @@ export const AnnouncementManager = ({
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/40 overflow-hidden">
-      <div className="bg-gradient-to-r from-color-b to-blue-600 p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-white/20 rounded-xl">
-              <FiBell className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">Project Updates</h3>
-              <p className="text-blue-100 text-sm">Keep your backers informed</p>
-            </div>
-          </div>
-          {!isCreating && (
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={FiPlus}
-              onClick={handleStartCreate}
-            >
-              New Update
-            </Button>
-          )}
+    <div className="space-y-4">
+      {/* Create Button */}
+      {!isCreating && (
+        <div className="flex justify-end">
+          <Button
+            variant="primary"
+            icon={FiPlus}
+            onClick={handleStartCreate}
+          >
+            New Update
+          </Button>
         </div>
-      </div>
-      
-      <div className="p-6">
-      <div className="space-y-4">
-        {/* Create New Announcement Form */}
-        {isCreating && (
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-2xl p-6 space-y-4 shadow-lg">
-            <h4 className="font-bold text-gray-900 flex items-center gap-2 text-lg">
-              <div className="p-2 bg-color-b/10 rounded-lg">
-                <FiMessageSquare className="w-5 h-5 text-color-b" />
-              </div>
-              Create New Update
-            </h4>
+      )}
+      {/* Create New Announcement Form */}
+      {isCreating && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h4 className="text-base font-semibold text-gray-900 mb-4">
+            Create New Update
+          </h4>
             
+          <div className="space-y-4">
             <FormInput
               label="Title"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Enter announcement title"
+              placeholder="Enter update title"
               error={errors.title}
               required
               maxLength={100}
@@ -149,7 +133,7 @@ export const AnnouncementManager = ({
               label="Content"
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
-              placeholder="Write your announcement content..."
+              placeholder="Write your update..."
               error={errors.content}
               required
               rows={4}
@@ -159,7 +143,6 @@ export const AnnouncementManager = ({
             <div className="flex gap-2 justify-end">
               <Button
                 variant="ghost"
-                size="sm"
                 icon={FiX}
                 onClick={handleCancelCreate}
               >
@@ -167,113 +150,100 @@ export const AnnouncementManager = ({
               </Button>
               <Button
                 variant="primary"
-                size="sm"
-                icon={FiSave}
+                icon={FiPlus}
                 onClick={handleCreate}
                 loading={loading}
               >
-                Create Announcement
+                Create Update
               </Button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Announcements List */}
-        {announcements.length === 0 && !isCreating ? (
-          <div className="text-center py-16 text-gray-500">
-            <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FiBell className="w-12 h-12 text-gray-400" />
-            </div>
-            <p className="text-xl font-semibold text-gray-700 mb-2">No updates yet</p>
-            <p className="text-sm text-gray-500">Create your first update to keep your backers informed</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {announcements.map((announcement) => (
-              <div
-                key={announcement.id}
-                className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-2xl p-6 hover:shadow-xl hover:border-color-b/30 transition-all duration-300"
-              >
-                {editingId === announcement.id ? (
-                  // Edit Mode
-                  <div className="space-y-4">
-                    <FormInput
-                      label="Title"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      error={errors.title}
-                      required
-                    />
-                    <FormTextarea
-                      label="Content"
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      error={errors.content}
-                      required
-                      rows={4}
-                    />
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        icon={FiX}
-                        onClick={handleCancelEdit}
+      {/* Announcements List */}
+      {announcements.length === 0 && !isCreating ? (
+        <div className="text-center py-16">
+          <FiBell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h4 className="text-lg font-semibold text-gray-600 mb-2">No updates yet</h4>
+          <p className="text-sm text-gray-500">Create your first update to keep your backers informed</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {announcements.map((announcement) => (
+            <div
+              key={announcement.id}
+              className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-900 transition-all duration-200"
+            >
+              {editingId === announcement.id ? (
+                <div className="space-y-4">
+                  <FormInput
+                    label="Title"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    error={errors.title}
+                    required
+                  />
+                  <FormTextarea
+                    label="Content"
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    error={errors.content}
+                    required
+                    rows={4}
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="ghost"
+                      icon={FiX}
+                      onClick={handleCancelEdit}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      icon={FiSave}
+                      onClick={() => handleSaveEdit(announcement.id)}
+                      loading={loading}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="text-base font-semibold text-gray-900">
+                      {announcement.title}
+                    </h4>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handleStartEdit(announcement)}
+                        className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
                       >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        icon={FiSave}
-                        onClick={() => handleSaveEdit(announcement.id)}
-                        loading={loading}
+                        <FiEdit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(announcement.id)}
+                        className="p-2 text-gray-600 hover:text-red-600 transition-colors"
                       >
-                        Save Changes
-                      </Button>
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                ) : (
-                  // View Mode
-                  <>
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-semibold text-gray-800 text-lg">
-                        {announcement.title}
-                      </h4>
-                      <div className="flex gap-1">
-                        <IconButton
-                          icon={FiEdit}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleStartEdit(announcement)}
-                          ariaLabel="Edit announcement"
-                        />
-                        <IconButton
-                          icon={FiTrash2}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(announcement.id)}
-                          ariaLabel="Delete announcement"
-                        />
-                      </div>
-                    </div>
-                    <p className="text-gray-600 text-sm mb-3 whitespace-pre-wrap">
-                      {announcement.content}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <FiBell className="w-3 h-3" />
-                      <span>{formatDate(announcement.date)}</span>
-                      {announcement.createdBy?.email && (
-                        <span className="ml-2">by {announcement.createdBy.email}</span>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      </div>
+                  <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap leading-relaxed">
+                    {announcement.content}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <FiCalendar className="w-3 h-3" />
+                    <span>{formatDate(announcement.date)}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

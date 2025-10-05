@@ -23,7 +23,8 @@ import {
   FiAlertCircle,
   FiActivity,
   FiBarChart2,
-  FiX
+  FiX,
+  FiBox
 } from 'react-icons/fi';
 import {
   ProjectCard,
@@ -32,7 +33,7 @@ import {
   AnnouncementManager,
   ProjectEditForm,
   ProjectAnalytics,
-  RewardsList
+  RewardsManager
 } from '../components/project';
 
 const auth = getAuth();
@@ -147,7 +148,8 @@ export default function MyProjectInfo() {
           category: projectData.category || '',
           endDate: safeFormatDateForInput(projectData.endDate),
           secondaryImages: [...projectData.secondaryImages || []],
-          milestones: { ...projectData.milestones || {} }
+          milestones: { ...projectData.milestones || {} },
+          rewardsList: [...projectData.rewardsList || []]
         });
 
         // Fetch funders
@@ -377,7 +379,8 @@ export default function MyProjectInfo() {
         ...project, 
         endDate: safeFormatDateForInput(project.endDate),
         secondaryImages: [...project.secondaryImages || []],
-        milestones: { ...project.milestones || {} }
+        milestones: { ...project.milestones || {} },
+        rewardsList: [...project.rewardsList || []]
       });
     } catch (error) {
       console.error('Error checking/deleting pending change request:', error);
@@ -597,6 +600,14 @@ export default function MyProjectInfo() {
     }
   };
 
+  // Rewards handlers
+  const handleRewardsChange = (updatedRewards) => {
+    setEditForm(prev => ({
+      ...prev,
+      rewardsList: updatedRewards
+    }));
+  };
+
   // Utility functions
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -693,182 +704,185 @@ export default function MyProjectInfo() {
   const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Modern Hero Header */}
-      <div className="relative pt-20 pb-8 bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="pt-20 pb-6 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <button
             onClick={() => navigate('/manage')}
-            className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors group mb-6 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg"
+            className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors mb-6 bg-gray-100 hover:bg-gray-200 px-4 py-2.5 rounded-lg"
           >
-            <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium">Back to Projects</span>
+            <FiArrowLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">Back to Projects</span>
           </button>
           
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className={`px-4 py-1.5 rounded-full text-sm font-semibold border-2 ${getStatusColor(project.status)}`}>
-                    {project.status || 'Unknown'}
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-3">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                  {project.status || 'Unknown'}
+                </span>
+                <span className="flex items-center text-gray-600 bg-gray-100 px-3 py-1 rounded-full text-xs">
+                  <FiTag className="w-3 h-3 mr-1.5" />
+                  {project.category || 'General'}
+                </span>
+                {project.hasPendingChanges && (
+                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium flex items-center">
+                    <FiClock className="w-3 h-3 mr-1" />
+                    Pending Changes
                   </span>
-                  <span className="flex items-center text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full text-sm">
-                    <FiTag className="w-4 h-4 mr-1.5" />
-                    {project.category || 'General'}
-                  </span>
-                  {project.hasPendingChanges && (
-                    <span className="px-3 py-1.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium flex items-center">
-                      <FiClock className="w-3 h-3 mr-1" />
-                      Pending Changes
-                    </span>
-                  )}
-                </div>
-                
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {project.title}
-                </h1>
-                
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                  {project.shortDescription}
-                </p>
-                
-                <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                  <div className="flex items-center bg-gray-50 px-3 py-2 rounded-lg">
-                    <FiCalendar className="w-4 h-4 mr-2 text-color-b" />
-                    <span>Ends {formatDate(project.endDate)}</span>
-                  </div>
-                  <div className="flex items-center bg-gray-50 px-3 py-2 rounded-lg">
-                    <FiUsers className="w-4 h-4 mr-2 text-color-b" />
-                    <span>{funders.length} Backers</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-3">
-                {isEditing ? (
-                  <>
-                    <Button
-                      variant="primary"
-                      icon={FiCheckCircle}
-                      onClick={handleEditSave}
-                      loading={checkingPending}
-                    >
-                      Save Changes
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      icon={FiX}
-                      onClick={() => setIsEditing(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      variant="primary"
-                      icon={FiEdit}
-                      onClick={checkPendingAndEnableEditing}
-                      loading={checkingPending}
-                      disabled={checkingPending}
-                    >
-                      {checkingPending ? 'Checking...' : 'Edit Project'}
-                    </Button>
-                    <Link to={`/projectDet/${project.id}`}>
-                      <Button
-                        variant="secondary"
-                        icon={FiEye}
-                        fullWidth
-                      >
-                        View Public Page
-                      </Button>
-                    </Link>
-                  </>
                 )}
               </div>
+              
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {project.title}
+              </h1>
+              
+              <p className="text-gray-600 mb-4 line-clamp-2">
+                {project.shortDescription}
+              </p>
+              
+              <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                <div className="flex items-center bg-gray-50 px-3 py-2 rounded-lg">
+                  <FiCalendar className="w-4 h-4 mr-2 text-gray-600" />
+                  <span>Ends {formatDate(project.endDate)}</span>
+                </div>
+                <div className="flex items-center bg-gray-50 px-3 py-2 rounded-lg">
+                  <FiUsers className="w-4 h-4 mr-2 text-gray-600" />
+                  <span>{funders.length} Backers</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              {isEditing ? (
+                <>
+                  <Button
+                    variant="primary"
+                    icon={FiCheckCircle}
+                    onClick={handleEditSave}
+                    loading={checkingPending}
+                  >
+                    Save Changes
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    icon={FiX}
+                    onClick={() => setIsEditing(false)}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="primary"
+                    icon={FiEdit}
+                    onClick={checkPendingAndEnableEditing}
+                    loading={checkingPending}
+                    disabled={checkingPending}
+                  >
+                    {checkingPending ? 'Checking...' : 'Edit Project'}
+                  </Button>
+                  <Link to={`/projectDet/${project.id}`}>
+                    <Button
+                      variant="secondary"
+                      icon={FiEye}
+                      fullWidth
+                    >
+                      View Public Page
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modern Stats Grid */}
-      <div className="max-w-7xl mx-auto px-4 -mt-2 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            icon={FiTrendingUp}
-            label="Funding Progress"
-            value={`${progress.toFixed(1)}%`}
-            color="blue"
-            trend={{
-              value: `${formatCurrency(project.fundedMoney)} raised`,
-              positive: progress > 0
-            }}
-          />
+      {/* Stats Grid */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Funding Progress */}
+          <div className="bg-white border border-gray-100 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-500">Funding Progress</p>
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <FiTrendingUp className="w-4 h-4 text-gray-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 mb-1">{progress.toFixed(1)}%</p>
+            <p className="text-xs text-gray-500">{formatCurrency(project.fundedMoney)} raised</p>
+          </div>
           
-          <StatCard
-            icon={FiDollarSign}
-            label="Funding Goal"
-            value={formatCurrency(project.fundingGoal)}
-            color="green"
-          />
+          {/* Funding Goal */}
+          <div className="bg-white border border-gray-100 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-500">Funding Goal</p>
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <FiDollarSign className="w-4 h-4 text-gray-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(project.fundingGoal)}</p>
+          </div>
           
-          <StatCard
-            icon={FiUsers}
-            label="Total Backers"
-            value={funders.length}
-            color="purple"
-            trend={{
-              value: `${project.backers || 0} contributions`,
-              positive: true
-            }}
-          />
+          {/* Total Backers */}
+          <div className="bg-white border border-gray-100 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-500">Total Backers</p>
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <FiUsers className="w-4 h-4 text-gray-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 mb-1">{funders.length}</p>
+            <p className="text-xs text-gray-500">{project.backers || 0} contributions</p>
+          </div>
           
-          <StatCard
-            icon={FiClock}
-            label="Days Remaining"
-            value={daysLeft > 0 ? daysLeft : 'Ended'}
-            color="orange"
-            trend={{
-              value: daysLeft > 0 ? 'Campaign active' : 'Campaign ended',
-              positive: daysLeft > 0
-            }}
-          />
+          {/* Days Remaining */}
+          <div className="bg-white border border-gray-100 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-500">Days Remaining</p>
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <FiClock className="w-4 h-4 text-gray-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-gray-900 mb-1">{daysLeft > 0 ? daysLeft : 'Ended'}</p>
+            <p className="text-xs text-gray-500">{daysLeft > 0 ? 'Campaign active' : 'Campaign ended'}</p>
+          </div>
         </div>
       </div>
 
-      {/* Modern Tabs */}
+      {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 mb-6">
-        <div className="bg-white rounded-lg border border-gray-200 p-2">
-          <div className="flex flex-wrap gap-2">
-            {[ 
-              { id: 'overview', label: 'Overview', icon: FiEye },
-              { id: 'images', label: 'Images', icon: FiImage },
-              { id: 'funders', label: 'Backers', icon: FiUsers, badge: funders.length },
-              { id: 'announcements', label: 'Updates', icon: FiActivity },
-              { id: 'analytics', label: 'Analytics', icon: FiBarChart2 },
-              { id: 'rewards', label: 'Rewards', icon: FiTarget }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <tab.icon className="w-5 h-5" />
-                <span>{tab.label}</span>
-                {tab.badge !== undefined && (
-                  <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-                    activeTab === tab.id ? 'bg-white/20' : 'bg-gray-200'
-                  }`}>
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {[ 
+            { id: 'overview', label: 'Overview', icon: FiEye },
+            { id: 'images', label: 'Images', icon: FiImage },
+            { id: 'rewards', label: 'Rewards', icon: FiBox },
+            { id: 'funders', label: 'Backers', icon: FiUsers, badge: funders.length },
+            { id: 'announcements', label: 'Updates', icon: FiActivity },
+            { id: 'analytics', label: 'Analytics', icon: FiBarChart2 }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                activeTab === tab.id
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+              {tab.badge !== undefined && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                  activeTab === tab.id ? 'bg-white/20' : 'bg-gray-200'
+                }`}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -876,7 +890,16 @@ export default function MyProjectInfo() {
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 pb-16">
         {activeTab === 'rewards' && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <RewardsList rewards={project.rewardsList || []} />
+            <div className="flex items-center gap-2 mb-6">
+              <FiBox className="w-5 h-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Project Rewards</h2>
+            </div>
+            <RewardsManager 
+              rewards={isEditing ? (editForm.rewardsList || project.rewardsList || []) : (project.rewardsList || [])}
+              onRewardsChange={handleRewardsChange}
+              isEditing={isEditing}
+              uploadImage={uploadImage}
+            />
           </div>
         )}
 
@@ -894,59 +917,61 @@ export default function MyProjectInfo() {
             ) : (
               <>
                 {/* Project Image */}
-                <ProjectCard>
-                  <div className="relative h-96 rounded-lg overflow-hidden">
-                    {project.imageUrl ? (
+                {project.imageUrl && (
+                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div className="relative aspect-video overflow-hidden">
                       <img
                         src={project.imageUrl}
                         alt={project.title}
                         className="w-full h-full object-cover"
                       />
-                    ) : (
-                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                        <FiImage className="w-24 h-24 text-gray-400" />
-                      </div>
-                    )}
+                    </div>
                   </div>
-                </ProjectCard>
+                )}
 
                 {/* Description */}
-                <ProjectCard title="Project Description" icon={FiEye}>
-                  <div className="prose prose-lg max-w-none">
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {project.longDescription || 'No detailed description available.'}
-                    </p>
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FiEye className="w-5 h-5 text-gray-600" />
+                    <h2 className="text-lg font-semibold text-gray-900">Project Description</h2>
                   </div>
-                </ProjectCard>
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {project.longDescription || 'No detailed description available.'}
+                  </p>
+                </div>
 
                 {/* Milestones */}
-                {project.milestones && (
-                  <ProjectCard title="Project Milestones" icon={FiTarget}>
+                {project.milestones && Object.keys(project.milestones).some(key => project.milestones[key]?.description) && (
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <FiTarget className="w-5 h-5 text-gray-600" />
+                      <h2 className="text-lg font-semibold text-gray-900">Project Milestones</h2>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {[25, 50, 75, 100].map((percentage) => (
                         project.milestones[percentage]?.description && (
                           <div
                             key={percentage}
-                            className={`p-4 rounded-lg border ${
+                            className={`p-4 rounded-lg border transition-all ${
                               progress >= percentage
                                 ? 'bg-green-50 border-green-200'
                                 : 'bg-gray-50 border-gray-200'
                             }`}
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <span className="font-bold text-lg text-gray-900">{percentage}%</span>
+                              <span className="font-semibold text-base text-gray-900">{percentage}%</span>
                               {progress >= percentage && (
                                 <FiCheckCircle className="w-5 h-5 text-green-600" />
                               )}
                             </div>
-                            <p className="text-gray-700 text-sm">
+                            <p className="text-sm text-gray-700">
                               {project.milestones[percentage].description}
                             </p>
                           </div>
                         )
                       ))}
                     </div>
-                  </ProjectCard>
+                  </div>
                 )}
               </>
             )}
@@ -954,15 +979,16 @@ export default function MyProjectInfo() {
         )}
 
         {activeTab === 'images' && (
-          <div className="space-y-6">
-            <ProjectCard title="Project Images" icon={FiImage}>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <FiImage className="w-5 h-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Project Images</h2>
+            </div>
+            <div className="space-y-6">
               {/* Main Image Section */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <FiImage className="w-5 h-5 text-color-b" />
-                  Main Project Image
-                </h3>
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 mb-3">Main Project Image</h3>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <div className="relative h-64 rounded-lg overflow-hidden mb-3">
                     {previewMainImageUrl ? (
                       <img
@@ -1013,10 +1039,7 @@ export default function MyProjectInfo() {
 
               {/* Secondary Images Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <FiImage className="w-5 h-5 text-color-b" />
-                  Additional Images
-                </h3>
+                <h3 className="text-base font-semibold text-gray-900 mb-3">Additional Images</h3>
                 
                 {/* Existing Images */}
                 {editForm.secondaryImages && editForm.secondaryImages.length > 0 && (
@@ -1116,51 +1139,55 @@ export default function MyProjectInfo() {
                   </Button>
                 </div>
               )}
-            </ProjectCard>
+            </div>
           </div>
         )}
 
         {activeTab === 'funders' && (
-          <ProjectCard title="Project Backers" icon={FiUsers}>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <FiUsers className="w-5 h-5 text-gray-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Project Backers</h2>
+            </div>
             {funders.length === 0 ? (
               <div className="text-center py-16">
                 <FiUsers className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h4 className="text-xl font-semibold text-gray-600 mb-2">No Backers Yet</h4>
-                <p className="text-gray-500">Your project hasn't received any funding yet.</p>
+                <h4 className="text-lg font-semibold text-gray-600 mb-2">No Backers Yet</h4>
+                <p className="text-sm text-gray-500">Your project hasn't received any funding yet.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {funders.map((funder) => (
                   <div
                     key={funder.id}
-                    className="bg-white rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
+                    className="bg-white rounded-lg p-4 border border-gray-200 hover:border-gray-900 transition-all duration-200"
                   >
-                    <div className="flex items-center gap-4 mb-4">
+                    <div className="flex items-center gap-3 mb-3">
                       <img
                         src={funder.profileImage}
                         alt={funder.name}
-                        className="w-12 h-12 rounded-full object-cover border border-gray-200"
+                        className="w-10 h-10 rounded-full object-cover"
                       />
-                      <div>
-                        <h4 className="text-base font-semibold text-gray-900">{funder.name}</h4>
-                        <p className="text-xs text-gray-500">{funder.location}</p>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold text-gray-900 truncate">{funder.name}</h4>
+                        <p className="text-xs text-gray-500 truncate">{funder.location}</p>
                       </div>
                     </div>
-                    <div className="space-y-2">
+                    <div className="pt-3 border-t border-gray-100 space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-600">Total Contribution</span>
-                        <span className="font-semibold text-gray-900">{formatCurrency(funder.totalAmount)}</span>
+                        <span className="text-xs text-gray-500">Total</span>
+                        <span className="text-sm font-semibold text-gray-900">{formatCurrency(funder.totalAmount)}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-600">Contributions</span>
-                        <span className="font-semibold text-gray-900">{funder.contributions.length}</span>
+                        <span className="text-xs text-gray-500">Times backed</span>
+                        <span className="text-sm font-medium text-gray-700">{funder.contributions.length}</span>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </ProjectCard>
+          </div>
         )}
 
         {activeTab === 'announcements' && (
