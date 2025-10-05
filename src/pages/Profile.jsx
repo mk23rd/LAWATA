@@ -379,11 +379,11 @@ const Profile = () => {
               </button>
               
               <button
-                onClick={() => navigate("/projects")}
+                onClick={() => navigate("/manage")}
                 className="bg-white hover:bg-gray-50 text-color-b font-bold px-4 py-2 rounded-lg shadow-md flex items-center justify-center gap-2 text-sm border-2 border-color-b/20 hover:border-color-b/40"
               >
                 <MdTrendingUp className="text-base" />
-                View Projects
+                Manage Projects
               </button>
             </div>
           </div>

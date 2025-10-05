@@ -338,7 +338,7 @@ export default function CreateProjectForm() {
         },
         rewards: []
       });
-      navigate("/projects");
+      navigate("/manage");
     } catch (error) {
       console.error(error);
       setMessage("❌ Failed to submit project.");

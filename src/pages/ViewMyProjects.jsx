@@ -70,14 +70,10 @@ export default function ViewMyProjects() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-slate-100 px-6 lg:px-12 pb-16 pt-28">
+    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-slate-100 px-6 lg:px-12 pb-16 pt-4">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
           <div>
-            <span className="inline-flex items-center gap-2 text-sm font-medium text-color-b">
-              <FiFolder className="w-4 h-4" />
-              Creator Dashboard
-            </span>
             <h1 className="text-3xl sm:text-4xl font-bold text-color-a mt-3">
               Your Projects
             </h1>

@@ -3,10 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase/firebase-config';
 import { updateProfile } from "firebase/auth"; 
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import InputField from '../components/InputField';
 import Button from '../components/Button';
 import { gsap } from "gsap";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import '../App.css';
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
@@ -178,29 +180,111 @@ const Signing = () => {
     }
   }, [activePanel]);
 
+  // Form submit handlers
+  const handleSignInSubmit = (e) => {
+    e.preventDefault();
+    handleSignIn();
+  };
+
+  const handleSignUpSubmit = (e) => {
+    e.preventDefault();
+    handleSignUp();
+  };
+
   const handleGoogleSignIn = async () => {
     if (loading) return;
     setLoading(true);
 
     const provider = new GoogleAuthProvider();
+    // Add additional scopes
+    provider.addScope('profile');
+    provider.addScope('email');
+    // Set custom parameters for better UX
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      
+      // Get existing user data from Firestore
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const existingData = userDoc.exists() ? userDoc.data() : {};
+      
+      // Only update username and profileImageUrl if they don't exist or are empty
+      const username = existingData.username || user.displayName || user.email.split('@')[0];
+      const profileImageUrl = existingData.profileImageUrl || user.photoURL || "";
 
-      // Save or update user info in Firestore
-      await setDoc(doc(db, "users", user.uid), {
+      // Prepare user data
+      const userData = {
         uid: user.uid,
         email: user.email,
-        username: user.displayName || "No Name",
-        photoURL: user.photoURL || "",
-        roles: ["visitor"],
+        username: username,
+        profileImageUrl: profileImageUrl,
+        roles: existingData.roles || ["visitor"],
+        walletBalance: existingData.walletBalance || 0,
         lastLogin: new Date(),
-      }, { merge: true });
+        createdAt: existingData.createdAt || new Date(),
+        displayName: user.displayName || "",
+        emailVerified: user.emailVerified,
+        providerData: user.providerData.map(provider => ({
+          providerId: provider.providerId,
+          uid: provider.uid,
+          displayName: provider.displayName,
+          email: provider.email,
+          photoURL: provider.photoURL
+        }))
+      };
 
-      alert("Signed in with Google successfully!");
+      // Save or update user info in Firestore
+      await setDoc(doc(db, "users", user.uid), userData, { merge: true });
+      
+      // Update user profile if display name is missing
+      if (!user.displayName) {
+        await updateProfile(user, {
+          displayName: userData.username,
+          photoURL: userData.profileImageUrl
+        });
+      }
+      
+      // Show success message and redirect
+      toast.success(`Welcome back, ${userData.username || 'User'}!`, {
+        position: "bottom-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      navigate('/home');
     } catch (error) {
       console.error("Google Sign-In error:", error);
-      alert(`Error: ${error.message}`);
+      
+      // Handle specific error cases
+      let errorMessage = 'An error occurred during sign-in';
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'Sign-in cancelled';
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = 'Pop-up blocked. Please allow pop-ups for this site.';
+      } else if (error.code === 'auth/internal-error') {
+        errorMessage = 'Authentication service error. Please check your Firebase configuration.';
+      } else if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = 'This domain is not authorized. Please add it to Firebase console.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage, {
+        position: "bottom-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -208,6 +292,18 @@ const Signing = () => {
 
   return (
     <div className='bg-white overflow-clip'>
+      <ToastContainer
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <nav className='w-screen h-1/5'> 
         <div className='fixed flex w-screen pointer-events-none'> 
           <div className='w-1/6 h-full flex justify-center items-center'> 
@@ -230,12 +326,12 @@ const Signing = () => {
           <div ref={signupWid3} className='bg-color-e h-4/5 w-full font-titan text-5xl text-color-b flex items-center justify-center'>
             <div className='text-color-b w-3xl gap-10 flex flex-col items-center justify-center'>
               <div ref={signupLabel} className='font-titan pointer-events-none'>Sign Up</div>
-              <div ref={signupInput} className='flex flex-col gap-2'>
-                <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="text" name="username" value={signupformData.username} onChange={handleSignUpChange} placeholder="User Name"/>
-                <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="email" name="email" value={signupformData.email} onChange={handleSignUpChange} placeholder="Email"/>
-                <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="password" name="password" value={signupformData.password} onChange={handleSignUpChange} placeholder="Password"/>
-                <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="password" name="confirmPassword" value={signupformData.confirmPassword} onChange={handleSignUpChange} placeholder="Confirm Password"/>
-              </div>
+              <form ref={signupInput} className='flex flex-col gap-2' onSubmit={handleSignUpSubmit} autoComplete="on">
+                <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="text" name="username" value={signupformData.username} onChange={handleSignUpChange} placeholder="User Name" autoComplete="username"/>
+                <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="email" name="email" value={signupformData.email} onChange={handleSignUpChange} placeholder="Email" autoComplete="email"/>
+                <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="password" name="password" value={signupformData.password} onChange={handleSignUpChange} placeholder="Password" autoComplete="new-password"/>
+                <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="password" name="confirmPassword" value={signupformData.confirmPassword} onChange={handleSignUpChange} placeholder="Confirm Password" autoComplete="new-password"/>
+              </form>
               <div ref={signupBtn} className='bg-color-b z-30 flex items-center justify-center rounded-xl text-2xl text-color-d w-40 h-10'>
                 <Button text="SIGN UP" callfunc={handleSignUp} loading={loading}/>
               </div>
@@ -248,9 +344,9 @@ const Signing = () => {
           <div ref={signinWid1} className='h-1/5 w-full border-color-b border-b-6 border-l-6 font-titan text-5xl text-color-b flex items-center justify-center'>
             <div className='text-color-e w-3xl gap-5 flex flex-col items-center justify-end-safe'>
               <div ref={signinLabel} className='font-titan pointer-events-none'>Login</div>
-              <div ref={signinInput} className='flex flex-col gap-5'>
-                <InputField classname="border-b-3 text-2xl border-color-e w-100 outline-0" inputtype="email" name="email" value={signinformData.email} onChange={handleSignInChange} placeholder="Email"/>
-                <InputField classname="border-b-3 text-2xl border-color-e w-100 outline-0" inputtype="password" name="password" value={signinformData.password} onChange={handleSignInChange} placeholder="Password"/>
+              <form ref={signinInput} className='flex flex-col gap-5' onSubmit={handleSignInSubmit} autoComplete="on">
+                <InputField classname="border-b-3 text-2xl border-color-e w-100 outline-0" inputtype="email" name="email" value={signinformData.email} onChange={handleSignInChange} placeholder="Email" autoComplete="email"/>
+                <InputField classname="border-b-3 text-2xl border-color-e w-100 outline-0" inputtype="password" name="password" value={signinformData.password} onChange={handleSignInChange} placeholder="Password" autoComplete="current-password"/>
                 <div className="flex text-xl justify-between">
                   <div className="flex gap-2 items-center justify-center">
                     <input className='w-4 h-4 rounded-sm' type="checkbox" />
@@ -258,7 +354,7 @@ const Signing = () => {
                   </div>
                   <p><a className='underline' href="#blank">Forgot password?</a></p>
                 </div>
-              </div>
+              </form>
               <div ref={signinBtn} className='bg-color-e flex items-center rounded-xl text-2xl justify-center text-color-d w-40 h-10'>
                 <Button text="LOG IN" callfunc={handleSignIn} loading={loading}/>
               </div>

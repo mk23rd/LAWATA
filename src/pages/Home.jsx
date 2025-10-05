@@ -456,14 +456,13 @@ const scrollRight = () => {
           
           <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
             <Link 
-              to="/projects" 
+              to="/manage" 
               className="bg-white text-black px-8 py-4 rounded-full text-xl font-bold hover:bg-gray-100 transition-all duration-300 hover:scale-105 shadow-2xl"
             >
-              Start Creating
+              Manage Your Projects
             </Link>
             <Link 
               to="/browse" 
-              className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-full text-xl font-bold hover:bg-white hover:text-black transition-all duration-300 hover:scale-105"
             >
               Explore Projects
             </Link>

@@ -783,7 +783,7 @@ export default function MyProjectInfo() {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Error</h2>
             <p className="text-gray-600 mb-6">{error}</p>
             <button 
-              onClick={() => navigate('/projects')}
+              onClick={() => navigate('/manage')}
               className="bg-gradient-to-r from-color-b to-blue-600 hover:from-blue-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               Back to My Projects
@@ -804,7 +804,7 @@ export default function MyProjectInfo() {
       <div className="pt-20 pb-4">
         <div className="max-w-7xl mx-auto px-4">
           <button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate('/manage')}
             className="flex items-center space-x-2 text-gray-600 hover:text-color-b transition-colors group mb-6"
           >
             <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />

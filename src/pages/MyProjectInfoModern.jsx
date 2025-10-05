@@ -679,7 +679,7 @@ export default function MyProjectInfo() {
             <Button
               variant="primary"
               icon={FiArrowLeft}
-              onClick={() => navigate('/projects')}
+              onClick={() => navigate('/manage')}
             >
               Back to My Projects
             </Button>
@@ -698,7 +698,7 @@ export default function MyProjectInfo() {
       <div className="relative pt-20 pb-8 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate('/manage')}
             className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 transition-colors group mb-6 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg"
           >
             <FiArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
