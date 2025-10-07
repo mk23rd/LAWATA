@@ -182,7 +182,7 @@ const ProjectDetails = () => {
     setShowReportModal(true);
   };
 
-  // Submit project report
+
   const handleSubmitReport = async () => {
     if (!reportReason.trim()) {
       toast.warning("Please select a reason for reporting.");
