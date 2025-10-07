@@ -217,7 +217,7 @@ const ProjectDetails = () => {
     }
   };
 
-  // Handle user report from comment
+  
   const handleUserReport = (user) => {
     if (!currentUser) {
       toast.warning("Please sign in to report users.");
@@ -227,7 +227,7 @@ const ProjectDetails = () => {
     setShowUserReportModal(true);
   };
 
-  // Submit user report
+
   const handleSubmitUserReport = async () => {
     if (!reportReason.trim()) {
       toast.warning("Please select a reason for reporting.");
