@@ -27,10 +27,10 @@ function App() {
   // Track whether the splash/loading experience has finished running
   const [loadingComplete, setLoadingComplete] = useState(false);
 
-  /*if (!loadingComplete) {
-    // Display the loading component until the asynchronous setup finishes
-    return <Loading onComplete={() => setLoadingComplete(true)} />;
-  }*/
+  // if (!loadingComplete) {
+  //   // Display the loading component until the asynchronous setup finishes
+  //   return <Loading onComplete={() => setLoadingComplete(true)} />;
+  // }
 
   return (
     <>

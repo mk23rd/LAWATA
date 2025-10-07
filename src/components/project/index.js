@@ -11,3 +11,4 @@ export { AnnouncementManager } from './AnnouncementManager';
 export { ProjectEditForm } from './ProjectEditForm';
 export { ProjectAnalytics } from './ProjectAnalytics';
 export { default as RewardsList } from './RewardsList';
+export { RewardsManager } from './RewardsManager';
