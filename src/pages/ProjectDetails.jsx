@@ -173,7 +173,7 @@ const ProjectDetails = () => {
     }
   };
 
-  // Handle report
+  
   const handleReport = () => {
     if (!currentUser) {
       toast.warning("Please sign in to report projects.");
