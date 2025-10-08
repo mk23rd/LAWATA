@@ -21,13 +21,12 @@ import MyInvestments from "./pages/MyInvestments";
 import InvestPage from "./pages/InvestPage";
 import Wallet from "./pages/Wallet";
 import Bookmarks from "./pages/Bookmarks";
+import AboutNew from "./pages/About_new";
 import Navbar from "./components/NavBar";
 
 function App() {
   // Track whether the splash/loading experience has finished running
   const [loadingComplete, setLoadingComplete] = useState(false);
-
-  // if (!loadingComplete) {
   //   // Display the loading component until the asynchronous setup finishes
   //   return <Loading onComplete={() => setLoadingComplete(true)} />;
   // }
@@ -46,8 +45,7 @@ function App() {
         <Route path="/signing" element={<Signing />} />
         <Route path="/create" element={<CreateProjectForm />} />
         <Route path="/community" element={<Community />} />
-        <Route path="/browse" element={<Browse />} />
-        {/* Dynamic routes for project-oriented experiences */}
+        <Route path="/about" element={<AboutNew />} />
         <Route path="/projectDet/:id" element={<ProjectDetails />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/manage-profile" element={<ManageProfile />} />
