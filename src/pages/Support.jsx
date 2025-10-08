@@ -16,7 +16,7 @@ import {
 import { db } from "../firebase/firebase-config";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { CheckCircle, XCircle, Loader2, Target, ChevronDown } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Target, ChevronDown, Wallet } from "lucide-react";
 import { toast } from "react-toastify";
 import RewardsList from "../components/project/RewardsList";
 
@@ -94,7 +94,9 @@ const Support = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [walletProcessing, setWalletProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(null); // 'success', 'error', or null
+  const [walletPaymentStatus, setWalletPaymentStatus] = useState(null); // 'success', 'error', or null
   const [showRewards, setShowRewards] = useState(false);
   const [selectedReward, setSelectedReward] = useState(null);
   const { id } = useParams();
@@ -723,6 +725,434 @@ const Support = () => {
     document.body.removeChild(tempForm);
   };
 
+  // Handle wallet payment
+  const handleWalletPayment = async (e) => {
+    e.preventDefault();
+
+    if (!currentUser) {
+      toast.error("Please sign in to proceed.");
+      navigate(`/signing?redirectTo=/support/${id}`);
+      return;
+    }
+    if (!profileComplete) {
+      toast.warning("Please complete your profile to proceed.");
+      navigate(`/manage-profile?redirectTo=/support/${id}`);
+      return;
+    }
+
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      toast.error("Please enter a valid amount.");
+      return;
+    }
+
+    setWalletProcessing(true);
+    setWalletPaymentStatus(null);
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        // ---- ALL READS FIRST ----
+        const projectRef = doc(db, "projects", id);
+        const userRef = doc(db, "users", currentUser.uid);
+
+        const [projectSnap, userSnap] = await Promise.all([
+          transaction.get(projectRef),
+          transaction.get(userRef),
+        ]);
+
+        if (!projectSnap.exists()) throw new Error("Project not found");
+        if (!userSnap.exists()) throw new Error("User not found in database.");
+
+        const projectData = projectSnap.data();
+        const userData = userSnap.data();
+
+        // Check wallet balance
+        const walletBalance = userData.walletBalance || 0;
+        if (walletBalance < numericAmount) {
+          throw new Error(`Insufficient wallet balance. You have $${walletBalance.toLocaleString()} but need $${numericAmount.toLocaleString()}.`);
+        }
+
+        // Prevent supporting own project
+        if (projectData.createdBy?.uid === currentUser.uid) {
+          throw new Error("You cannot support your own project.");
+        }
+
+        // Gate: profile completeness check
+        const hasProfile = Boolean(
+          userData &&
+            userData.phoneNumber &&
+            userData.profileImageUrl &&
+            userData.bio &&
+            userData.location &&
+            userData.location.city &&
+            userData.location.country
+        );
+        if (!hasProfile) {
+          throw new Error("Please complete your profile before supporting a project.");
+        }
+
+        const currentFunded = projectData.fundedMoney ?? 0;
+        const fundingGoal = projectData.fundingGoal ?? Infinity;
+        const remaining = fundingGoal - currentFunded;
+
+        if (numericAmount > remaining) {
+          throw new Error(`You can only fund up to $${remaining}.`);
+        }
+
+        // Validate reward selection if applicable
+        if (selectedReward) {
+          const rewardFromProject = projectData.rewardsList?.[selectedReward.index];
+          if (!rewardFromProject) {
+            throw new Error("Selected reward no longer exists.");
+          }
+          
+          const rewardAmount = parseFloat(rewardFromProject.amount) || 0;
+          if (numericAmount < rewardAmount) {
+            throw new Error(`Your contribution of $${numericAmount} is insufficient for the selected reward (requires $${rewardAmount}).`);
+          }
+          
+          if (rewardFromProject.type === 'limited') {
+            const remainingQuantity = rewardFromProject.quantity - (rewardFromProject.claimed || 0);
+            if (remainingQuantity <= 0) {
+              throw new Error("Selected reward is out of stock.");
+            }
+          }
+        }
+
+        // ---- ALL WRITES AFTER ----
+        // Update user's wallet balance
+        transaction.update(userRef, {
+          walletBalance: increment(-numericAmount)
+        });
+      });
+
+      // Process the support transaction (similar to processSupport but without affecting main button states)
+      await processWalletSupport(numericAmount, selectedReward);
+      
+      setWalletPaymentStatus('success');
+      toast.success(`🎉 Payment successful! $${numericAmount} deducted from your wallet.`, {
+        autoClose: 3000
+      });
+
+      setTimeout(() => {
+        setAmount("");
+        setSelectedReward(null);
+        setWalletPaymentStatus(null);
+      }, 1500);
+
+    } catch (err) {
+      console.error("Error processing wallet payment:", err);
+      setWalletPaymentStatus('error');
+      toast.error(err.message || "Wallet payment failed. Please try again.");
+
+      setTimeout(() => {
+        setWalletPaymentStatus(null);
+      }, 1500);
+    } finally {
+      setWalletProcessing(false);
+    }
+  };
+
+  // Process wallet support transaction (similar to processSupport but independent)
+  const processWalletSupport = async (numericAmount, selectedReward) => {
+    try {
+      // Store milestone data before transaction
+      let milestonesReached = [];
+      let previousFundedMoney = 0;
+      let allPreviousFunders = [];
+
+      await runTransaction(db, async (transaction) => {
+        // ---- ALL READS FIRST ----
+        const projectRef = doc(db, "projects", id);
+        const userRef = doc(db, "users", currentUser.uid);
+
+        const [projectSnap, userSnap] = await Promise.all([
+          transaction.get(projectRef),
+          transaction.get(userRef),
+        ]);
+
+        if (!projectSnap.exists()) throw new Error("Project not found");
+        if (!userSnap.exists()) throw new Error("User not found in database.");
+
+        const projectData = projectSnap.data();
+        const userData = userSnap.data();
+
+        // Store previous funded amount for milestone checking
+        previousFundedMoney = projectData.fundedMoney ?? 0;
+
+        // ---- PREPARE DATA LOCALLY ----
+        // Determine if this is the user's first time funding this project
+        const userFundings = userData.fundings ? { ...userData.fundings } : {};
+        const isFirstContributionToProject = !userData.fundings || !userData.fundings[id];
+
+        const nowISO = new Date().toISOString();
+
+        if (userFundings[id]) {
+          userFundings[id] = {
+            ...userFundings[id],
+            contributions: [
+              ...(userFundings[id].contributions || []),
+              { amount: numericAmount, date: nowISO },
+            ],
+            totalFundedPerProject:
+              (userFundings[id].totalFundedPerProject ?? 0) + numericAmount,
+          };
+        } else {
+          userFundings[id] = {
+            projectTitle: projectData.title || "Untitled",
+            totalFundedPerProject: numericAmount,
+            contributions: [{ amount: numericAmount, date: nowISO }],
+          };
+        }
+
+        const newTotalFunded = (userData.totalFunded ?? 0) + numericAmount;
+        const newFundingCounter = (userData.fundingCounter ?? 0) + 1;
+
+        // Check if user should get Investor role
+        const shouldAddInvestorRole =
+          (newFundingCounter >= 100 || newTotalFunded >= 750000) &&
+          !userData.roles?.includes("Investor");
+
+        // Prepare update data for user
+        const updateData = {
+          totalFunded: newTotalFunded,
+          fundingCounter: newFundingCounter,
+          fundings: userFundings,
+        };
+
+        // Add reward to user's myRewards if a reward was selected
+        if (selectedReward) {
+          const rewardData = {
+            rewardId: selectedReward.id || `reward_${selectedReward.index}_${Date.now()}`,
+            description: selectedReward.description,
+            imageUrl: selectedReward.imageUrl,
+            title: selectedReward.title,
+            type: selectedReward.type,
+            projectId: id,
+            projectTitle: projectData.title,
+            claimedAt: Timestamp.now(),
+            amount: selectedReward.amount
+          };
+
+          // Initialize myRewards array if it doesn't exist, then add the new reward
+          updateData.myRewards = arrayUnion(rewardData);
+        }
+
+        // Add Investor role if conditions are met
+        if (shouldAddInvestorRole) {
+          updateData.roles = arrayUnion("Investor", "Funder");
+          try {
+            await addDoc(collection(db, "notifications"), {
+              message: `Your Roles have been Promoted you now have access to Investment.`,
+              type: "Roles_update",
+              read: false,
+              userId: currentUser.uid,
+              createdAt: Timestamp.now()
+            });
+          } catch (notifErr) {
+            console.error("Failed to create notification:", notifErr);
+          }
+        } else if (!userData.roles?.includes("Funder")) {
+          // Add Funder role if not already present
+          updateData.roles = arrayUnion("Funder");
+        }
+
+        // Check for milestone completion
+        const currentFunded = projectData.fundedMoney ?? 0;
+        const fundingGoal = projectData.fundingGoal ?? Infinity;
+        const newFundedMoney = currentFunded + numericAmount;
+        const milestones = projectData.milestones || {};
+
+        // Check which milestones are reached
+        [25, 50, 75, 100].forEach(percentage => {
+          if (milestones[percentage]) {
+            const milestoneAmount = (fundingGoal * percentage) / 100;
+            const previousPercentage = (previousFundedMoney / fundingGoal) * 100;
+            const newPercentage = (newFundedMoney / fundingGoal) * 100;
+
+            // If this milestone was just crossed
+            if (previousPercentage < percentage && newPercentage >= percentage) {
+              milestonesReached.push({
+                percentage,
+                description: milestones[percentage].description,
+                amount: milestoneAmount
+              });
+
+              // Update milestone status to completed
+              transaction.update(projectRef, {
+                [`milestones.${percentage}.status`]: 'completed',
+                [`milestones.${percentage}.completedAt`]: serverTimestamp()
+              });
+            }
+          }
+        });
+
+        // ---- ALL WRITES AFTER ----
+        // Build project update (fundedMoney, and backers if first contribution)
+        const projectUpdate = {
+          fundedMoney: increment(numericAmount),
+        };
+        if (isFirstContributionToProject) {
+          projectUpdate.backers = increment(1);
+        }
+
+        // Handle reward selection if a reward was chosen
+        if (selectedReward && selectedReward.type === 'limited') {
+          // Update the specific reward quantity in the rewardsList array
+          const rewardIndex = selectedReward.index;
+          const updatedRewardsList = [...(projectData.rewardsList || [])];
+          if (updatedRewardsList[rewardIndex]) {
+            const currentQuantity = updatedRewardsList[rewardIndex].quantity || 0;
+            const newQuantity = Math.max(0, currentQuantity - 1);
+            
+            updatedRewardsList[rewardIndex] = {
+              ...updatedRewardsList[rewardIndex],
+              quantity: newQuantity
+            };
+            projectUpdate.rewardsList = updatedRewardsList;
+          }
+        }
+
+        transaction.update(projectRef, projectUpdate);
+
+        // Update user record
+        transaction.update(userRef, updateData);
+
+        // Create transaction record
+        const transactionsCol = collection(db, "transactions");
+        const newTransRef = doc(transactionsCol);
+        transaction.set(newTransRef, {
+          equityBought: 0,
+          fundedMoney: numericAmount,
+          funding: true,
+          status: 'completed',
+          type: 'funding',
+          projectId: id,
+          transactionTime: serverTimestamp(),
+          userId: currentUser.uid,
+        });
+      });
+
+      // Fetch all previous funders for milestone notifications
+      if (milestonesReached.length > 0) {
+        try {
+          const transactionsQuery = query(
+            collection(db, 'transactions'),
+            where('projectId', '==', id),
+            where('funding', '==', true)
+          );
+          const transactionsSnap = await getDocs(transactionsQuery);
+          const funderIds = new Set();
+
+          transactionsSnap.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.userId && data.userId !== currentUser.uid) {
+              funderIds.add(data.userId);
+            }
+          });
+
+          allPreviousFunders = Array.from(funderIds);
+        } catch (err) {
+          console.error("Error fetching previous funders:", err);
+        }
+      }
+
+      // Notification to the project creator
+      try {
+        await addDoc(collection(db, "notifications"), {
+          userId: project.createdBy.uid,
+          projectId: project.id,
+          projectTitle: project.title,
+          message: `Your Project ${project.title} was funded ${numericAmount}$ by ${currentUser.displayName || "a supporter"}.`,
+          type: "Your_project_Funded",
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      } catch (notifErr) {
+        console.error("Failed to create notification:", notifErr);
+      }
+
+      // Notification to the supporter
+      try {
+        const supportMessage = selectedReward 
+          ? `You donated ${numericAmount}$ to ${project.title} and claimed the reward: ${selectedReward.title}!`
+          : `You donated ${numericAmount}$ to a project called ${project.title}.`;
+          
+        await addDoc(collection(db, "notifications"), {
+          userId: currentUser.uid,
+          projectId: project.id,
+          projectTitle: project.title,
+          message: supportMessage,
+          type: "You_Funded_a_project",
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      } catch (notifErr) {
+        console.error("Failed to create notification:", notifErr);
+      }
+
+      // Reward claimed notification if applicable
+      if (selectedReward) {
+        try {
+          await addDoc(collection(db, "notifications"), {
+            userId: currentUser.uid,
+            projectId: project.id,
+            projectTitle: project.title,
+            message: `🎁 Reward Claimed! You've successfully claimed "${selectedReward.title}" from ${project.title}. Check your rewards in your profile!`,
+            type: "Reward_Claimed",
+            read: false,
+            createdAt: Timestamp.now()
+          });
+        } catch (notifErr) {
+          console.error("Failed to create reward notification:", notifErr);
+        }
+      }
+
+      // Send milestone notifications if any milestones were reached
+      if (milestonesReached.length > 0) {
+        for (const milestone of milestonesReached) {
+          // Notify project creator about milestone completion
+          try {
+            await addDoc(collection(db, "notifications"), {
+              userId: project.createdBy.uid,
+              projectId: project.id,
+              projectTitle: project.title,
+              message: `🎉 Milestone Reached! Your project "${project.title}" has reached ${milestone.percentage}% funding ($${milestone.amount.toFixed(2)})! ${milestone.description}`,
+              type: "Milestone_Completed",
+              read: false,
+              createdAt: Timestamp.now()
+            });
+          } catch (notifErr) {
+            console.error("Failed to create milestone notification for creator:", notifErr);
+          }
+
+          // Notify all previous funders about milestone completion
+          for (const funderId of allPreviousFunders) {
+            try {
+              await addDoc(collection(db, "notifications"), {
+                userId: funderId,
+                projectId: project.id,
+                projectTitle: project.title,
+                message: `🎉 Great news! The project "${project.title}" you supported has reached ${milestone.percentage}% funding milestone! ${milestone.description}`,
+                type: "Milestone_Completed",
+                read: false,
+                createdAt: Timestamp.now()
+              });
+            } catch (notifErr) {
+              console.error(`Failed to create milestone notification for funder ${funderId}:`, notifErr);
+            }
+          }
+        }
+      }
+
+      // Refresh project data to show updated funding info
+      await refreshProjectData();
+
+    } catch (err) {
+      console.error("Error processing wallet support:", err);
+      throw err; // Re-throw to be handled by the calling function
+    }
+  };
 
   const getButtonContent = () => {
     if (processing) {
@@ -752,7 +1182,7 @@ const Support = () => {
       );
     }
     
-    return "Confirm Support";
+    return "Pay with Chapa";
   };
 
   const getButtonStyles = () => {
@@ -769,6 +1199,58 @@ const Support = () => {
     }
     
     return "bg-green-500 hover:bg-green-600 text-white";
+  };
+
+  const getWalletButtonContent = () => {
+    if (walletProcessing) {
+      return (
+        <div className="flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+          Processing...
+        </div>
+      );
+    }
+    
+    if (walletPaymentStatus === 'success') {
+      return (
+        <div className="flex items-center justify-center">
+          <CheckCircle className="w-5 h-5 mr-2" />
+          Payment Successful!
+        </div>
+      );
+    }
+    
+    if (walletPaymentStatus === 'error') {
+      return (
+        <div className="flex items-center justify-center">
+          <XCircle className="w-5 h-5 mr-2" />
+          Payment Failed
+        </div>
+      );
+    }
+    
+    return (
+      <div className="flex items-center justify-center">
+        <Wallet className="w-5 h-5 mr-2" />
+        Pay with Wallet
+      </div>
+    );
+  };
+
+  const getWalletButtonStyles = () => {
+    if (walletProcessing) {
+      return "bg-purple-500 text-white cursor-wait";
+    }
+    
+    if (walletPaymentStatus === 'success') {
+      return "bg-green-500 text-white";
+    }
+    
+    if (walletPaymentStatus === 'error') {
+      return "bg-red-500 text-white";
+    }
+    
+    return "bg-purple-500 hover:bg-purple-600 text-white";
   };
 
   if (loading)
@@ -1050,16 +1532,31 @@ const Support = () => {
                   </div>
                 )}
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={processing || paymentStatus === 'success'}
-                  className={`w-full py-4 rounded-2xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg ${
-                    getButtonStyles()
-                  }`}
-                >
-                  {getButtonContent()}
-                </button>
+                {/* Payment Buttons */}
+                <div className="flex gap-3">
+                  {/* Chapa Payment Button */}
+                  <button
+                    type="submit"
+                    disabled={processing || paymentStatus === 'success'}
+                    className={`flex-1 py-3 rounded-2xl font-bold text-base transition-all transform hover:scale-105 shadow-lg ${
+                      getButtonStyles()
+                    }`}
+                  >
+                    {getButtonContent()}
+                  </button>
+
+                  {/* Wallet Payment Button */}
+                  <button
+                    type="button"
+                    onClick={handleWalletPayment}
+                    disabled={walletProcessing || walletPaymentStatus === 'success'}
+                    className={`flex-1 py-3 rounded-2xl font-bold text-base transition-all transform hover:scale-105 shadow-lg ${
+                      getWalletButtonStyles()
+                    }`}
+                  >
+                    {getWalletButtonContent()}
+                  </button>
+                </div>
 
                 {/* Security Note */}
                 <div className="flex items-center justify-center gap-2 text-sm text-gray-500 pt-4">
