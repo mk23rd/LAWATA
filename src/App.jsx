@@ -46,6 +46,7 @@ function App() {
         <Route path="/create" element={<CreateProjectForm />} />
         <Route path="/community" element={<Community />} />
         <Route path="/about" element={<AboutNew />} />
+        <Route path="/browse" element={<Browse />} />
         <Route path="/projectDet/:id" element={<ProjectDetails />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/manage-profile" element={<ManageProfile />} />
