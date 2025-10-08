@@ -240,7 +240,7 @@ const Browse = () => {
                     <div className="mb-3">
                       <div className="w-full bg-gray-100 rounded-full h-1.5">
                         <div
-                          className="h-1.5 rounded-full bg-gray-900 transition-all"
+                          className="h-1.5 rounded-full bg-blue-500 transition-all"
                           style={{ width: `${fundedPercentage}%` }}
                         />
                       </div>
