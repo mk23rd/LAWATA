@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Upload, X, Loader, User, Phone, MapPin, Tag, FileText, Camera, Save, Eye } from "lucide-react";
 import { toast } from 'react-toastify';
 import SimplePhoneInput from '../components/ui/SimplePhoneInput';
+import CountryCitySelector from '../components/ui/CountryCitySelector';
 
 const ManageProfile = () => {
   const navigate = useNavigate();
@@ -85,6 +86,14 @@ const ManageProfile = () => {
   const handlePhoneChange = (phoneInfo) => {
     setPhoneData(phoneInfo);
     setFormData((prev) => ({ ...prev, phoneNumber: phoneInfo.number }));
+  };
+
+  const handleCountryChange = (country) => {
+    setFormData((prev) => ({ ...prev, country: country }));
+  };
+
+  const handleCityChange = (city) => {
+    setFormData((prev) => ({ ...prev, city: city }));
   };
 
   const handleFileSelect = (file) => {
@@ -372,24 +381,13 @@ const ManageProfile = () => {
                 <MapPin size={18} />
                 Location <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  placeholder="City"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-                />
-                <input
-                  type="text"
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  placeholder="Country"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-                />
-              </div>
+              <CountryCitySelector
+                selectedCountry={formData.country}
+                selectedCity={formData.city}
+                onCountryChange={handleCountryChange}
+                onCityChange={handleCityChange}
+                error={(!formData.country || !formData.city)}
+              />
             </div>
 
             {/* Preferred Categories */}
