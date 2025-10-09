@@ -54,9 +54,9 @@ const Home = () => {
     }
   }
 
-  const toggleDropdown = () => {
-    setShowDropdown(!showDropdown)
-  }
+  // const toggleDropdown = () => {
+  //   setShowDropdown(!showDropdown)
+  // }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -168,7 +168,7 @@ const scrollRight = () => {
         <div className='w-screen h-1/5 flex items-center pt-25'>
           <div className=' w-0/10 h-full lg:w-2/10'></div>
           <div className=' w-10/10 h-full flex items-center lg:justify-start justify-center'>
-                <p className='sm:text-3xl md:text-3xl lg:text-4xl text-2xl text-center lg:text-start pt-30 lg:pt-0 text-color-e font-medium lg:font-light'>Crowdfunding Meets Risk Intelligence - Where Every Investment <br /> is an Informed Decision</p>
+                <p className='sm:text-3xl md:text-3xl lg:text-4xl text-2xl text-center lg:text-start pt-30 lg:pt-0 text-color-e font-medium lg:font-light'>Crowdfunding Meets Risk Intelligence - Where Every Funding <br /> is an Informed Decision</p>
           </div>       
         </div>
       </div>
@@ -326,15 +326,15 @@ const scrollRight = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 relative z-10">
           <div className="text-center animate-fade-in-up animation-delay-300">
-            <div className="text-4xl md:text-6xl font-bold text-white mb-2">500+</div>
+            <div className="text-4xl md:text-6xl font-bold text-white mb-2">50+</div>
             <div className="text-gray-300 text-sm md:text-lg">Projects Funded</div>
           </div>
           <div className="text-center animate-fade-in-up animation-delay-400">
-            <div className="text-4xl md:text-6xl font-bold text-white mb-2">$2M+</div>
+            <div className="text-4xl md:text-6xl font-bold text-white mb-2">$1M+</div>
             <div className="text-gray-300 text-sm md:text-lg">Total Raised</div>
           </div>
           <div className="text-center animate-fade-in-up animation-delay-500">
-            <div className="text-4xl md:text-6xl font-bold text-white mb-2">10K+</div>
+            <div className="text-4xl md:text-6xl font-bold text-white mb-2">1K+</div>
             <div className="text-gray-300 text-sm md:text-lg">Active Users</div>
           </div>
           <div className="text-center animate-fade-in-up animation-delay-600">
@@ -350,7 +350,7 @@ const scrollRight = () => {
         
         <div className="relative z-10 text-center px-4 mb-16">
           <h2 className="text-4xl md:text-6xl font-bold text-white mb-8">
-            Why Choose <span className="text-yellow-300">LAWATA</span>?
+            Why Choose <span className="text-blue-500">LAWATA</span>?
           </h2>
           <p className="text-xl text-gray-200 max-w-3xl mx-auto">
             Experience the next generation of crowdfunding with AI-powered risk assessment
@@ -364,8 +364,8 @@ const scrollRight = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Smart Risk Analysis</h3>
-            <p className="text-gray-200">AI-powered algorithms analyze project viability and provide intelligent risk assessments</p>
+            <h3 className="text-3xl font-bold text-black mb-4">Smart Risk Analysis</h3>
+            <p className="text-black-200 text-xl">AI-powered algorithms analyze project viability and provide intelligent risk assessments</p>
           </div>
 
           <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 text-center hover:bg-opacity-20 transition-all duration-300 hover:scale-105">
@@ -374,8 +374,8 @@ const scrollRight = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Lightning Fast</h3>
-            <p className="text-gray-200">Get instant funding decisions and real-time project updates with our advanced platform</p>
+            <h3 className="text-3xl font-bold text-black mb-4">Lightning Fast</h3>
+            <p className="text-black-200 text-xl">Get instant funding decisions and real-time project updates with our advanced platform</p>
           </div>
 
           <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 text-center hover:bg-opacity-20 transition-all duration-300 hover:scale-105">
@@ -384,8 +384,8 @@ const scrollRight = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Secure & Trusted</h3>
-            <p className="text-gray-200">Bank-level security with blockchain technology ensuring safe and transparent transactions</p>
+            <h3 className="text-3xl font-bold text-black mb-4">Secure & Trusted</h3>
+            <p className="text-black-200 text-xl">Bank-level security with Firebase technology ensuring safe and transparent transactions</p>
           </div>
         </div>
       </div>
@@ -407,11 +407,11 @@ const scrollRight = () => {
                 <span className="text-white font-bold text-lg">A</span>
               </div>
               <div>
-                <h4 className="text-white font-semibold">Alex Chen</h4>
-                <p className="text-gray-300 text-sm">Project Creator</p>
+                <h4 className="text-black font-semibold text-2xl">Alex Chen</h4>
+                <p className="text-black-300 text-l">Project Creator</p>
               </div>
             </div>
-            <p className="text-gray-200 italic">"LAWATA helped me raise $50K for my tech startup in just 2 weeks. The risk analysis gave investors confidence in my project."</p>
+            <p className="text-black-100 italic text-xl">"LAWATA helped me raise $50K for my tech startup in just 2 weeks. The risk analysis gave investors confidence in my project."</p>
           </div>
 
           <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 hover:bg-opacity-20 transition-all duration-300">
@@ -420,11 +420,11 @@ const scrollRight = () => {
                 <span className="text-white font-bold text-lg">M</span>
               </div>
               <div>
-                <h4 className="text-white font-semibold">Maria Rodriguez</h4>
-                <p className="text-gray-300 text-sm">Investor</p>
+                <h4 className="text-black font-semibold text-2xl">Maria Rodriguez</h4>
+                <p className="text-black-300 text-l">Investor</p>
               </div>
             </div>
-            <p className="text-gray-200 italic">"The AI risk assessment is incredible. I've made 3 successful investments with 200% returns. LAWATA changed my investment game!"</p>
+            <p className="text-gray-800 italic text-xl">"The AI risk assessment is incredible. I've made 3 successful investments with 200% returns. LAWATA changed my investment game!"</p>
           </div>
 
           <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 hover:bg-opacity-20 transition-all duration-300">
@@ -433,11 +433,11 @@ const scrollRight = () => {
                 <span className="text-white font-bold text-lg">J</span>
               </div>
               <div>
-                <h4 className="text-white font-semibold">James Wilson</h4>
-                <p className="text-gray-300 text-sm">Entrepreneur</p>
+                <h4 className="text-black font-semibold text-2xl">James Wilson</h4>
+                <p className="text-black-300 text-l">Entrepreneur</p>
               </div>
             </div>
-            <p className="text-gray-200 italic">"The platform is intuitive and the community is amazing. I found both funding and mentorship here. Highly recommended!"</p>
+            <p className="text-gray-800 italic text-xl">"The platform is intuitive and the community is amazing. I found both funding and mentorship here. Highly recommended!"</p>
           </div>
         </div>
       </div>
@@ -448,7 +448,7 @@ const scrollRight = () => {
         
         <div className="relative z-10 text-center px-4">
           <h2 className="text-4xl md:text-7xl font-bold text-white mb-8">
-            Ready to <span className="text-black">Launch</span>?
+            Ready to <span className="text-blue-500">Launch</span>?
           </h2>
           <p className="text-xl md:text-2xl text-gray-100 mb-12 max-w-3xl mx-auto">
             Join thousands of creators and investors building the future together
@@ -463,6 +463,7 @@ const scrollRight = () => {
             </Link>
             <Link 
               to="/browse" 
+              className="bg-blue-600 text-white px-8 py-4 rounded-full text-xl font-bold hover:bg-blue-500 transition-all duration-300 hover:scale-105 shadow-2xl"
             >
               Explore Projects
             </Link>
