@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { Upload, X, Loader, User, Phone, MapPin, Tag, FileText, Camera, Save, Eye } from "lucide-react";
 import { toast } from 'react-toastify';
+import SimplePhoneInput from '../components/ui/SimplePhoneInput';
 
 const ManageProfile = () => {
   const navigate = useNavigate();
@@ -16,6 +17,13 @@ const ManageProfile = () => {
     city: "",
     country: "",
     preferredCategories: "",
+  });
+
+  const [phoneData, setPhoneData] = useState({
+    number: "",
+    isValid: false,
+    countryCode: "",
+    dialCode: ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -34,14 +42,26 @@ const ManageProfile = () => {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
+          const phoneNumber = data.phoneNumber || "";
+          
           setFormData({
-            phoneNumber: data.phoneNumber || "",
+            phoneNumber: phoneNumber,
             profileImageUrl: data.profileImageUrl || "",
             bio: data.bio || "",
             city: data.location?.city || "",
             country: data.location?.country || "",
             preferredCategories: (data.preferredCategories || []).join(", "),
           });
+          
+          // Initialize phone data if phone number exists
+          if (phoneNumber) {
+            setPhoneData({
+              number: phoneNumber,
+              isValid: true, // Assume existing numbers are valid
+              countryCode: "",
+              dialCode: ""
+            });
+          }
           
           if (data.profileImageUrl) {
             setFilePreview(data.profileImageUrl);
@@ -60,6 +80,11 @@ const ManageProfile = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePhoneChange = (phoneInfo) => {
+    setPhoneData(phoneInfo);
+    setFormData((prev) => ({ ...prev, phoneNumber: phoneInfo.number }));
   };
 
   const handleFileSelect = (file) => {
@@ -131,10 +156,8 @@ const ManageProfile = () => {
     // Phone number validation
     if (!formData.phoneNumber.trim()) {
       errors.push("Phone number is required");
-    } else if (!/^[\d\s\-\+\(\)]+$/.test(formData.phoneNumber)) {
-      errors.push("Phone number can only contain numbers, spaces, and symbols (+, -, (, ))");
-    } else if (formData.phoneNumber.replace(/\D/g, '').length < 10) {
-      errors.push("Phone number must be at least 10 digits");
+    } else if (!phoneData.isValid) {
+      errors.push("Please enter a valid phone number for the selected country");
     }
 
     // Bio validation
@@ -306,14 +329,22 @@ const ManageProfile = () => {
                 <Phone size={18} />
                 Phone Number <span className="text-red-500">*</span>
               </label>
-              <input
-                type="tel"
-                name="phoneNumber"
+              <SimplePhoneInput
                 value={formData.phoneNumber}
-                onChange={handleChange}
+                onChange={handlePhoneChange}
                 placeholder="Enter your phone number"
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+                error={formData.phoneNumber && !phoneData.isValid}
               />
+              {formData.phoneNumber && !phoneData.isValid && (
+                <p className="text-red-500 text-xs mt-1">
+                  Please enter a valid phone number for the selected country
+                </p>
+              )}
+              {phoneData.isValid && phoneData.countryCode && (
+                <p className="text-green-600 text-xs mt-1">
+                  Valid {phoneData.countryCode.toUpperCase()} phone number
+                </p>
+              )}
             </div>
 
             {/* Bio */}
