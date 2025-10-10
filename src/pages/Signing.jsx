@@ -102,6 +102,8 @@ const Signing = () => {
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetEmailSending, setResetEmailSending] = useState(false);
+  const [usernameChecking, setUsernameChecking] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState(null);
 
   // Form handlers
   const handleSignInChange = (e) => {
@@ -112,6 +114,38 @@ const Signing = () => {
   const handleSignUpChange = (e) => {
     const { name, value } = e.target;
     signupsetFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Reset username availability when username changes
+    if (name === 'username') {
+      setUsernameAvailable(null);
+    }
+  };
+
+  // Generate random username for Google sign-ups
+  const generateRandomUsername = async () => {
+    const adjectives = ['Happy', 'Lucky', 'Bright', 'Swift', 'Bold', 'Clever', 'Brave', 'Wise', 'Cool', 'Epic'];
+    const nouns = ['Tiger', 'Eagle', 'Dragon', 'Phoenix', 'Wolf', 'Lion', 'Falcon', 'Bear', 'Panda', 'Fox'];
+    
+    let username = '';
+    let isAvailable = false;
+    let attempts = 0;
+    
+    while (!isAvailable && attempts < 10) {
+      const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+      const noun = nouns[Math.floor(Math.random() * nouns.length)];
+      const randomNum = Math.floor(Math.random() * 1000);
+      username = `${adjective}${noun}${randomNum}`;
+      
+      // Check if username exists
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('username', '==', username.toLowerCase()));
+      const querySnapshot = await getDocs(q);
+      
+      isAvailable = querySnapshot.empty;
+      attempts++;
+    }
+    
+    return username;
   };
 
   // Check if email already exists in Firestore
@@ -131,28 +165,55 @@ const Signing = () => {
   const checkUsernameExists = async (username) => {
     try {
       const usersRef = collection(db, 'users');
-      // Check both original case and lowercase for compatibility with existing data
-      const q1 = query(usersRef, where('username', '==', username));
-      const q2 = query(usersRef, where('username', '==', username.toLowerCase()));
-      
-      const [querySnapshot1, querySnapshot2] = await Promise.all([
-        getDocs(q1),
-        getDocs(q2)
-      ]);
+      const q = query(usersRef, where('username', '==', username.toLowerCase()));
+      const querySnapshot = await getDocs(q);
       
       console.log('Username check:', { 
         username, 
         lowercase: username.toLowerCase(), 
-        found1: !querySnapshot1.empty, 
-        found2: !querySnapshot2.empty 
+        found: !querySnapshot.empty
       });
       
-      return !querySnapshot1.empty || !querySnapshot2.empty;
+      return !querySnapshot.empty;
     } catch (error) {
       console.error('Error checking username:', error);
       return false;
     }
   };
+
+  // Real-time username availability check
+  const checkUsernameAvailability = async (username) => {
+    if (!username.trim()) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    if (username.trim().length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    setUsernameChecking(true);
+    try {
+      const exists = await checkUsernameExists(username.trim());
+      setUsernameAvailable(!exists);
+    } catch (error) {
+      console.error('Error checking username:', error);
+    } finally {
+      setUsernameChecking(false);
+    }
+  };
+
+  // Debounced username check
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (signupformData.username) {
+        checkUsernameAvailability(signupformData.username);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [signupformData.username]);
 
   // Step 1: Validate form and show email verification
   const handleSignUp = async () => {
@@ -178,6 +239,30 @@ const Signing = () => {
       toast.error("Please enter a username", {
         position: "top-center",
         autoClose: 3000,
+      });
+      return;
+    }
+
+    if (signupformData.username.trim().length < 3) {
+      toast.error("Username must be at least 3 characters", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+      return;
+    }
+
+    if (signupformData.username.trim().length > 20) {
+      toast.error("Username must not exceed 20 characters", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(signupformData.username.trim())) {
+      toast.error("Username can only contain letters, numbers, and underscores", {
+        position: "top-center",
+        autoClose: 4000,
       });
       return;
     }
@@ -264,8 +349,8 @@ const Signing = () => {
       await setDoc(doc(db, "users", verifiedUser.uid), {
         uid: verifiedUser.uid,
         email: signupformData.email.toLowerCase(),
-        username: signupformData.username.toLowerCase(), // Store username in lowercase for consistency
-        displayName: signupformData.username, // Keep original case for display
+        username: signupformData.username.trim().toLowerCase(), // Store username in lowercase for consistency
+        displayName: signupformData.username.trim(), // Keep original case for display
         roles: ["visitor"], 
         walletBalance: 0,
         createdAt: new Date(),
@@ -420,21 +505,25 @@ const Signing = () => {
       const userDoc = await getDoc(doc(db, "users", user.uid));
       const existingData = userDoc.exists() ? userDoc.data() : {};
       
-      // Only update username and profileImageUrl if they don't exist or are empty
-      const username = existingData.username || user.displayName || user.email.split('@')[0];
+      // Generate random username for new Google users
+      let username = existingData.username;
+      if (!username) {
+        username = await generateRandomUsername();
+      }
+      
       const profileImageUrl = existingData.profileImageUrl || user.photoURL || "";
 
       // Prepare user data
       const userData = {
         uid: user.uid,
         email: user.email,
-        username: username,
+        username: username.toLowerCase(),
+        displayName: username,
         profileImageUrl: profileImageUrl,
         roles: existingData.roles || ["visitor"],
         walletBalance: existingData.walletBalance || 0,
         lastLogin: new Date(),
         createdAt: existingData.createdAt || new Date(),
-        displayName: user.displayName || "",
         emailVerified: user.emailVerified,
         providerData: user.providerData.map(provider => ({
           providerId: provider.providerId,
@@ -656,7 +745,30 @@ const Signing = () => {
             <div className='text-color-b w-3xl gap-10 flex flex-col items-center justify-center'>
               <div ref={signupLabel} className='font-titan pointer-events-none'>Sign Up</div>
               <form ref={signupInput} className='flex flex-col gap-2' onSubmit={handleSignUpSubmit} autoComplete="on">
-                <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="text" name="username" value={signupformData.username} onChange={handleSignUpChange} placeholder="User Name" autoComplete="username"/>
+                <div className="relative">
+                  <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="text" name="username" value={signupformData.username} onChange={handleSignUpChange} placeholder="User Name" autoComplete="username"/>
+                  {usernameChecking && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      <svg className="animate-spin h-5 w-5 text-color-b" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  )}
+                  {!usernameChecking && signupformData.username && signupformData.username.length >= 3 && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      {usernameAvailable === true ? (
+                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      ) : usernameAvailable === false ? (
+                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
                 <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="email" name="email" value={signupformData.email} onChange={handleSignUpChange} placeholder="Email" autoComplete="email"/>
                 <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="password" name="password" value={signupformData.password} onChange={handleSignUpChange} placeholder="Password" autoComplete="new-password"/>
                 <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="password" name="confirmPassword" value={signupformData.confirmPassword} onChange={handleSignUpChange} placeholder="Confirm Password" autoComplete="new-password"/>
