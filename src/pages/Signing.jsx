@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase/firebase-config';
 import { updateProfile, signOut } from "firebase/auth"; 
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import InputField from '../components/InputField';
 import Button from '../components/Button';
@@ -99,6 +99,9 @@ const Signing = () => {
   });
   const [rememberMeSignIn, setRememberMeSignIn] = useState(false);
   const [rememberMeSignUp, setRememberMeSignUp] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetEmailSending, setResetEmailSending] = useState(false);
 
   // Form handlers
   const handleSignInChange = (e) => {
@@ -548,6 +551,56 @@ const Signing = () => {
     setShowPreSignupVerification(false);
   };
 
+  // Forgot Password Handler
+  const handleForgotPassword = async () => {
+    if (!resetEmail.trim()) {
+      toast.error("Please enter your email address", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(resetEmail.trim())) {
+      toast.error("Please enter a valid email address", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+      return;
+    }
+
+    setResetEmailSending(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail.trim());
+      toast.success("Password reset email sent! Please check your inbox.", {
+        position: "top-center",
+        autoClose: 5000,
+      });
+      setShowForgotPasswordModal(false);
+      setResetEmail('');
+    } catch (error) {
+      console.error('Password reset error:', error);
+      let errorMessage = 'Failed to send password reset email';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many requests. Please try again later';
+      }
+      
+      toast.error(errorMessage, {
+        position: "top-center",
+        autoClose: 5000,
+      });
+    } finally {
+      setResetEmailSending(false);
+    }
+  };
+
   return (
     <div className='bg-white overflow-clip'>
       {/* Pre-Signup Email Verification Modal */}
@@ -642,7 +695,19 @@ const Signing = () => {
                     />
                     <span>Remember Me !</span>
                   </div>
-                  <p><a className='underline' href="#blank">Forgot password?</a></p>
+                  <p>
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowForgotPasswordModal(true);
+                        setResetEmail(signinformData.email);
+                      }} 
+                      className='underline hover:text-gray-300 transition-colors'
+                    >
+                      Forgot password?
+                    </button>
+                  </p>
                 </div>
               </form>
               <div ref={signinBtn} className='bg-color-e flex items-center rounded-xl text-2xl justify-center text-color-d w-40 h-10'>
@@ -661,6 +726,88 @@ const Signing = () => {
           <div ref={signinWid3} className='h-3/5 w-full'></div>
         </div>
       </main>
+
+      {/* Forgot Password Modal */}
+      {showForgotPasswordModal && (
+        <div 
+          className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setShowForgotPasswordModal(false);
+            setResetEmail('');
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 max-w-md w-full shadow-sm border border-gray-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Reset Password</h2>
+              <p className="text-sm text-gray-600">
+                Enter your email address and we'll send you a link to reset your password.
+              </p>
+            </div>
+            
+            {/* Email Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !resetEmailSending) {
+                    handleForgotPassword();
+                  }
+                }}
+                placeholder="your.email@example.com"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:border-color-b focus:ring-1 focus:ring-color-b transition-all text-sm outline-none"
+                autoFocus
+              />
+            </div>
+
+            {/* Info Message */}
+            <div className="mb-6 p-3 bg-gray-50 border border-gray-100 rounded-lg">
+              <p className="text-xs text-gray-600">
+                Check your spam folder if you don't receive the email within a few minutes.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleForgotPassword}
+                disabled={resetEmailSending}
+                className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resetEmailSending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                  </span>
+                ) : (
+                  'Send Reset Link'
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowForgotPasswordModal(false);
+                  setResetEmail('');
+                }}
+                disabled={resetEmailSending}
+                className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
