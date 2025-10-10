@@ -27,6 +27,31 @@ const Signing = () => {
   const initialPanel = location.state?.panel || "login"; // default to login if nothing passed
   const [activePanel, setActivePanel] = useState(initialPanel);
 
+  // Load remembered credentials on mount
+  useEffect(() => {
+    const rememberedSignInEmail = localStorage.getItem('rememberedSignInEmail');
+    const rememberedSignInPassword = localStorage.getItem('rememberedSignInPassword');
+    const rememberedSignUpEmail = localStorage.getItem('rememberedSignUpEmail');
+    const rememberedSignUpUsername = localStorage.getItem('rememberedSignUpUsername');
+    
+    if (rememberedSignInEmail && rememberedSignInPassword) {
+      signinsetFormData({
+        email: rememberedSignInEmail,
+        password: rememberedSignInPassword
+      });
+      setRememberMeSignIn(true);
+    }
+    
+    if (rememberedSignUpEmail && rememberedSignUpUsername) {
+      signupsetFormData(prev => ({
+        ...prev,
+        email: rememberedSignUpEmail,
+        username: rememberedSignUpUsername
+      }));
+      setRememberMeSignUp(true);
+    }
+  }, []);
+
   // Firebase auth listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -72,6 +97,8 @@ const Signing = () => {
   const [signupformData, signupsetFormData] = useState({
     email: '', password: '', confirmPassword: '', username: ''
   });
+  const [rememberMeSignIn, setRememberMeSignIn] = useState(false);
+  const [rememberMeSignUp, setRememberMeSignUp] = useState(false);
 
   // Form handlers
   const handleSignInChange = (e) => {
@@ -199,6 +226,15 @@ const Signing = () => {
         return;
       }
 
+      // Handle Remember Me for signup
+      if (rememberMeSignUp) {
+        localStorage.setItem('rememberedSignUpEmail', signupformData.email.trim());
+        localStorage.setItem('rememberedSignUpUsername', signupformData.username.trim());
+      } else {
+        localStorage.removeItem('rememberedSignUpEmail');
+        localStorage.removeItem('rememberedSignUpUsername');
+      }
+
       // Show email verification before creating account
       setShowPreSignupVerification(true);
     } catch (error) {
@@ -266,6 +302,15 @@ const Signing = () => {
       );
       const user = userCredential.user;
       
+      // Handle Remember Me
+      if (rememberMeSignIn) {
+        localStorage.setItem('rememberedSignInEmail', signinformData.email);
+        localStorage.setItem('rememberedSignInPassword', signinformData.password);
+      } else {
+        localStorage.removeItem('rememberedSignInEmail');
+        localStorage.removeItem('rememberedSignInPassword');
+      }
+      
       // Update last login
       await setDoc(doc(db, "users", user.uid), { 
         lastLogin: new Date(),
@@ -312,7 +357,7 @@ const Signing = () => {
       gsap.to(signupWid2.current, { height: "15%", duration: 0.6 });
       gsap.to(signupWid3.current, { height: "85%", duration: 0.6 });
 
-      gsap.to(signinLabel.current, { fontSize: "32px", y: 145, duration: 0.6 });
+      gsap.to(signinLabel.current, { fontSize: "32px", y: 200, paddingBottom: "20px", duration: 0.6 });
       gsap.to(signupLabel.current, { fontSize: "72px", y: 0, duration: 0.6 });
       gsap.to(signinInput.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
       gsap.to(signinBtn.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
@@ -330,7 +375,7 @@ const Signing = () => {
       gsap.to(signupWid2.current, { height: "15%", duration: 0.6 });
       gsap.to(signupWid3.current, { height: "15%", duration: 0.6 });
 
-      gsap.to(signinLabel.current, { fontSize: "72px", y: 0, duration: 0.6 });
+      gsap.to(signinLabel.current, { fontSize: "72px", y: 0, paddingBottom: "0px", duration: 0.6 });
       gsap.to(signupLabel.current, { fontSize: "32px", y: 175, duration: 0.6 });
       gsap.to(signinInput.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
       gsap.to(signinBtn.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
@@ -536,7 +581,7 @@ const Signing = () => {
         theme="light"
       />
       <nav className='w-screen h-1/5'> 
-        <div className='fixed flex w-screen pointer-events-none'> 
+        <div className='fixed flex w-screen pointer-events-none z-10'> 
           <div className='w-1/6 h-full flex justify-center items-center'> 
             <p className='font-titan text-6xl text-color-e relative top-5 pointer-events-auto'>LAWATA</p>
           </div> 
@@ -562,6 +607,15 @@ const Signing = () => {
                 <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="email" name="email" value={signupformData.email} onChange={handleSignUpChange} placeholder="Email" autoComplete="email"/>
                 <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="password" name="password" value={signupformData.password} onChange={handleSignUpChange} placeholder="Password" autoComplete="new-password"/>
                 <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="password" name="confirmPassword" value={signupformData.confirmPassword} onChange={handleSignUpChange} placeholder="Confirm Password" autoComplete="new-password"/>
+                <div className="flex gap-2 items-center text-xl">
+                  <input 
+                    className='w-4 h-4 rounded-sm' 
+                    type="checkbox" 
+                    checked={rememberMeSignUp}
+                    onChange={(e) => setRememberMeSignUp(e.target.checked)}
+                  />
+                  <span>Remember Me !</span>
+                </div>
               </form>
               <div ref={signupBtn} className='bg-color-b z-30 flex items-center justify-center rounded-xl text-2xl text-color-d w-40 h-10'>
                 <Button text="SIGN UP" callfunc={handleSignUp} loading={loading}/>
@@ -572,15 +626,20 @@ const Signing = () => {
 
         {/* Sign In Panel */}
         <div ref={signinRef} className='w-1/5 h-screen flex flex-col items-center' onClick={() => setActivePanel("login")}>
-          <div ref={signinWid1} className='h-1/5 w-full border-color-b border-b-6 border-l-6 font-titan text-5xl text-color-b flex items-center justify-center'>
-            <div className='text-color-e w-3xl gap-5 flex flex-col items-center justify-end-safe'>
+          <div ref={signinWid1} className='h-1/5 w-full border-color-b border-b-6 border-l-6 font-titan text-5xl text-color-b flex items-center justify-center relative z-20'>
+            <div className='text-color-e w-3xl gap-5 flex flex-col items-center justify-center'>
               <div ref={signinLabel} className='font-titan pointer-events-none'>Login</div>
               <form ref={signinInput} className='flex flex-col gap-5' onSubmit={handleSignInSubmit} autoComplete="on">
                 <InputField classname="border-b-3 text-2xl border-color-e w-100 outline-0" inputtype="email" name="email" value={signinformData.email} onChange={handleSignInChange} placeholder="Email" autoComplete="email"/>
                 <InputField classname="border-b-3 text-2xl border-color-e w-100 outline-0" inputtype="password" name="password" value={signinformData.password} onChange={handleSignInChange} placeholder="Password" autoComplete="current-password"/>
                 <div className="flex text-xl justify-between">
                   <div className="flex gap-2 items-center justify-center">
-                    <input className='w-4 h-4 rounded-sm' type="checkbox" />
+                    <input 
+                      className='w-4 h-4 rounded-sm' 
+                      type="checkbox" 
+                      checked={rememberMeSignIn}
+                      onChange={(e) => setRememberMeSignIn(e.target.checked)}
+                    />
                     <span>Remember Me !</span>
                   </div>
                   <p><a className='underline' href="#blank">Forgot password?</a></p>

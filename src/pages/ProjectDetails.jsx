@@ -303,10 +303,10 @@ const ProjectDetails = () => {
     try {
       if (timestamp.seconds !== undefined) {
         const date = new Date(timestamp.seconds * 1000);
-        return date.toLocaleDateString('en-US', {
+        return date.toLocaleDateString('en-CA', {
           year: 'numeric',
-          month: 'short',
-          day: 'numeric'
+          month: '2-digit',
+          day: '2-digit'
         });
       }
       return timestamp;
@@ -375,6 +375,8 @@ const ProjectDetails = () => {
   const isFullyFunded = fundedPercentage >= 100;
   const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
   const allImages = [project.imageUrl, ...(project.secondaryImages || [])].filter(Boolean);
+
+  console.log(project)
 
   return (
     <div className="min-h-screen bg-white">
@@ -714,12 +716,8 @@ const ProjectDetails = () => {
               {/* Project Details */}
               <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500">Duration</span>
-                  <span className="text-gray-900 font-medium">{project.duration || 0} months</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-500">Start Date</span>
-                  <span className="text-gray-900 font-medium">{project.projectStartDate || 'TBD'}</span>
+                  <span className="text-gray-900 font-medium">{formatFirebaseTimestamp(project.createdAt) || 'TBD'}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-gray-500">End Date</span>
