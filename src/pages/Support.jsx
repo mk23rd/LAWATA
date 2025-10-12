@@ -19,6 +19,7 @@ import { useAuth } from "../context/AuthContext";
 import { CheckCircle, XCircle, Loader2, Target, ChevronDown, Wallet, DollarSign, Users, Clock } from "lucide-react";
 import { toast } from "react-toastify";
 import RewardsList from "../components/project/RewardsList";
+const CHAPA_PUBLIC_KEY = import.meta.env.VITE_CHAPA_API_KEY;
 const sliderStyles = `
   input[type="range"] {
     -webkit-appearance: none;
@@ -95,11 +96,11 @@ const Support = () => {
   const [walletPaymentStatus, setWalletPaymentStatus] = useState(null); // 'success', 'error', or null
   const [showRewards, setShowRewards] = useState(false);
   const [selectedReward, setSelectedReward] = useState(null);
+  const [userData, setUserData] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, profileComplete } = useAuth();
   const paymentProcessedRef = useRef(false);
-
   const templates = [100, 500, 1000, 3000, 5000, 10000];
 
   // Fetch project details
@@ -139,6 +140,24 @@ const Support = () => {
   useEffect(() => {
     fetchProject();
   }, [id]);
+
+  // Fetch user data to get wallet balance
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (currentUser) {
+        try {
+          const userRef = doc(db, "users", currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setUserData(userSnap.data());
+          }
+        } catch (err) {
+          console.error("Error fetching user data:", err);
+        }
+      }
+    };
+    fetchUserData();
+  }, [currentUser]);
 
   // Handle payment return from Chapa
   useEffect(() => {
@@ -1266,27 +1285,26 @@ const Support = () => {
       <style>{sliderStyles}</style>
       <div className="min-h-screen bg-white p-6">
         <div className="max-w-7xl mx-auto">
-          
-          {/* Wallet Balance Display */}
-          {currentUser && (
-            <div className="flex justify-end mb-6">
-              <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200">
-                <div className="flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-600">Wallet Balance:</span>
-                  <span className="text-base font-bold text-gray-900">
-                    ${((currentUser?.walletBalance) || 0).toLocaleString()}
-                  </span>
+  
+          {/* Wallet Balance Card - Redesigned to follow design system */}
+          {currentUser && userData && (
+            <div className="mb-8 mt-20">
+              <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 mb-1">Available Balance</p>
+                    <p className="text-3xl font-bold text-gray-900">
+                      ETB {(userData.walletBalance || 0).toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">Use your wallet to support this project instantly</p>
+                  </div>
+                  <div className="p-3 bg-gray-100 rounded-lg">
+                    <Wallet className="w-6 h-6 text-gray-600" />
+                  </div>
                 </div>
               </div>
             </div>
           )}
-  
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Support Project</h1>
-            <p className="text-gray-600">Choose your support amount and help bring this project to life</p>
-          </div>
   
           {/* Main Content Card */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -1319,7 +1337,7 @@ const Support = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-500 mb-1">Raised</p>
-                        <p className="text-2xl font-bold text-gray-900">${(project.fundedMoney ?? 0).toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-gray-900">ETB {(project.fundedMoney ?? 0).toLocaleString()}</p>
                       </div>
                       <div className="p-2 bg-gray-100 rounded-lg">
                         <DollarSign className="w-5 h-5 text-gray-600" />
@@ -1330,7 +1348,7 @@ const Support = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-500 mb-1">Goal</p>
-                        <p className="text-2xl font-bold text-gray-900">${project.fundingGoal.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-gray-900">ETB {project.fundingGoal.toLocaleString()}</p>
                       </div>
                       <div className="p-2 bg-gray-100 rounded-lg">
                         <Target className="w-5 h-5 text-gray-600" />
@@ -1341,7 +1359,7 @@ const Support = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-500 mb-1">Remaining</p>
-                        <p className="text-xl font-bold text-gray-900">${remaining.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-gray-900">ETB {remaining.toLocaleString()}</p>
                       </div>
                       <div className="p-2 bg-gray-100 rounded-lg">
                         <Clock className="w-5 h-5 text-gray-600" />
@@ -1406,7 +1424,7 @@ const Support = () => {
                                   : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
                               }`}
                             >
-                              <div className="text-xs mb-1">$</div>
+                              <div className="text-xs mb-1">ETB</div>
                               <div className="text-base">{value.toLocaleString()}</div>
                             </button>
                           ))}
@@ -1419,7 +1437,7 @@ const Support = () => {
                           Or Enter Custom Amount
                         </label>
                         <div className="relative">
-                          <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg font-medium">$</span>
+                          <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg font-medium">ETB</span>
                           <input
                             type="number"
                             min="1"
@@ -1454,9 +1472,9 @@ const Support = () => {
                             }}
                           />
                           <div className="flex justify-between text-xs text-gray-500 mt-2">
-                            <span>$1</span>
-                            <span className="font-medium text-gray-900">${(amount || 0).toLocaleString()}</span>
-                            <span>${maxSliderAmount.toLocaleString()}</span>
+                            <span>ETB 1</span>
+                            <span className="font-medium text-gray-900">ETB {(amount || 0).toLocaleString()}</span>
+                            <span>ETB {maxSliderAmount.toLocaleString()}</span>
                           </div>
                         </div>
                       </div>
@@ -1473,7 +1491,12 @@ const Support = () => {
                             const remainingQuantity = reward.type === 'limited' ? (reward.quantity - (reward.claimed || 0)) : Infinity;
                             const isEligible = numericAmount >= rewardAmount && remainingQuantity > 0;
                             const isSelected = selectedReward?.index === index;
-                            
+                            const rewardClassName = isSelected
+                              ? "relative p-3 border rounded-lg transition-all cursor-pointer border-color-b bg-blue-50"
+                              : isEligible
+                              ? "relative p-3 border rounded-lg transition-all cursor-pointer border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
+                              : "relative p-3 border rounded-lg transition-all cursor-pointer border-gray-100 bg-gray-50 cursor-not-allowed opacity-60";
+
                             return (
                               <div
                                 key={index}
@@ -1482,13 +1505,7 @@ const Support = () => {
                                     setSelectedReward(isSelected ? null : { ...reward, index });
                                   }
                                 }}
-                                className={`relative p-3 border rounded-lg transition-all cursor-pointer ${
-                                  isSelected
-                                    ? "border-color-b bg-blue-50"
-                                    : isEligible
-                                    ? "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
-                                    : "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
-                                }`}
+                                className={rewardClassName}
                               >
                                 <div className="flex items-center gap-3">
                                   {reward.imageUrl && (
@@ -1512,7 +1529,7 @@ const Support = () => {
                                       <span className={`text-xs font-medium ${
                                         isEligible ? "text-green-600" : "text-gray-400"
                                       }`}>
-                                        ${rewardAmount.toLocaleString()}
+                                        ETB {rewardAmount.toLocaleString()}
                                       </span>
                                       {reward.type === 'limited' && (
                                         <span className={`text-xs ${
@@ -1522,23 +1539,17 @@ const Support = () => {
                                         </span>
                                       )}
                                     </div>
+                                    {!isEligible && (
+                                      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 rounded-lg">
+                                        <span className="text-xs text-gray-500 font-medium">
+                                          {numericAmount < rewardAmount
+                                            ? "Insufficient amount"
+                                            : "Out of Stock"}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
-                                  {isSelected && (
-                                    <div className="w-5 h-5 bg-color-b rounded-full flex items-center justify-center flex-shrink-0">
-                                      <CheckCircle className="w-3 h-3 text-white" />
-                                    </div>
-                                  )}
                                 </div>
-                                {!isEligible && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 rounded-lg">
-                                    <span className="text-xs text-gray-500 font-medium">
-                                      {numericAmount < rewardAmount
-                                        ? `Requires $${rewardAmount.toLocaleString()}`
-                                        : "Out of Stock"
-                                      }
-                                    </span>
-                                  </div>
-                                )}
                               </div>
                             );
                           })}
@@ -1565,15 +1576,7 @@ const Support = () => {
                       <button
                         type="submit"
                         disabled={processing || paymentStatus === 'success'}
-                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                          processing 
-                            ? "bg-gray-400 text-white cursor-wait"
-                            : paymentStatus === 'success'
-                            ? "bg-green-600 text-white"
-                            : paymentStatus === 'error'
-                            ? "bg-red-600 text-white"
-                            : "bg-gray-900 text-white hover:bg-gray-800"
-                        }`}
+                        className={"flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all " + getButtonStyles()}
                       >
                         {processing ? (
                           <div className="flex items-center justify-center">
