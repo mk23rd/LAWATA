@@ -159,6 +159,21 @@ const Support = () => {
     fetchUserData();
   }, [currentUser]);
 
+  // Function to refresh user data (for real-time balance updates)
+  const refreshUserData = async () => {
+    if (currentUser) {
+      try {
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setUserData(userSnap.data());
+        }
+      } catch (err) {
+        console.error("Error refreshing user data:", err);
+      }
+    }
+  };
+
   // Handle payment return from Chapa
   useEffect(() => {
     const handlePaymentReturn = async () => {
@@ -560,6 +575,9 @@ const Support = () => {
 
       // Refresh project data to show updated funding info
       await refreshProjectData();
+      
+      // Refresh user data to show updated balance
+      await refreshUserData();
 
       // Show success message
       const milestoneMessage = milestonesReached.length > 0 
@@ -569,14 +587,13 @@ const Support = () => {
         ? ` 🎁 Reward "${rewardToProcess.title}" claimed!`
         : '';
       toast.success(`🎉 You successfully supported with $${numericAmount}!${rewardMessage}${milestoneMessage}`, {
-        autoClose: 5000
+        autoClose: 3000
       });
 
+      // Redirect to project details page after successful payment
       setTimeout(() => {
-        setAmount("");
-        setSelectedReward(null); // Clear selected reward
-        setPaymentStatus(null);
-      }, 1500);
+        navigate(`/projectDet/${id}`);
+      }, 2000);
 
     } catch (err) {
       console.error("Error processing support:", err);
@@ -724,7 +741,7 @@ const Support = () => {
     document.body.removeChild(tempForm);
   };
 
-  // Handle wallet payment
+  // Handle wallet payment - Optimized for speed
   const handleWalletPayment = async (e) => {
     e.preventDefault();
 
@@ -749,6 +766,39 @@ const Support = () => {
     setWalletPaymentStatus(null);
 
     try {
+      // Single optimized transaction that handles everything
+      await processOptimizedWalletSupport(numericAmount, selectedReward);
+      
+      setWalletPaymentStatus('success');
+      toast.success(`🎉 Payment successful! $${numericAmount} deducted from your wallet.`, {
+        autoClose: 2000
+      });
+
+      // Redirect to project details page after successful payment
+      setTimeout(() => {
+        navigate(`/projectDet/${id}`);
+      }, 1500);
+
+    } catch (err) {
+      console.error("Error processing wallet payment:", err);
+      setWalletPaymentStatus('error');
+      toast.error(err.message || "Wallet payment failed. Please try again.");
+
+      setTimeout(() => {
+        setWalletPaymentStatus(null);
+      }, 1500);
+    } finally {
+      setWalletProcessing(false);
+    }
+  };
+
+  // Optimized wallet support - Single transaction for maximum speed
+  const processOptimizedWalletSupport = async (numericAmount, selectedReward) => {
+    try {
+      let milestonesReached = [];
+      let previousFundedMoney = 0;
+      let allPreviousFunders = [];
+
       await runTransaction(db, async (transaction) => {
         // ---- ALL READS FIRST ----
         const projectRef = doc(db, "projects", id);
@@ -818,41 +868,271 @@ const Support = () => {
           }
         }
 
+        // Store previous funded amount for milestone checking
+        previousFundedMoney = currentFunded;
+
+        // ---- PREPARE DATA LOCALLY ----
+        // Determine if this is the user's first time funding this project
+        const userFundings = userData.fundings ? { ...userData.fundings } : {};
+        const isFirstContributionToProject = !userData.fundings || !userData.fundings[id];
+
+        const nowISO = new Date().toISOString();
+
+        if (userFundings[id]) {
+          userFundings[id] = {
+            ...userFundings[id],
+            contributions: [
+              ...(userFundings[id].contributions || []),
+              { amount: numericAmount, date: nowISO },
+            ],
+            totalFundedPerProject:
+              (userFundings[id].totalFundedPerProject ?? 0) + numericAmount,
+          };
+        } else {
+          userFundings[id] = {
+            projectTitle: projectData.title || "Untitled",
+            totalFundedPerProject: numericAmount,
+            contributions: [{ amount: numericAmount, date: nowISO }],
+          };
+        }
+
+        const newTotalFunded = (userData.totalFunded ?? 0) + numericAmount;
+        const newFundingCounter = (userData.fundingCounter ?? 0) + 1;
+
+        // Check if user should get Investor role
+        const shouldAddInvestorRole =
+          (newFundingCounter >= 100 || newTotalFunded >= 750000) &&
+          !userData.roles?.includes("Investor");
+
+        // Prepare update data for user
+        const updateData = {
+          walletBalance: increment(-numericAmount), // Deduct from wallet
+          totalFunded: newTotalFunded,
+          fundingCounter: newFundingCounter,
+          fundings: userFundings,
+        };
+
+        // Add reward to user's myRewards if a reward was selected
+        if (selectedReward) {
+          const rewardData = {
+            rewardId: selectedReward.id || `reward_${selectedReward.index}_${Date.now()}`,
+            description: selectedReward.description,
+            imageUrl: selectedReward.imageUrl,
+            title: selectedReward.title,
+            type: selectedReward.type,
+            projectId: id,
+            projectTitle: projectData.title,
+            claimedAt: Timestamp.now(),
+            amount: selectedReward.amount
+          };
+
+          // Initialize myRewards array if it doesn't exist, then add the new reward
+          updateData.myRewards = arrayUnion(rewardData);
+        }
+
+        // Add Investor role if conditions are met
+        if (shouldAddInvestorRole) {
+          updateData.roles = arrayUnion("Investor", "Funder");
+        } else if (!userData.roles?.includes("Funder")) {
+          // Add Funder role if not already present
+          updateData.roles = arrayUnion("Funder");
+        }
+
+        // Check for milestone completion
+        const newFundedMoney = currentFunded + numericAmount;
+        const milestones = projectData.milestones || {};
+
+        // Check which milestones are reached
+        [25, 50, 75, 100].forEach(percentage => {
+          if (milestones[percentage]) {
+            const milestoneAmount = (fundingGoal * percentage) / 100;
+            const previousPercentage = (previousFundedMoney / fundingGoal) * 100;
+            const newPercentage = (newFundedMoney / fundingGoal) * 100;
+
+            // If this milestone was just crossed
+            if (previousPercentage < percentage && newPercentage >= percentage) {
+              milestonesReached.push({
+                percentage,
+                description: milestones[percentage].description,
+                amount: milestoneAmount
+              });
+
+              // Update milestone status to completed
+              transaction.update(projectRef, {
+                [`milestones.${percentage}.status`]: 'completed',
+                [`milestones.${percentage}.completedAt`]: serverTimestamp()
+              });
+            }
+          }
+        });
+
         // ---- ALL WRITES AFTER ----
-        // Update user's wallet balance
-        transaction.update(userRef, {
-          walletBalance: increment(-numericAmount)
+        // Build project update (fundedMoney, and backers if first contribution)
+        const projectUpdate = {
+          fundedMoney: increment(numericAmount),
+        };
+        if (isFirstContributionToProject) {
+          projectUpdate.backers = increment(1);
+        }
+
+        // Handle reward selection if a reward was chosen
+        if (selectedReward && selectedReward.type === 'limited') {
+          // Update the specific reward quantity in the rewardsList array
+          const rewardIndex = selectedReward.index;
+          const updatedRewardsList = [...(projectData.rewardsList || [])];
+          if (updatedRewardsList[rewardIndex]) {
+            const currentQuantity = updatedRewardsList[rewardIndex].quantity || 0;
+            const newQuantity = Math.max(0, currentQuantity - 1);
+            
+            updatedRewardsList[rewardIndex] = {
+              ...updatedRewardsList[rewardIndex],
+              quantity: newQuantity
+            };
+            projectUpdate.rewardsList = updatedRewardsList;
+          }
+        }
+
+        transaction.update(projectRef, projectUpdate);
+        transaction.update(userRef, updateData);
+
+        // Create transaction record
+        const transactionsCol = collection(db, "transactions");
+        const newTransRef = doc(transactionsCol);
+        transaction.set(newTransRef, {
+          equityBought: 0,
+          fundedMoney: numericAmount,
+          funding: true,
+          status: 'completed',
+          type: 'funding',
+          projectId: id,
+          transactionTime: serverTimestamp(),
+          userId: currentUser.uid,
         });
       });
 
-      // Process the support transaction (similar to processSupport but without affecting main button states)
-      await processWalletSupport(numericAmount, selectedReward);
-      
-      setWalletPaymentStatus('success');
-      toast.success(`🎉 Payment successful! $${numericAmount} deducted from your wallet.`, {
-        autoClose: 3000
-      });
+      // Process notifications in parallel for better performance
+      const notificationPromises = [];
 
-      setTimeout(() => {
-        setAmount("");
-        setSelectedReward(null);
-        setWalletPaymentStatus(null);
-      }, 1500);
+      // Notification to the project creator
+      notificationPromises.push(
+        addDoc(collection(db, "notifications"), {
+          userId: project.createdBy.uid,
+          projectId: project.id,
+          projectTitle: project.title,
+          message: `Your Project ${project.title} was funded ${numericAmount}$ by ${currentUser.displayName || "a supporter"}.`,
+          type: "Your_project_Funded",
+          read: false,
+          createdAt: Timestamp.now()
+        }).catch(err => console.error("Failed to create creator notification:", err))
+      );
+
+      // Notification to the supporter
+      const supportMessage = selectedReward 
+        ? `You donated ${numericAmount}$ to ${project.title} and claimed the reward: ${selectedReward.title}!`
+        : `You donated ${numericAmount}$ to a project called ${project.title}.`;
+        
+      notificationPromises.push(
+        addDoc(collection(db, "notifications"), {
+          userId: currentUser.uid,
+          projectId: project.id,
+          projectTitle: project.title,
+          message: supportMessage,
+          type: "You_Funded_a_project",
+          read: false,
+          createdAt: Timestamp.now()
+        }).catch(err => console.error("Failed to create supporter notification:", err))
+      );
+
+      // Reward claimed notification if applicable
+      if (selectedReward) {
+        notificationPromises.push(
+          addDoc(collection(db, "notifications"), {
+            userId: currentUser.uid,
+            projectId: project.id,
+            projectTitle: project.title,
+            message: `🎁 Reward Claimed! You've successfully claimed "${selectedReward.title}" from ${project.title}. Check your rewards in your profile!`,
+            type: "Reward_Claimed",
+            read: false,
+            createdAt: Timestamp.now()
+          }).catch(err => console.error("Failed to create reward notification:", err))
+        );
+      }
+
+      // Send milestone notifications if any milestones were reached
+      if (milestonesReached.length > 0) {
+        // Fetch previous funders for milestone notifications
+        try {
+          const transactionsQuery = query(
+            collection(db, 'transactions'),
+            where('projectId', '==', id),
+            where('funding', '==', true)
+          );
+          const transactionsSnap = await getDocs(transactionsQuery);
+          const funderIds = new Set();
+
+          transactionsSnap.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.userId && data.userId !== currentUser.uid) {
+              funderIds.add(data.userId);
+            }
+          });
+
+          allPreviousFunders = Array.from(funderIds);
+        } catch (err) {
+          console.error("Error fetching previous funders:", err);
+        }
+
+        // Create milestone notifications in parallel
+        for (const milestone of milestonesReached) {
+          // Notify project creator about milestone completion
+          notificationPromises.push(
+            addDoc(collection(db, "notifications"), {
+              userId: project.createdBy.uid,
+              projectId: project.id,
+              projectTitle: project.title,
+              message: `🎉 Milestone Reached! Your project "${project.title}" has reached ${milestone.percentage}% funding ($${milestone.amount.toFixed(2)})! ${milestone.description}`,
+              type: "Milestone_Completed",
+              read: false,
+              createdAt: Timestamp.now()
+            }).catch(err => console.error("Failed to create milestone notification for creator:", err))
+          );
+
+          // Notify all previous funders about milestone completion
+          for (const funderId of allPreviousFunders) {
+            notificationPromises.push(
+              addDoc(collection(db, "notifications"), {
+                userId: funderId,
+                projectId: project.id,
+                projectTitle: project.title,
+                message: `🎉 Great news! The project "${project.title}" you supported has reached ${milestone.percentage}% funding milestone! ${milestone.description}`,
+                type: "Milestone_Completed",
+                read: false,
+                createdAt: Timestamp.now()
+              }).catch(err => console.error(`Failed to create milestone notification for funder ${funderId}:`, err))
+            );
+          }
+        }
+      }
+
+      // Execute all notifications in parallel
+      await Promise.allSettled(notificationPromises);
+
+      // Update local state immediately for better UX
+      setUserData(prev => ({
+        ...prev,
+        walletBalance: (prev?.walletBalance || 0) - numericAmount
+      }));
+
+      // Refresh project data in background
+      refreshProjectData().catch(err => console.error("Error refreshing project data:", err));
 
     } catch (err) {
-      console.error("Error processing wallet payment:", err);
-      setWalletPaymentStatus('error');
-      toast.error(err.message || "Wallet payment failed. Please try again.");
-
-      setTimeout(() => {
-        setWalletPaymentStatus(null);
-      }, 1500);
-    } finally {
-      setWalletProcessing(false);
+      console.error("Error processing optimized wallet support:", err);
+      throw err; // Re-throw to be handled by the calling function
     }
   };
 
-  // Process wallet support transaction (similar to processSupport but independent)
+  // Process wallet support transaction (similar to processSupport but independent) - DEPRECATED
   const processWalletSupport = async (numericAmount, selectedReward) => {
     try {
       // Store milestone data before transaction
@@ -1153,104 +1433,6 @@ const Support = () => {
     }
   };
 
-  const getButtonContent = () => {
-    if (processing) {
-      return (
-        <div className="flex items-center justify-center">
-          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          Processing...
-        </div>
-      );
-    }
-    
-    if (paymentStatus === 'success') {
-      return (
-        <div className="flex items-center justify-center">
-          <CheckCircle className="w-5 h-5 mr-2" />
-          Payment Successful!
-        </div>
-      );
-    }
-    
-    if (paymentStatus === 'error') {
-      return (
-        <div className="flex items-center justify-center">
-          <XCircle className="w-5 h-5 mr-2" />
-          Payment Failed
-        </div>
-      );
-    }
-    
-    return "Pay with Chapa";
-  };
-
-  const getButtonStyles = () => {
-    if (processing) {
-      return "bg-blue-500 text-white cursor-wait";
-    }
-    
-    if (paymentStatus === 'success') {
-      return "bg-green-500 text-white";
-    }
-    
-    if (paymentStatus === 'error') {
-      return "bg-red-500 text-white";
-    }
-    
-    return "bg-green-500 hover:bg-green-600 text-white";
-  };
-
-  const getWalletButtonContent = () => {
-    if (walletProcessing) {
-      return (
-        <div className="flex items-center justify-center">
-          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          Processing...
-        </div>
-      );
-    }
-    
-    if (walletPaymentStatus === 'success') {
-      return (
-        <div className="flex items-center justify-center">
-          <CheckCircle className="w-5 h-5 mr-2" />
-          Payment Successful!
-        </div>
-      );
-    }
-    
-    if (walletPaymentStatus === 'error') {
-      return (
-        <div className="flex items-center justify-center">
-          <XCircle className="w-5 h-5 mr-2" />
-          Payment Failed
-        </div>
-      );
-    }
-    
-    return (
-      <div className="flex items-center justify-center">
-        <Wallet className="w-5 h-5 mr-2" />
-        Pay with Wallet
-      </div>
-    );
-  };
-
-  const getWalletButtonStyles = () => {
-    if (walletProcessing) {
-      return "bg-purple-500 text-white cursor-wait";
-    }
-    
-    if (walletPaymentStatus === 'success') {
-      return "bg-green-500 text-white";
-    }
-    
-    if (walletPaymentStatus === 'error') {
-      return "bg-red-500 text-white";
-    }
-    
-    return "bg-purple-500 hover:bg-purple-600 text-white";
-  };
 
   if (loading)
     return (
@@ -1302,6 +1484,27 @@ const Support = () => {
                     <Wallet className="w-6 h-6 text-gray-600" />
                   </div>
                 </div>
+                
+                {/* Balance Status Indicator */}
+                {amount && parseFloat(amount) > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    {userData.walletBalance >= parseFloat(amount) ? (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CheckCircle className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          Sufficient balance for ETB {parseFloat(amount).toLocaleString()}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-red-600">
+                        <XCircle className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          Insufficient balance. Need ETB {(parseFloat(amount) - userData.walletBalance).toLocaleString()} more
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1421,7 +1624,7 @@ const Support = () => {
                                   ? "bg-gray-900 text-white"
                                   : processing
                                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                               }`}
                             >
                               <div className="text-xs mb-1">ETB</div>
@@ -1492,9 +1695,9 @@ const Support = () => {
                             const isEligible = numericAmount >= rewardAmount && remainingQuantity > 0;
                             const isSelected = selectedReward?.index === index;
                             const rewardClassName = isSelected
-                              ? "relative p-3 border rounded-lg transition-all cursor-pointer border-color-b bg-blue-50"
+                              ? "relative p-3 border rounded-lg transition-all cursor-pointer border-gray-900 bg-gray-100"
                               : isEligible
-                              ? "relative p-3 border rounded-lg transition-all cursor-pointer border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
+                              ? "relative p-3 border rounded-lg transition-all cursor-pointer border-gray-200 hover:border-gray-900 bg-white"
                               : "relative p-3 border rounded-lg transition-all cursor-pointer border-gray-100 bg-gray-50 cursor-not-allowed opacity-60";
 
                             return (
@@ -1555,14 +1758,14 @@ const Support = () => {
                           })}
                         </div>
                         {selectedReward && (
-                          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="mt-3 p-3 bg-gray-100 border border-gray-200 rounded-lg">
                             <div className="flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm font-medium text-blue-900">
+                              <CheckCircle className="w-4 h-4 text-gray-600" />
+                              <span className="text-sm font-medium text-gray-900">
                                 Selected: {selectedReward.title}
                               </span>
                             </div>
-                            <p className="text-xs text-blue-700 mt-1">
+                            <p className="text-xs text-gray-600 mt-1">
                               {selectedReward.description}
                             </p>
                           </div>
@@ -1572,11 +1775,15 @@ const Support = () => {
   
                     {/* Payment Buttons */}
                     <div className="flex gap-3">
-                      {/* Chapa Payment Button */}
+                      {/* Chapa Payment Button - Primary Button */}
                       <button
                         type="submit"
                         disabled={processing || paymentStatus === 'success'}
-                        className={"flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all " + getButtonStyles()}
+                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                          processing || paymentStatus === 'success'
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "bg-gray-900 text-white hover:bg-gray-800"
+                        }`}
                       >
                         {processing ? (
                           <div className="flex items-center justify-center">
@@ -1598,19 +1805,15 @@ const Support = () => {
                         )}
                       </button>
 
-                      {/* Wallet Payment Button */}
+                      {/* Wallet Payment Button - Secondary Button */}
                       <button
                         type="button"
                         onClick={handleWalletPayment}
-                        disabled={walletProcessing || walletPaymentStatus === 'success'}
+                        disabled={walletProcessing || walletPaymentStatus === 'success' || !userData?.walletBalance || userData.walletBalance < parseFloat(amount)}
                         className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                          walletProcessing 
-                            ? "bg-purple-400 text-white cursor-wait"
-                            : walletPaymentStatus === 'success'
-                            ? "bg-green-600 text-white"
-                            : walletPaymentStatus === 'error'
-                            ? "bg-red-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
+                          walletProcessing || walletPaymentStatus === 'success' || !userData?.walletBalance || userData.walletBalance < parseFloat(amount)
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
                       >
                         {walletProcessing ? (
@@ -1627,6 +1830,11 @@ const Support = () => {
                           <div className="flex items-center justify-center">
                             <XCircle className="w-4 h-4 mr-2" />
                             Payment Failed
+                          </div>
+                        ) : !userData?.walletBalance || userData.walletBalance < parseFloat(amount) ? (
+                          <div className="flex items-center justify-center">
+                            <Wallet className="w-4 h-4 mr-2" />
+                            Insufficient Balance
                           </div>
                         ) : (
                           <div className="flex items-center justify-center">
@@ -1651,7 +1859,7 @@ const Support = () => {
           {/* Rewards Section */}
           {project.rewardsList && project.rewardsList.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-900 transition-all duration-200">
                 <button
                   onClick={() => setShowRewards(!showRewards)}
                   className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
