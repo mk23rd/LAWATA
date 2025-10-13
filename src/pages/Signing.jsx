@@ -438,12 +438,12 @@ const Signing = () => {
       gsap.to(signupRef.current, { width: "90%", duration: 0.6, ease: "power2.out" });
       gsap.to(signinRef.current, { width: "10%", duration: 0.6, ease: "power2.out" });
 
-      gsap.to(signinWid1.current, { height: "15%", duration: 0.6 });
-      gsap.to(signinWid2.current, { height: "15%", duration: 0.6 });
-      gsap.to(signinWid3.current, { height: "70%", duration: 0.6 });
+      gsap.to(signinWid1.current, { height: "25%", duration: 0.6 });
+      gsap.to(signinWid2.current, { height: "10%", duration: 0.6 });
+      gsap.to(signinWid3.current, { height: "65%", duration: 0.6 });
       gsap.to(signupWid1.current, { height: "0%", duration: 0.6 });
-      gsap.to(signupWid2.current, { height: "15%", duration: 0.6 });
-      gsap.to(signupWid3.current, { height: "85%", duration: 0.6 });
+      gsap.to(signupWid2.current, { height: "25%", duration: 0.6 });
+      gsap.to(signupWid3.current, { height: "75%", duration: 0.6 });
 
       gsap.to(signinLabel.current, { fontSize: "32px", y: 200, paddingBottom: "20px", duration: 0.6 });
       gsap.to(signupLabel.current, { fontSize: "72px", y: 0, duration: 0.6 });
@@ -464,7 +464,7 @@ const Signing = () => {
       gsap.to(signupWid3.current, { height: "15%", duration: 0.6 });
 
       gsap.to(signinLabel.current, { fontSize: "72px", y: 0, paddingBottom: "0px", duration: 0.6 });
-      gsap.to(signupLabel.current, { fontSize: "32px", y: 175, duration: 0.6 });
+      gsap.to(signupLabel.current, { fontSize: "32px", y: 190, duration: 0.6 });
       gsap.to(signinInput.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
       gsap.to(signinBtn.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
       gsap.to(googleinBtn.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
@@ -722,19 +722,6 @@ const Signing = () => {
         pauseOnHover
         theme="light"
       />
-      <nav className='w-screen h-1/5'> 
-        <div className='fixed flex w-screen pointer-events-none z-10'> 
-          <div className='w-1/6 h-full flex justify-center items-center'> 
-            <p className='font-titan text-6xl text-color-e relative top-5 pointer-events-auto'>LAWATA</p>
-          </div> 
-
-          <div className='w-4/6 h-full flex justify-center items-center'> 
-          </div> 
-
-          <div className='w-1/6 h-full flex justify-center items-center'> 
-          </div> 
-        </div> 
-      </nav>
       
       <main className='w-screen flex'>
         {/* Sign Up Panel */}
@@ -772,7 +759,7 @@ const Signing = () => {
                 <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="email" name="email" value={signupformData.email} onChange={handleSignUpChange} placeholder="Email" autoComplete="email"/>
                 <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="password" name="password" value={signupformData.password} onChange={handleSignUpChange} placeholder="Password" autoComplete="new-password"/>
                 <InputField classname="border-b-3 text-2xl border-color-b w-100 outline-0" inputtype="password" name="confirmPassword" value={signupformData.confirmPassword} onChange={handleSignUpChange} placeholder="Confirm Password" autoComplete="new-password"/>
-                <div className="flex gap-2 items-center text-xl">
+                <div className="flex gap-2 items-center opacity-85 text-2xl relative top-5">
                   <input 
                     className='w-4 h-4 rounded-sm' 
                     type="checkbox" 
@@ -782,7 +769,7 @@ const Signing = () => {
                   <span>Remember Me !</span>
                 </div>
               </form>
-              <div ref={signupBtn} className='bg-color-b z-30 flex items-center justify-center rounded-xl text-2xl text-color-d w-40 h-10'>
+              <div ref={signupBtn}>
                 <Button text="SIGN UP" callfunc={handleSignUp} loading={loading}/>
               </div>
             </div>
@@ -797,7 +784,7 @@ const Signing = () => {
               <form ref={signinInput} className='flex flex-col gap-5' onSubmit={handleSignInSubmit} autoComplete="on">
                 <InputField classname="border-b-3 text-2xl border-color-e w-100 outline-0" inputtype="email" name="email" value={signinformData.email} onChange={handleSignInChange} placeholder="Email" autoComplete="email"/>
                 <InputField classname="border-b-3 text-2xl border-color-e w-100 outline-0" inputtype="password" name="password" value={signinformData.password} onChange={handleSignInChange} placeholder="Password" autoComplete="current-password"/>
-                <div className="flex text-xl justify-between">
+                <div className="flex text-xl justify-between relative top-5">
                   <div className="flex gap-2 items-center justify-center">
                     <input 
                       className='w-4 h-4 rounded-sm' 
@@ -805,7 +792,7 @@ const Signing = () => {
                       checked={rememberMeSignIn}
                       onChange={(e) => setRememberMeSignIn(e.target.checked)}
                     />
-                    <span>Remember Me !</span>
+                    <span className='text-2xl opacity-70'>Remember Me !</span>
                   </div>
                   <p>
                     <button 
@@ -815,18 +802,19 @@ const Signing = () => {
                         setShowForgotPasswordModal(true);
                         setResetEmail(signinformData.email);
                       }} 
-                      className='underline hover:text-gray-300 transition-colors'
+                      className='underline hover:text-color-b transition-colors text-2xl opacity-70'
                     >
                       Forgot password?
                     </button>
                   </p>
                 </div>
               </form>
-              <div ref={signinBtn} className='bg-color-e flex items-center rounded-xl text-2xl justify-center text-color-d w-40 h-10'>
+              
+              <div ref={signinBtn} className='relative top-10'>
                 <Button text="LOG IN" callfunc={handleSignIn} loading={loading}/>
               </div>
 
-              <div ref={googleinBtn} className='bg-color-b flex items-center rounded-xl text-2xl justify-center text-color-d w-60 h-10 cursor-pointer'
+              <div ref={googleinBtn} className='bg-color-b flex items-center rounded-xl text-2xl justify-center text-color-d w-60 h-10 cursor-pointer relative top-10'
                   onClick={handleGoogleSignIn}>
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
                     alt="Google" className="w-6 h-6 mr-2"/>
