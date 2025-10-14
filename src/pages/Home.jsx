@@ -15,6 +15,9 @@ import Navbar from '../components/NavBar';
 import { Draggable } from "gsap/Draggable";
 
 import Arrow from "../assets/images/arrow-left.svg"
+import { FiChevronUp, FiChevronRight } from "react-icons/fi";
+import ImageLeft from "../assets/images/Home/pexels-olly-3771045.jpg"
+import ImageRight from "../assets/images/Home/pexels-diohasbi-3280130.jpg"
 
 
 // Landing page showcasing the brand hero, featured projects, and marketing sections
@@ -27,6 +30,37 @@ const Home = () => {
   const [freshProjects, setFreshProjects] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
+
+  const statsContainerRef = useRef(null);
+  const barRefs = useRef([]);
+  const textRefs = useRef([]);
+
+  const setBarRef = (el, i) => (barRefs.current[i] = el);
+  const setTextRef = (el, i) => (textRefs.current[i] = el);
+
+  // place this INSIDE the Home component function, before the useEffect that uses it
+const stats = [
+  { id: "projects", display: "50+", label: "Projects Funded", percent: 40, numeric: 20, suffix: "+" },
+  
+  {
+    id: "raised",
+    display: "$1M+",
+    label: "Total Raised",
+    percent: 85,
+    numeric: 1000000,
+    format: (n) => {
+      if (n >= 1000000) return `$${(n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1)}M`;
+      if (n >= 1000) return `$${Math.round(n / 1000)}K`;
+      return `$${Math.round(n)}`;
+    },
+    suffix: "+",
+  },
+
+  { id: "users", display: "1K+", label: "Active Users", percent: 60, numeric: 1000, format: (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : `${Math.round(n)}`), suffix: "+" },
+
+  { id: "rate", display: "95%", label: "Success Rate", percent: 48, numeric: 48, suffix: "%" },
+];
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -130,6 +164,66 @@ const scrollRight = () => {
   freshContainerRef.current.scrollBy({ left: 300, behavior: "smooth" });
 };
 
+useEffect(() => {
+  if (!statsContainerRef.current) return;
+
+  // initial zero state
+  barRefs.current.forEach((el) => el && gsap.set(el, { height: "0%" }));
+  textRefs.current.forEach((el, i) => {
+    const s = stats[i];
+    if (!el) return;
+    if (s.suffix === "%") el.innerText = "0%";
+    else if (s.format) el.innerText = s.format(0) + (s.suffix || "");
+    else el.innerText = "0" + (s.suffix || "");
+  });
+
+  const tl = gsap.timeline({
+    scrollTrigger: {
+      trigger: statsContainerRef.current,
+      start: "top 80%",
+      toggleActions: "play none none none",
+      // markers: true, // enable to debug
+    },
+  });
+
+  stats.forEach((s, i) => {
+    // bar grow
+    tl.to(
+      barRefs.current[i],
+      { height: `${s.percent}%`, duration: 1.2, ease: "power3.out" },
+      i * 0.12
+    );
+
+    // count-up
+    const obj = { val: 0 };
+    tl.to(
+      obj,
+      {
+        val: s.numeric,
+        duration: 1.2,
+        ease: "power1.out",
+        onUpdate: () => {
+          const el = textRefs.current[i];
+          if (!el) return;
+          if (s.suffix === "%") el.innerText = Math.round(obj.val) + "%";
+          else if (s.format) el.innerText = s.format(obj.val) + (s.suffix || "");
+          else el.innerText = Math.round(obj.val) + (s.suffix || "");
+        },
+      },
+      i * 0.12
+    );
+  });
+
+  return () => {
+    try {
+      if (tl && tl.scrollTrigger) tl.scrollTrigger.kill();
+      tl.kill();
+    } catch (e) {
+      // ignore
+    }
+  };
+}, []);
+
 
 
 
@@ -151,6 +245,32 @@ const scrollRight = () => {
   return () => document.removeEventListener('mousedown', handleClickOutside);
 }, []); */
 
+// add this near your stats array
+const yTicks = [0, 25, 50, 75, 100]; // adjust values if you want different divisions
+
+const testimonials = [
+  {
+    initial: "A",
+    name: "Alex Chen",
+    role: "Project Creator",
+    quote:
+      '“LAWATA helped me raise $50K for my tech startup in just 2 weeks. The risk analysis gave investors confidence in my project.”',
+  },
+  {
+    initial: "M",
+    name: "Maria Rodriguez",
+    role: "Investor",
+    quote:
+      '“The AI risk assessment is incredible. I\'ve made 3 successful investments with 200% returns. LAWATA changed my investment game!”',
+  },
+  {
+    initial: "J",
+    name: "James Wilson",
+    role: "Entrepreneur",
+    quote:
+      '“The platform is intuitive and the community is amazing. I found both funding and mentorship here. Highly recommended!”',
+  },
+];
 
   
 
@@ -305,176 +425,188 @@ const scrollRight = () => {
 
 
       {/* Statistics Section */}
-      <div className="h-screen w-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex flex-col justify-center items-center relative overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-yellow-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-          <div className="absolute top-40 left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-        </div>
-
-        <div className="relative z-10 text-center px-4">
-          <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 animate-fade-in-up">
+      <div className="h-screen w-screen bg-white flex flex-col justify-center items-center relative overflow-hidden">
+        <div className='w-full h-1/5 flex flex-col items-center'>
+          <h2 className="text-4xl md:text-6xl font-bold text-color-a mb-5 mt-5 animate-fade-in-up">
             Join the Future of
-            <span className="bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent"> Crowdfunding</span>
+            <span className="bg-color-a bg-clip-text text-transparent"> Crowdfunding</span>
           </h2>
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto animate-fade-in-up animation-delay-200">
+          <p className="text-xl md:text-2xl text-color-e mb-12 max-w-3xl mx-auto animate-fade-in-up animation-delay-200">
             Where innovative ideas meet intelligent investment decisions
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 relative z-10">
-          <div className="text-center animate-fade-in-up animation-delay-300">
-            <div className="text-4xl md:text-6xl font-bold text-white mb-2">50+</div>
-            <div className="text-gray-300 text-sm md:text-lg">Projects Funded</div>
-          </div>
-          <div className="text-center animate-fade-in-up animation-delay-400">
-            <div className="text-4xl md:text-6xl font-bold text-white mb-2">$1M+</div>
-            <div className="text-gray-300 text-sm md:text-lg">Total Raised</div>
-          </div>
-          <div className="text-center animate-fade-in-up animation-delay-500">
-            <div className="text-4xl md:text-6xl font-bold text-white mb-2">1K+</div>
-            <div className="text-gray-300 text-sm md:text-lg">Active Users</div>
-          </div>
-          <div className="text-center animate-fade-in-up animation-delay-600">
-            <div className="text-4xl md:text-6xl font-bold text-white mb-2">95%</div>
-            <div className="text-gray-300 text-sm md:text-lg">Success Rate</div>
-          </div>
-        </div>
-      </div>
+        {/* ====== Animated Stats Container (uses GSAP + ScrollTrigger) ====== */}
+        <div
+          ref={statsContainerRef}
+          className="relative w-11/12 h-4/5 flex justify-center items-end gap-10 mb-5 md:gap-38 lg:gap-48 z-10 border-b-6 border-l-6"
+        >
+          {/* Arrow on top-left of the Y-axis */}
+          <FiChevronUp
+            className="absolute text-color-a"
+            style={{
+              top: '-25px',
+              left: '-35px',
+              fontSize: '4rem',
+            }}
+          />
 
-      {/* Features Section */}
-      <div className="h-screen w-screen bg-gradient-to-br from-green-400 via-blue-500 to-purple-600 flex flex-col justify-center items-center relative">
-        <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+          {/* Arrow on bottom-right of the X-axis */}
+          <FiChevronRight
+            className="absolute text-color-a"
+            style={{
+              right: '-25px',
+              bottom: '-35px',
+              fontSize: '4rem',
+            }}
+          />
+
+          {stats.map((s, i) => (
+            <div key={s.id} className="relative text-center w-40 h-full overflow-hidden">
+              <div className="absolute inset-x-0 bottom-0 h-full flex items-end justify-center">
+                <div
+                  ref={(el) => setBarRef(el, i)}
+                  className="md:w-40 border-t-4 border-r-4 border-l-4 w-20 ml-2 mr-2"
+                  style={{
+                    background: "#1C5EDD",
+                    height: "0%",
+                  }}
+                >
+                  <div
+                    ref={(el) => setTextRef(el, i)}
+                    className="text-3xl mt-5 md:text-6xl font-bold text-white leading-none"
+                  >
+                    {s.display}
+                  </div>
+                  <div className="text-gray-300 text-sm md:text-lg">{s.label}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
         
-        <div className="relative z-10 text-center px-4 mb-16">
-          <h2 className="text-4xl md:text-6xl font-bold text-white mb-8">
-            Why Choose <span className="text-blue-500">LAWATA</span>?
-          </h2>
-          <p className="text-xl text-gray-200 max-w-3xl mx-auto">
-            Experience the next generation of crowdfunding with AI-powered risk assessment
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative z-10 max-w-6xl mx-auto px-4">
-          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 text-center hover:bg-opacity-20 transition-all duration-300 hover:scale-105">
-            <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </div>
-            <h3 className="text-3xl font-bold text-black mb-4">Smart Risk Analysis</h3>
-            <p className="text-black-200 text-xl">AI-powered algorithms analyze project viability and provide intelligent risk assessments</p>
-          </div>
-
-          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 text-center hover:bg-opacity-20 transition-all duration-300 hover:scale-105">
-            <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h3 className="text-3xl font-bold text-black mb-4">Lightning Fast</h3>
-            <p className="text-black-200 text-xl">Get instant funding decisions and real-time project updates with our advanced platform</p>
-          </div>
-
-          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 text-center hover:bg-opacity-20 transition-all duration-300 hover:scale-105">
-            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-            <h3 className="text-3xl font-bold text-black mb-4">Secure & Trusted</h3>
-            <p className="text-black-200 text-xl">Bank-level security with Firebase technology ensuring safe and transparent transactions</p>
-          </div>
-        </div>
       </div>
 
       {/* Testimonials Section */}
-      <div className="h-screen w-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col justify-center items-center relative">
-        <div className="absolute inset-0 bg-black bg-opacity-30"></div>
-        
-        <div className="relative z-10 text-center px-4 mb-16">
-          <h2 className="text-4xl md:text-6xl font-bold text-white mb-8">
-            What Our <span className="text-cyan-400">Community</span> Says
+      <div className="min-h-screen w-screen bg-white flex flex-col items-center py-12 px-4">
+        <div className="relative max-w-6xl w-full text-center mb-12 mt-0 lg:mt-10">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-color-a">
+            What Our <span className="text-color-a">Community</span> Says
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10 max-w-6xl mx-auto px-4">
-          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 hover:bg-opacity-20 transition-all duration-300">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mr-4">
-                <span className="text-white font-bold text-lg">A</span>
+        <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-0 lg:mt-10">
+          {testimonials.map((t, i) => (
+            <article
+              key={i}
+              tabIndex={0}
+              aria-labelledby={`testi-${i}-name`}
+              className="group relative rounded-2xl p-6 sm:p-8 bg-color-e bg-opacity-10 backdrop-blur-lg transition-all duration-300 hover:bg-opacity-20 focus:outline-none focus:ring-4 focus:ring-color-e/40 transform hover:scale-[1.012] focus:scale-[1.012]"
+              style={{ minHeight: 220 }}
+            >
+              {/* Centered vertical bar (visible and full height) */}
+              <div className="absolute inset-0 flex items-center justify-center z-0">
+                <div className="h-75 w-1 bg-color-e"></div>
               </div>
-              <div>
-                <h4 className="text-black font-semibold text-2xl">Alex Chen</h4>
-                <p className="text-black-300 text-l">Project Creator</p>
-              </div>
-            </div>
-            <p className="text-black-100 italic text-xl">"LAWATA helped me raise $50K for my tech startup in just 2 weeks. The risk analysis gave investors confidence in my project."</p>
-          </div>
 
-          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 hover:bg-opacity-20 transition-all duration-300">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center mr-4">
-                <span className="text-white font-bold text-lg">M</span>
-              </div>
-              <div>
-                <h4 className="text-black font-semibold text-2xl">Maria Rodriguez</h4>
-                <p className="text-black-300 text-l">Investor</p>
-              </div>
-            </div>
-            <p className="text-gray-800 italic text-xl">"The AI risk assessment is incredible. I've made 3 successful investments with 200% returns. LAWATA changed my investment game!"</p>
-          </div>
+              {/* Foreground content */}
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center mb-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-color-b flex items-center justify-center mr-4">
+                    <span className="text-white font-bold text-lg">{t.initial}</span>
+                  </div>
 
-          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 hover:bg-opacity-20 transition-all duration-300">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mr-4">
-                <span className="text-white font-bold text-lg">J</span>
+                  <div className="min-w-0">
+                    <h4
+                      id={`testi-${i}-name`}
+                      className="text-white font-semibold text-lg sm:text-xl truncate"
+                    >
+                      {t.name}
+                    </h4>
+                    <p className="text-white text-sm opacity-90">{t.role}</p>
+                  </div>
+                </div>
+
+                <p className="text-white italic text-base sm:text-lg leading-relaxed max-w-prose">
+                  {t.quote}
+                </p>
+
+                {/* optional CTA area (keeps spacing consistent on short quotes) */}
+                <div className="mt-auto pt-4">
+                  {/* placeholder for possible rating / date / link */}
+                  <span className="text-xs text-white/60">Verified member</span>
+                </div>
               </div>
-              <div>
-                <h4 className="text-black font-semibold text-2xl">James Wilson</h4>
-                <p className="text-black-300 text-l">Entrepreneur</p>
-              </div>
-            </div>
-            <p className="text-gray-800 italic text-xl">"The platform is intuitive and the community is amazing. I found both funding and mentorship here. Highly recommended!"</p>
-          </div>
+            </article>
+          ))}
         </div>
       </div>
 
       {/* Call to Action Section */}
-      <div className="h-screen w-screen bg-gradient-to-br from-yellow-400 via-red-500 to-pink-600 flex flex-col justify-center items-center relative">
-        <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-        
-        <div className="relative z-10 text-center px-4">
-          <h2 className="text-4xl md:text-7xl font-bold text-white mb-8">
-            Ready to <span className="text-blue-500">Launch</span>?
-          </h2>
-          <p className="text-xl md:text-2xl text-gray-100 mb-12 max-w-3xl mx-auto">
-            Join thousands of creators and investors building the future together
-          </p>
-          
-          <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
-            <Link 
-              to="/manage" 
-              className="bg-white text-black px-8 py-4 rounded-full text-xl font-bold hover:bg-gray-100 transition-all duration-300 hover:scale-105 shadow-2xl"
-            >
-              Manage Your Projects
-            </Link>
-            <Link 
-              to="/browse" 
-              className="bg-blue-600 text-white px-8 py-4 rounded-full text-xl font-bold hover:bg-blue-500 transition-all duration-300 hover:scale-105 shadow-2xl"
-            >
-              Explore Projects
-            </Link>
-          </div>
+      <div className="h-screen w-screen flex">
+        {/* Left side */}
+        <Link to="/manage" className="group relative w-1/2 overflow-hidden cursor-pointer border-t-4 border-r-3">
+        {/* Image (covers the half) */}
+        <img
+        src={ImageLeft} /* replace with your left image path */
+        alt="Left"
+        className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-600 ease-out group-hover:scale-120"
+        />
+
+
+        {/* dim overlay so center text is readable */}
+        <div className="absolute inset-0 bg-opacity-30 transition-opacity duration-300 group-hover:bg-opacity-40"></div>
+
+
+        {/* Center content for this half (hidden link shown on hover) */}
+        <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6 mt-20">
+        <h3 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg">Create & Build</h3>
+        <p className="mt-4 text-sm md:text-xl text-white/90 max-w-xs">Manage your ideas, teams and funding in one place.</p>
+
+
+        {/* the CTA is initially hidden and revealed when hovering the half */}
+        <Link
+        to="/manage"
+        className="mt-8 inline-block bg-white text-black px-8 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0"
+        >
+        Manage Your Projects
+        </Link>
         </div>
 
-        {/* Floating Elements */}
-        <div className="absolute top-20 left-20 w-4 h-4 bg-white rounded-full animate-pulse"></div>
-        <div className="absolute top-40 right-32 w-6 h-6 bg-yellow-300 rounded-full animate-bounce"></div>
-        <div className="absolute bottom-32 left-32 w-3 h-3 bg-pink-300 rounded-full animate-ping"></div>
-        <div className="absolute bottom-20 right-20 w-5 h-5 bg-cyan-300 rounded-full animate-pulse"></div>
+
+        {/* decorative accent (optional) */}
+        <div className="absolute bottom-6 left-6 w-3 h-3 bg-white rounded-full animate-pulse opacity-80"></div>
+        </Link>
+
+
+        {/* Right side */}
+        <Link to="/browse" className="group relative w-1/2 overflow-hidden cursor-pointer border-t-4 border-l-3">
+        <img
+        src={ImageRight} /* replace with your right image path */
+        alt="Right"
+        className="absolute inset-0 w-full h-full object-cover transform transition-transform duration-600 ease-out group-hover:scale-120"
+        />
+
+
+        <div className="absolute inset-0 bg-opacity-25 transition-opacity duration-300 group-hover:bg-opacity-40"></div>
+
+
+        <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6 mt-20">
+        <h3 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg">Discover & Invest</h3>
+        <p className="mt-4 text-sm md:text-xl text-white/90 max-w-xs">Explore rising creators and join their journeys.</p>
+
+
+        <Link
+        to="/browse"
+        className="mt-8 inline-block bg-blue-600 text-white px-8 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0"
+        >
+        Explore Projects
+        </Link>
+        </div>
+
+
+        <div className="absolute top-8 right-8 w-4 h-4 bg-yellow-300 rounded-full animate-bounce opacity-80"></div>
+        </Link>
       </div>
     </div>
   )
