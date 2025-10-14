@@ -89,7 +89,7 @@ const Browse = () => {
 
   // Format amounts as USD currency strings
   const formatFunding = (amount) => {
-    return amount?.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }) || '$0';
+    return amount?.toLocaleString('en-US', { style: 'currency', currency: 'ETB', minimumFractionDigits: 0 }) || '$0';
   };
 
   if (loading) return (

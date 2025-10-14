@@ -318,7 +318,7 @@ const ProjectDetails = () => {
   const formatFunding = (amount) => {
     return amount?.toLocaleString('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'ETB',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }) || '$0';

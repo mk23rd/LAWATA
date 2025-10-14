@@ -357,17 +357,17 @@ export default function CreateProjectForm() {
 
     stepwrapperRefs.forEach((step, idx) => {
       if (idx + 1 === activeStep) {
-        tl.to(step.current, { width: "75%", y: 0, duration: 0.5, ease: "power2.out" }, 0);
+        tl.to(step.current, { width: "75%", y: 0, duration: 0.3, ease: "power2.out" }, 0);
       } else {
-        tl.to(step.current, { width: "5%", y: (idx + 1) * 20, duration: 0.5, ease: "power2.out" }, 0);
+        tl.to(step.current, { width: "5%", y: (idx + 1) * 20, duration: 0.3, ease: "power2.out" }, 0);
       }
     });
 
     steplineRefs.forEach((step, idx) => {
       if (idx + 1 === activeStep) {
-        tl.to(step.current, { height: "70vh", y: 0, duration: 0.5, ease: "power2.out" }, 0);
+        tl.to(step.current, { height: "80vh", y: 0, duration: 0.3, ease: "power2.out" }, 0);
       } else {
-        tl.to(step.current, { height: "30vh", duration: 0.5, ease: "power2.out" }, 0);
+        tl.to(step.current, { height: "30vh", duration: 0.3, ease: "power2.out" }, 0);
       }
     });
 
@@ -376,10 +376,10 @@ export default function CreateProjectForm() {
       const isActive = idx + 1 === activeStep;
 
       tl.to(step.current, {
-        height: isActive ? "65vh" : "25vh",
-        width: isActive ? "100%" : "100%",
+        height: isActive ? "70vh" : "25vh",
+        width: isActive ? "105%" : "105%",
         padding: isActive ? "0.8rem" : "0.3rem",
-        duration: 0.5,
+        duration: 0.3,
         ease: "power2.out",
       }, 0);
 
@@ -529,13 +529,13 @@ export default function CreateProjectForm() {
       
       <div className="w-full max-w-sm">
         <div className="relative group">
-          <label className="block text-sm font-semibold text-gray-700 mb-2 text-center">Funding Goal (USD) *</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2 text-center">Funding Goal (ETB) *</label>
           <div className="relative">
-            <FiDollarSign className="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-400 group-focus-within:text-color-b transition-colors" />
+            <div className="absolute top-1/2 left-4 transform -translate-y-1/2 text-gray-400 group-focus-within:text-color-b transition-colors text-xl">ETB</div>
             <input 
               type="number" 
               name="fundingGoal" 
-              placeholder="Enter amount in USD" 
+              placeholder="Enter amount in ETB" 
               value={formData.fundingGoal} 
               onChange={handleChange}
               className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 placeholder-gray-400 text-center text-xl font-bold" 
@@ -811,7 +811,7 @@ export default function CreateProjectForm() {
 
                     {/* Reward Amount */}
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Pledge Amount (USD) *</label>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Pledge Amount (ETB) *</label>
                       <div className="relative">
                         <FiDollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <input
@@ -1054,17 +1054,8 @@ export default function CreateProjectForm() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 md:p-8">
+    <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-6xl font-titan bg-gradient-to-r from-color-b via-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4 animate-fade-in-up">
-            Create Your Project
-          </h1>
-          <p className="text-lg text-gray-600 animate-fade-in-up animation-delay-200">
-            Bring your ideas to life with our modern project creation platform
-          </p>
-        </div>
-
         {/* Mobile Step Navigation */}
         <div className="md:hidden w-full mb-6">
           <div className="flex justify-between items-center bg-white/80 backdrop-blur-sm rounded-2xl p-3 shadow-lg border border-white/20">
@@ -1088,7 +1079,7 @@ export default function CreateProjectForm() {
         </div>
 
         {/* Desktop Candlestick Layout */}
-        <div className="hidden md:flex w-full justify-center items-center gap-10">
+        <div className="hidden md:flex w-full justify-center items-center gap-6">
           {stepboxRefs.map((ref, idx) => (
             <div
               key={idx}
@@ -1105,7 +1096,7 @@ export default function CreateProjectForm() {
               <div
                 ref={ref}
                 className={`create border-3 bg-white/90 backdrop-blur-sm h-60 w-full font-titan flex relative z-10 mx-auto flex-none cursor-pointer shadow-xl hover:shadow-2xl transition-all duration-500
-                  ${idx === 4 && activeStep === 5 ? "border-dashed rounded-xl border-color-b" : "border-solid rounded-none border-color-b"}`}
+                  ${idx === 4 && activeStep === 5 ? "border-dashed rounded-xl border-color-b" : "border-solid border-color-b rounded-md"}`}
               >
                 <p
                   className="text-color-b font-titan sm:text-xl md:text-3xl lg:text-5xl absolute"

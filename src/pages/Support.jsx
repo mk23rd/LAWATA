@@ -16,13 +16,10 @@ import {
 import { db } from "../firebase/firebase-config";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { CheckCircle, XCircle, Loader2, Target, ChevronDown, Wallet } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Target, ChevronDown, Wallet, DollarSign, Users, Clock } from "lucide-react";
 import { toast } from "react-toastify";
 import RewardsList from "../components/project/RewardsList";
-
 const CHAPA_PUBLIC_KEY = import.meta.env.VITE_CHAPA_API_KEY;
-
-// Slider styles for the range input
 const sliderStyles = `
   input[type="range"] {
     -webkit-appearance: none;
@@ -99,11 +96,11 @@ const Support = () => {
   const [walletPaymentStatus, setWalletPaymentStatus] = useState(null); // 'success', 'error', or null
   const [showRewards, setShowRewards] = useState(false);
   const [selectedReward, setSelectedReward] = useState(null);
+  const [userData, setUserData] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
   const { currentUser, profileComplete } = useAuth();
   const paymentProcessedRef = useRef(false);
-
   const templates = [100, 500, 1000, 3000, 5000, 10000];
 
   // Fetch project details
@@ -143,6 +140,39 @@ const Support = () => {
   useEffect(() => {
     fetchProject();
   }, [id]);
+
+  // Fetch user data to get wallet balance
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (currentUser) {
+        try {
+          const userRef = doc(db, "users", currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setUserData(userSnap.data());
+          }
+        } catch (err) {
+          console.error("Error fetching user data:", err);
+        }
+      }
+    };
+    fetchUserData();
+  }, [currentUser]);
+
+  // Function to refresh user data (for real-time balance updates)
+  const refreshUserData = async () => {
+    if (currentUser) {
+      try {
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setUserData(userSnap.data());
+        }
+      } catch (err) {
+        console.error("Error refreshing user data:", err);
+      }
+    }
+  };
 
   // Handle payment return from Chapa
   useEffect(() => {
@@ -356,12 +386,7 @@ const Support = () => {
         const newFundedMoney = currentFunded + numericAmount;
         const milestones = projectData.milestones || {};
 
-        console.log('Checking milestones:', {
-          previousFunded: previousFundedMoney,
-          newFunded: newFundedMoney,
-          goal: fundingGoal,
-          milestones: milestones
-        });
+        
 
         // Check which milestones are reached
         [25, 50, 75, 100].forEach(percentage => {
@@ -370,21 +395,10 @@ const Support = () => {
             const previousPercentage = (previousFundedMoney / fundingGoal) * 100;
             const newPercentage = (newFundedMoney / fundingGoal) * 100;
 
-            console.log(`Milestone ${percentage}%:`, {
-              previousPercentage,
-              newPercentage,
-              crossed: previousPercentage < percentage && newPercentage >= percentage
-            });
 
             // If this milestone was just crossed
             if (previousPercentage < percentage && newPercentage >= percentage) {
-              console.log(`✅ Milestone ${percentage}% reached!`);
-              milestonesReached.push({
-                percentage,
-                description: milestones[percentage].description,
-                amount: milestoneAmount
-              });
-
+             
               // Update milestone status to completed
               transaction.update(projectRef, {
                 [`milestones.${percentage}.status`]: 'completed',
@@ -561,6 +575,9 @@ const Support = () => {
 
       // Refresh project data to show updated funding info
       await refreshProjectData();
+      
+      // Refresh user data to show updated balance
+      await refreshUserData();
 
       // Show success message
       const milestoneMessage = milestonesReached.length > 0 
@@ -570,14 +587,13 @@ const Support = () => {
         ? ` 🎁 Reward "${rewardToProcess.title}" claimed!`
         : '';
       toast.success(`🎉 You successfully supported with $${numericAmount}!${rewardMessage}${milestoneMessage}`, {
-        autoClose: 5000
+        autoClose: 3000
       });
 
+      // Redirect to project details page after successful payment
       setTimeout(() => {
-        setAmount("");
-        setSelectedReward(null); // Clear selected reward
-        setPaymentStatus(null);
-      }, 1500);
+        navigate(`/projectDet/${id}`);
+      }, 2000);
 
     } catch (err) {
       console.error("Error processing support:", err);
@@ -725,7 +741,7 @@ const Support = () => {
     document.body.removeChild(tempForm);
   };
 
-  // Handle wallet payment
+  // Handle wallet payment - Optimized for speed
   const handleWalletPayment = async (e) => {
     e.preventDefault();
 
@@ -750,6 +766,39 @@ const Support = () => {
     setWalletPaymentStatus(null);
 
     try {
+      // Single optimized transaction that handles everything
+      await processOptimizedWalletSupport(numericAmount, selectedReward);
+      
+      setWalletPaymentStatus('success');
+      toast.success(`🎉 Payment successful! $${numericAmount} deducted from your wallet.`, {
+        autoClose: 2000
+      });
+
+      // Redirect to project details page after successful payment
+      setTimeout(() => {
+        navigate(`/projectDet/${id}`);
+      }, 1500);
+
+    } catch (err) {
+      console.error("Error processing wallet payment:", err);
+      setWalletPaymentStatus('error');
+      toast.error(err.message || "Wallet payment failed. Please try again.");
+
+      setTimeout(() => {
+        setWalletPaymentStatus(null);
+      }, 1500);
+    } finally {
+      setWalletProcessing(false);
+    }
+  };
+
+  // Optimized wallet support - Single transaction for maximum speed
+  const processOptimizedWalletSupport = async (numericAmount, selectedReward) => {
+    try {
+      let milestonesReached = [];
+      let previousFundedMoney = 0;
+      let allPreviousFunders = [];
+
       await runTransaction(db, async (transaction) => {
         // ---- ALL READS FIRST ----
         const projectRef = doc(db, "projects", id);
@@ -819,41 +868,271 @@ const Support = () => {
           }
         }
 
+        // Store previous funded amount for milestone checking
+        previousFundedMoney = currentFunded;
+
+        // ---- PREPARE DATA LOCALLY ----
+        // Determine if this is the user's first time funding this project
+        const userFundings = userData.fundings ? { ...userData.fundings } : {};
+        const isFirstContributionToProject = !userData.fundings || !userData.fundings[id];
+
+        const nowISO = new Date().toISOString();
+
+        if (userFundings[id]) {
+          userFundings[id] = {
+            ...userFundings[id],
+            contributions: [
+              ...(userFundings[id].contributions || []),
+              { amount: numericAmount, date: nowISO },
+            ],
+            totalFundedPerProject:
+              (userFundings[id].totalFundedPerProject ?? 0) + numericAmount,
+          };
+        } else {
+          userFundings[id] = {
+            projectTitle: projectData.title || "Untitled",
+            totalFundedPerProject: numericAmount,
+            contributions: [{ amount: numericAmount, date: nowISO }],
+          };
+        }
+
+        const newTotalFunded = (userData.totalFunded ?? 0) + numericAmount;
+        const newFundingCounter = (userData.fundingCounter ?? 0) + 1;
+
+        // Check if user should get Investor role
+        const shouldAddInvestorRole =
+          (newFundingCounter >= 100 || newTotalFunded >= 750000) &&
+          !userData.roles?.includes("Investor");
+
+        // Prepare update data for user
+        const updateData = {
+          walletBalance: increment(-numericAmount), // Deduct from wallet
+          totalFunded: newTotalFunded,
+          fundingCounter: newFundingCounter,
+          fundings: userFundings,
+        };
+
+        // Add reward to user's myRewards if a reward was selected
+        if (selectedReward) {
+          const rewardData = {
+            rewardId: selectedReward.id || `reward_${selectedReward.index}_${Date.now()}`,
+            description: selectedReward.description,
+            imageUrl: selectedReward.imageUrl,
+            title: selectedReward.title,
+            type: selectedReward.type,
+            projectId: id,
+            projectTitle: projectData.title,
+            claimedAt: Timestamp.now(),
+            amount: selectedReward.amount
+          };
+
+          // Initialize myRewards array if it doesn't exist, then add the new reward
+          updateData.myRewards = arrayUnion(rewardData);
+        }
+
+        // Add Investor role if conditions are met
+        if (shouldAddInvestorRole) {
+          updateData.roles = arrayUnion("Investor", "Funder");
+        } else if (!userData.roles?.includes("Funder")) {
+          // Add Funder role if not already present
+          updateData.roles = arrayUnion("Funder");
+        }
+
+        // Check for milestone completion
+        const newFundedMoney = currentFunded + numericAmount;
+        const milestones = projectData.milestones || {};
+
+        // Check which milestones are reached
+        [25, 50, 75, 100].forEach(percentage => {
+          if (milestones[percentage]) {
+            const milestoneAmount = (fundingGoal * percentage) / 100;
+            const previousPercentage = (previousFundedMoney / fundingGoal) * 100;
+            const newPercentage = (newFundedMoney / fundingGoal) * 100;
+
+            // If this milestone was just crossed
+            if (previousPercentage < percentage && newPercentage >= percentage) {
+              milestonesReached.push({
+                percentage,
+                description: milestones[percentage].description,
+                amount: milestoneAmount
+              });
+
+              // Update milestone status to completed
+              transaction.update(projectRef, {
+                [`milestones.${percentage}.status`]: 'completed',
+                [`milestones.${percentage}.completedAt`]: serverTimestamp()
+              });
+            }
+          }
+        });
+
         // ---- ALL WRITES AFTER ----
-        // Update user's wallet balance
-        transaction.update(userRef, {
-          walletBalance: increment(-numericAmount)
+        // Build project update (fundedMoney, and backers if first contribution)
+        const projectUpdate = {
+          fundedMoney: increment(numericAmount),
+        };
+        if (isFirstContributionToProject) {
+          projectUpdate.backers = increment(1);
+        }
+
+        // Handle reward selection if a reward was chosen
+        if (selectedReward && selectedReward.type === 'limited') {
+          // Update the specific reward quantity in the rewardsList array
+          const rewardIndex = selectedReward.index;
+          const updatedRewardsList = [...(projectData.rewardsList || [])];
+          if (updatedRewardsList[rewardIndex]) {
+            const currentQuantity = updatedRewardsList[rewardIndex].quantity || 0;
+            const newQuantity = Math.max(0, currentQuantity - 1);
+            
+            updatedRewardsList[rewardIndex] = {
+              ...updatedRewardsList[rewardIndex],
+              quantity: newQuantity
+            };
+            projectUpdate.rewardsList = updatedRewardsList;
+          }
+        }
+
+        transaction.update(projectRef, projectUpdate);
+        transaction.update(userRef, updateData);
+
+        // Create transaction record
+        const transactionsCol = collection(db, "transactions");
+        const newTransRef = doc(transactionsCol);
+        transaction.set(newTransRef, {
+          equityBought: 0,
+          fundedMoney: numericAmount,
+          funding: true,
+          status: 'completed',
+          type: 'funding',
+          projectId: id,
+          transactionTime: serverTimestamp(),
+          userId: currentUser.uid,
         });
       });
 
-      // Process the support transaction (similar to processSupport but without affecting main button states)
-      await processWalletSupport(numericAmount, selectedReward);
-      
-      setWalletPaymentStatus('success');
-      toast.success(`🎉 Payment successful! $${numericAmount} deducted from your wallet.`, {
-        autoClose: 3000
-      });
+      // Process notifications in parallel for better performance
+      const notificationPromises = [];
 
-      setTimeout(() => {
-        setAmount("");
-        setSelectedReward(null);
-        setWalletPaymentStatus(null);
-      }, 1500);
+      // Notification to the project creator
+      notificationPromises.push(
+        addDoc(collection(db, "notifications"), {
+          userId: project.createdBy.uid,
+          projectId: project.id,
+          projectTitle: project.title,
+          message: `Your Project ${project.title} was funded ${numericAmount}$ by ${currentUser.displayName || "a supporter"}.`,
+          type: "Your_project_Funded",
+          read: false,
+          createdAt: Timestamp.now()
+        }).catch(err => console.error("Failed to create creator notification:", err))
+      );
+
+      // Notification to the supporter
+      const supportMessage = selectedReward 
+        ? `You donated ${numericAmount}$ to ${project.title} and claimed the reward: ${selectedReward.title}!`
+        : `You donated ${numericAmount}$ to a project called ${project.title}.`;
+        
+      notificationPromises.push(
+        addDoc(collection(db, "notifications"), {
+          userId: currentUser.uid,
+          projectId: project.id,
+          projectTitle: project.title,
+          message: supportMessage,
+          type: "You_Funded_a_project",
+          read: false,
+          createdAt: Timestamp.now()
+        }).catch(err => console.error("Failed to create supporter notification:", err))
+      );
+
+      // Reward claimed notification if applicable
+      if (selectedReward) {
+        notificationPromises.push(
+          addDoc(collection(db, "notifications"), {
+            userId: currentUser.uid,
+            projectId: project.id,
+            projectTitle: project.title,
+            message: `🎁 Reward Claimed! You've successfully claimed "${selectedReward.title}" from ${project.title}. Check your rewards in your profile!`,
+            type: "Reward_Claimed",
+            read: false,
+            createdAt: Timestamp.now()
+          }).catch(err => console.error("Failed to create reward notification:", err))
+        );
+      }
+
+      // Send milestone notifications if any milestones were reached
+      if (milestonesReached.length > 0) {
+        // Fetch previous funders for milestone notifications
+        try {
+          const transactionsQuery = query(
+            collection(db, 'transactions'),
+            where('projectId', '==', id),
+            where('funding', '==', true)
+          );
+          const transactionsSnap = await getDocs(transactionsQuery);
+          const funderIds = new Set();
+
+          transactionsSnap.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.userId && data.userId !== currentUser.uid) {
+              funderIds.add(data.userId);
+            }
+          });
+
+          allPreviousFunders = Array.from(funderIds);
+        } catch (err) {
+          console.error("Error fetching previous funders:", err);
+        }
+
+        // Create milestone notifications in parallel
+        for (const milestone of milestonesReached) {
+          // Notify project creator about milestone completion
+          notificationPromises.push(
+            addDoc(collection(db, "notifications"), {
+              userId: project.createdBy.uid,
+              projectId: project.id,
+              projectTitle: project.title,
+              message: `🎉 Milestone Reached! Your project "${project.title}" has reached ${milestone.percentage}% funding ($${milestone.amount.toFixed(2)})! ${milestone.description}`,
+              type: "Milestone_Completed",
+              read: false,
+              createdAt: Timestamp.now()
+            }).catch(err => console.error("Failed to create milestone notification for creator:", err))
+          );
+
+          // Notify all previous funders about milestone completion
+          for (const funderId of allPreviousFunders) {
+            notificationPromises.push(
+              addDoc(collection(db, "notifications"), {
+                userId: funderId,
+                projectId: project.id,
+                projectTitle: project.title,
+                message: `🎉 Great news! The project "${project.title}" you supported has reached ${milestone.percentage}% funding milestone! ${milestone.description}`,
+                type: "Milestone_Completed",
+                read: false,
+                createdAt: Timestamp.now()
+              }).catch(err => console.error(`Failed to create milestone notification for funder ${funderId}:`, err))
+            );
+          }
+        }
+      }
+
+      // Execute all notifications in parallel
+      await Promise.allSettled(notificationPromises);
+
+      // Update local state immediately for better UX
+      setUserData(prev => ({
+        ...prev,
+        walletBalance: (prev?.walletBalance || 0) - numericAmount
+      }));
+
+      // Refresh project data in background
+      refreshProjectData().catch(err => console.error("Error refreshing project data:", err));
 
     } catch (err) {
-      console.error("Error processing wallet payment:", err);
-      setWalletPaymentStatus('error');
-      toast.error(err.message || "Wallet payment failed. Please try again.");
-
-      setTimeout(() => {
-        setWalletPaymentStatus(null);
-      }, 1500);
-    } finally {
-      setWalletProcessing(false);
+      console.error("Error processing optimized wallet support:", err);
+      throw err; // Re-throw to be handled by the calling function
     }
   };
 
-  // Process wallet support transaction (similar to processSupport but independent)
+  // Process wallet support transaction (similar to processSupport but independent) - DEPRECATED
   const processWalletSupport = async (numericAmount, selectedReward) => {
     try {
       // Store milestone data before transaction
@@ -1154,104 +1433,6 @@ const Support = () => {
     }
   };
 
-  const getButtonContent = () => {
-    if (processing) {
-      return (
-        <div className="flex items-center justify-center">
-          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          Processing...
-        </div>
-      );
-    }
-    
-    if (paymentStatus === 'success') {
-      return (
-        <div className="flex items-center justify-center">
-          <CheckCircle className="w-5 h-5 mr-2" />
-          Payment Successful!
-        </div>
-      );
-    }
-    
-    if (paymentStatus === 'error') {
-      return (
-        <div className="flex items-center justify-center">
-          <XCircle className="w-5 h-5 mr-2" />
-          Payment Failed
-        </div>
-      );
-    }
-    
-    return "Pay with Chapa";
-  };
-
-  const getButtonStyles = () => {
-    if (processing) {
-      return "bg-blue-500 text-white cursor-wait";
-    }
-    
-    if (paymentStatus === 'success') {
-      return "bg-green-500 text-white";
-    }
-    
-    if (paymentStatus === 'error') {
-      return "bg-red-500 text-white";
-    }
-    
-    return "bg-green-500 hover:bg-green-600 text-white";
-  };
-
-  const getWalletButtonContent = () => {
-    if (walletProcessing) {
-      return (
-        <div className="flex items-center justify-center">
-          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          Processing...
-        </div>
-      );
-    }
-    
-    if (walletPaymentStatus === 'success') {
-      return (
-        <div className="flex items-center justify-center">
-          <CheckCircle className="w-5 h-5 mr-2" />
-          Payment Successful!
-        </div>
-      );
-    }
-    
-    if (walletPaymentStatus === 'error') {
-      return (
-        <div className="flex items-center justify-center">
-          <XCircle className="w-5 h-5 mr-2" />
-          Payment Failed
-        </div>
-      );
-    }
-    
-    return (
-      <div className="flex items-center justify-center">
-        <Wallet className="w-5 h-5 mr-2" />
-        Pay with Wallet
-      </div>
-    );
-  };
-
-  const getWalletButtonStyles = () => {
-    if (walletProcessing) {
-      return "bg-purple-500 text-white cursor-wait";
-    }
-    
-    if (walletPaymentStatus === 'success') {
-      return "bg-green-500 text-white";
-    }
-    
-    if (walletPaymentStatus === 'error') {
-      return "bg-red-500 text-white";
-    }
-    
-    return "bg-purple-500 hover:bg-purple-600 text-white";
-  };
 
   if (loading)
     return (
@@ -1284,314 +1465,420 @@ const Support = () => {
   return (
     <>
       <style>{sliderStyles}</style>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 pt-24 pb-12 px-4">
-        <div className="max-w-5xl mx-auto">
-    
-
-        {/* Single Unified Card */}
-        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/40 p-8 md:p-10">
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Project Info Section */}
-            <div>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">{project.title}</h2>
-                <p className="text-gray-600">{project.shortDescription || 'Support this amazing project'}</p>
-              </div>
-
-            {/* Progress Section */}
-            <div className="space-y-4 mb-6">
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-600">Funding Progress</span>
-                  <span className="text-sm font-bold text-color-b">{progress.toFixed(1)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-color-b to-blue-600 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(progress, 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 gap-4 mt-6">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border-2 border-blue-200">
-                  <p className="text-xs text-gray-600 mb-1">Raised</p>
-                  <p className="text-2xl font-bold text-color-b">${(project.fundedMoney ?? 0).toLocaleString()}</p>
-                </div>
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 border-2 border-green-200">
-                  <p className="text-xs text-gray-600 mb-1">Goal</p>
-                  <p className="text-2xl font-bold text-green-600">${project.fundingGoal.toLocaleString()}</p>
-                </div>
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 border-2 border-purple-200">
-                  <p className="text-xs text-gray-600 mb-1">Remaining</p>
-                  <p className="text-xl font-bold text-purple-600">${remaining.toLocaleString()}</p>
-                </div>
-                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-4 border-2 border-orange-200">
-                  <p className="text-xs text-gray-600 mb-1">Backers</p>
-                  <p className="text-2xl font-bold text-orange-600">{project.backers || 0}</p>
-                </div>
-              </div>
-            </div>
-
-              {/* Project Image */}
-              {project.imageUrl && (
-                <div className="rounded-2xl overflow-hidden shadow-lg">
-                  <img 
-                    src={project.imageUrl} 
-                    alt={project.title}
-                    className="w-full h-48 object-contain"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Support Form Section */}
-            <div>
-            {isOwner ? (
-              <div className="text-center py-12">
-                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <XCircle className="w-10 h-10 text-red-500" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Cannot Support Own Project</h3>
-                <p className="text-gray-600">You cannot support your own project.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800 mb-6">Choose Your Support</h3>
-                  
-                  {/* Quick Select Buttons */}
-                  <div className="mb-6">
-                    <p className="text-sm font-medium text-gray-600 mb-3">Quick Select Amount</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      {templates.map((value) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => handleTemplateClick(value)}
-                          disabled={processing}
-                          className={`relative py-4 px-3 rounded-2xl font-bold transition-all transform hover:scale-105 ${
-                            amount === value.toString()
-                              ? "bg-gradient-to-r from-color-b to-blue-600 text-white shadow-lg scale-105"
-                              : processing
-                              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                              : "bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 hover:shadow-lg border-2 border-gray-200 hover:border-color-b"
-                          }`}
-                        >
-                          <div className="text-xs mb-1">$</div>
-                          <div className="text-xl">{value.toLocaleString()}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Custom Amount Input */}
+      <div className="min-h-screen bg-white p-6">
+        <div className="max-w-7xl mx-auto">
+  
+          {/* Wallet Balance Card - Redesigned to follow design system */}
+          {currentUser && userData && (
+            <div className="mb-8 mt-20">
+              <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-200">
+                <div className="flex items-center justify-between">
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-2">
-                      Or Enter Custom Amount
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl font-bold">$</span>
-                      <input
-                        type="number"
-                        min="1"
-                        max={maxSliderAmount}
-                        value={amount}
-                        onChange={handleInputChange}
-                        disabled={processing}
-                        className={`w-full pl-10 pr-4 py-4 text-xl font-bold border-2 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-color-b focus:outline-none transition-all ${
-                          processing ? "bg-gray-100 cursor-not-allowed border-gray-200" : "bg-white border-gray-300"
-                        }`}
-                        placeholder="100"
-                      />
-                    </div>
+                    <p className="text-sm font-medium text-gray-600 mb-1">Available Balance</p>
+                    <p className="text-3xl font-bold text-gray-900">
+                      ETB {(userData.walletBalance || 0).toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">Use your wallet to support this project instantly</p>
                   </div>
-
-                  {/* Slider */}
-                  <div className="mt-6">
-                    <label className="block text-sm font-medium text-gray-600 mb-3">
-                      Adjust Amount with Slider
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="range"
-                        min="1"
-                        max={maxSliderAmount}
-                        value={amount || 0}
-                        onChange={(e) => setAmount(e.target.value)}
-                        disabled={processing}
-                        className="w-full h-3 bg-gradient-to-r from-blue-200 to-blue-300 rounded-full appearance-none cursor-pointer slider-thumb"
-                        style={{
-                          background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${((amount || 0) / maxSliderAmount) * 100}%, #E5E7EB ${((amount || 0) / maxSliderAmount) * 100}%, #E5E7EB 100%)`
-                        }}
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-2">
-                        <span>$1</span>
-                        <span className="font-bold text-color-b">${(amount || 0).toLocaleString()}</span>
-                        <span>${maxSliderAmount.toLocaleString()}</span>
-                      </div>
-                    </div>
+                  <div className="p-3 bg-gray-100 rounded-lg">
+                    <Wallet className="w-6 h-6 text-gray-600" />
                   </div>
                 </div>
-
-                {/* Reward Selection */}
-                {project.rewardsList && project.rewardsList.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-gray-600 mb-3">Select a Reward (Optional)</h4>
-                    <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
-                      {project.rewardsList.map((reward, index) => {
-                        const numericAmount = parseFloat(amount) || 0;
-                        const rewardAmount = parseFloat(reward.amount) || 0;
-                        const remainingQuantity = reward.type === 'limited' ? (reward.quantity - (reward.claimed || 0)) : Infinity;
-                        const isEligible = numericAmount >= rewardAmount && remainingQuantity > 0;
-                        const isSelected = selectedReward?.index === index;
-                        
-                        return (
-                          <div
-                            key={index}
-                            onClick={() => {
-                              if (isEligible && !processing) {
-                                setSelectedReward(isSelected ? null : { ...reward, index });
-                              }
-                            }}
-                            className={`relative p-3 border-2 rounded-xl transition-all cursor-pointer ${
-                              isSelected
-                                ? "border-blue-500 bg-blue-50 shadow-md"
-                                : isEligible
-                                ? "border-gray-200 hover:border-gray-300 bg-white hover:shadow-sm"
-                                : "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              {reward.imageUrl && (
-                                <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                                  <img
-                                    src={reward.imageUrl}
-                                    alt={reward.title}
-                                    className={`w-full h-full object-cover ${
-                                      isEligible ? "" : "grayscale"
-                                    }`}
-                                  />
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <h5 className={`font-medium text-sm truncate ${
-                                  isEligible ? "text-gray-900" : "text-gray-400"
-                                }`}>
-                                  {reward.title}
-                                </h5>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className={`text-xs font-medium ${
-                                    isEligible ? "text-green-600" : "text-gray-400"
-                                  }`}>
-                                    ${rewardAmount.toLocaleString()}
-                                  </span>
-                                  {reward.type === 'limited' && (
-                                    <span className={`text-xs ${
-                                      isEligible ? "text-gray-500" : "text-gray-400"
-                                    }`}>
-                                      {remainingQuantity} left
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {isSelected && (
-                                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <CheckCircle className="w-3 h-3 text-white" />
-                                </div>
-                              )}
-                            </div>
-                            {!isEligible && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 rounded-xl">
-                                <span className="text-xs text-gray-500 font-medium">
-                                  {numericAmount < rewardAmount
-                                    ? `Requires $${rewardAmount.toLocaleString()}`
-                                    : "Out of Stock"
-                                  }
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {selectedReward && (
-                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-900">
-                            Selected: {selectedReward.title}
-                          </span>
-                        </div>
-                        <p className="text-xs text-blue-700 mt-1">
-                          {selectedReward.description}
-                        </p>
+                
+                {/* Balance Status Indicator */}
+                {amount && parseFloat(amount) > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    {userData.walletBalance >= parseFloat(amount) ? (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CheckCircle className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          Sufficient balance for ETB {parseFloat(amount).toLocaleString()}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-red-600">
+                        <XCircle className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          Insufficient balance. Need ETB {(parseFloat(amount) - userData.walletBalance).toLocaleString()} more
+                        </span>
                       </div>
                     )}
                   </div>
                 )}
-
-                {/* Payment Buttons */}
-                <div className="flex gap-3">
-                  {/* Chapa Payment Button */}
-                  <button
-                    type="submit"
-                    disabled={processing || paymentStatus === 'success'}
-                    className={`flex-1 py-3 rounded-2xl font-bold text-base transition-all transform hover:scale-105 shadow-lg ${
-                      getButtonStyles()
-                    }`}
-                  >
-                    {getButtonContent()}
-                  </button>
-
-                  {/* Wallet Payment Button */}
-                  <button
-                    type="button"
-                    onClick={handleWalletPayment}
-                    disabled={walletProcessing || walletPaymentStatus === 'success'}
-                    className={`flex-1 py-3 rounded-2xl font-bold text-base transition-all transform hover:scale-105 shadow-lg ${
-                      getWalletButtonStyles()
-                    }`}
-                  >
-                    {getWalletButtonContent()}
-                  </button>
+              </div>
+            </div>
+          )}
+  
+          {/* Main Content Card */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              
+              {/* Project Info Section */}
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-2">{project.title}</h2>
+                  <p className="text-sm text-gray-600">{project.shortDescription || 'Support this amazing project'}</p>
                 </div>
-
-                {/* Security Note */}
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 pt-4">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span>Secure payment processing</span>
+  
+                {/* Progress Section */}
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-600">Funding Progress</span>
+                    <span className="text-sm font-bold text-gray-900">{progress.toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                    <div 
+                      className="bg-gray-900 h-1.5 rounded-full transition-all" 
+                      style={{ width: `${Math.min(progress, 100)}%` }}
+                    />
+                  </div>
                 </div>
-              </form>
-            )}
+  
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-white border border-gray-100 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Raised</p>
+                        <p className="text-2xl font-bold text-gray-900">ETB {(project.fundedMoney ?? 0).toLocaleString()}</p>
+                      </div>
+                      <div className="p-2 bg-gray-100 rounded-lg">
+                        <DollarSign className="w-5 h-5 text-gray-600" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white border border-gray-100 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Goal</p>
+                        <p className="text-2xl font-bold text-gray-900">ETB {project.fundingGoal.toLocaleString()}</p>
+                      </div>
+                      <div className="p-2 bg-gray-100 rounded-lg">
+                        <Target className="w-5 h-5 text-gray-600" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white border border-gray-100 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Remaining</p>
+                        <p className="text-xl font-bold text-gray-900">ETB {remaining.toLocaleString()}</p>
+                      </div>
+                      <div className="p-2 bg-gray-100 rounded-lg">
+                        <Clock className="w-5 h-5 text-gray-600" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white border border-gray-100 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-1">Backers</p>
+                        <p className="text-2xl font-bold text-gray-900">{project.backers || 0}</p>
+                      </div>
+                      <div className="p-2 bg-gray-100 rounded-lg">
+                        <Users className="w-5 h-5 text-gray-600" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+  
+                {/* Project Image */}
+                {project.imageUrl && (
+                  <div className="rounded-lg overflow-hidden border border-gray-200">
+                    <img 
+                      src={project.imageUrl} 
+                      alt={project.title}
+                      className="w-full h-48 object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+  
+              {/* Support Form Section */}
+              <div>
+                {isOwner ? (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <XCircle className="w-10 h-10 text-red-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Cannot Support Own Project</h3>
+                    <p className="text-sm text-gray-600">You cannot support your own project.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-6">Choose Your Support</h3>
+                      
+                      {/* Quick Select Buttons */}
+                      <div className="mb-6">
+                        <p className="text-sm font-medium text-gray-700 mb-3">Quick Select Amount</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          {templates.map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => handleTemplateClick(value)}
+                              disabled={processing}
+                              className={`py-2.5 px-3 rounded-lg font-medium transition-all text-sm ${
+                                amount === value.toString()
+                                  ? "bg-gray-900 text-white"
+                                  : processing
+                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              }`}
+                            >
+                              <div className="text-xs mb-1">ETB</div>
+                              <div className="text-base">{value.toLocaleString()}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+  
+                      {/* Custom Amount Input */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Or Enter Custom Amount
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg font-medium">ETB</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max={maxSliderAmount}
+                            value={amount}
+                            onChange={handleInputChange}
+                            disabled={processing}
+                            className={`w-full pl-10 pr-4 py-2.5 text-lg font-medium border border-gray-200 rounded-lg focus:border-color-b focus:ring-1 focus:ring-color-b transition-all ${
+                              processing ? "bg-gray-100 cursor-not-allowed" : "bg-white"
+                            }`}
+                            placeholder="100"
+                          />
+                        </div>
+                      </div>
+  
+                      {/* Slider */}
+                      <div className="mt-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                          Adjust Amount with Slider
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="range"
+                            min="1"
+                            max={maxSliderAmount}
+                            value={amount || 0}
+                            onChange={(e) => setAmount(e.target.value)}
+                            disabled={processing}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                            style={{
+                              background: `linear-gradient(to right, #111827 0%, #111827 ${((amount || 0) / maxSliderAmount) * 100}%, #E5E7EB ${((amount || 0) / maxSliderAmount) * 100}%, #E5E7EB 100%)`
+                            }}
+                          />
+                          <div className="flex justify-between text-xs text-gray-500 mt-2">
+                            <span>ETB 1</span>
+                            <span className="font-medium text-gray-900">ETB {(amount || 0).toLocaleString()}</span>
+                            <span>ETB {maxSliderAmount.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+  
+                    {/* Reward Selection */}
+                    {project.rewardsList && project.rewardsList.length > 0 && (
+                      <div className="mb-6">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">Select a Reward (Optional)</h4>
+                        <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
+                          {project.rewardsList.map((reward, index) => {
+                            const numericAmount = parseFloat(amount) || 0;
+                            const rewardAmount = parseFloat(reward.amount) || 0;
+                            const remainingQuantity = reward.type === 'limited' ? (reward.quantity - (reward.claimed || 0)) : Infinity;
+                            const isEligible = numericAmount >= rewardAmount && remainingQuantity > 0;
+                            const isSelected = selectedReward?.index === index;
+                            const rewardClassName = isSelected
+                              ? "relative p-3 border rounded-lg transition-all cursor-pointer border-gray-900 bg-gray-100"
+                              : isEligible
+                              ? "relative p-3 border rounded-lg transition-all cursor-pointer border-gray-200 hover:border-gray-900 bg-white"
+                              : "relative p-3 border rounded-lg transition-all cursor-pointer border-gray-100 bg-gray-50 cursor-not-allowed opacity-60";
+
+                            return (
+                              <div
+                                key={index}
+                                onClick={() => {
+                                  if (isEligible && !processing) {
+                                    setSelectedReward(isSelected ? null : { ...reward, index });
+                                  }
+                                }}
+                                className={rewardClassName}
+                              >
+                                <div className="flex items-center gap-3">
+                                  {reward.imageUrl && (
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                                      <img
+                                        src={reward.imageUrl}
+                                        alt={reward.title}
+                                        className={`w-full h-full object-cover ${
+                                          isEligible ? "" : "grayscale"
+                                        }`}
+                                      />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <h5 className={`font-medium text-sm truncate ${
+                                      isEligible ? "text-gray-900" : "text-gray-400"
+                                    }`}>
+                                      {reward.title}
+                                    </h5>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className={`text-xs font-medium ${
+                                        isEligible ? "text-green-600" : "text-gray-400"
+                                      }`}>
+                                        ETB {rewardAmount.toLocaleString()}
+                                      </span>
+                                      {reward.type === 'limited' && (
+                                        <span className={`text-xs ${
+                                          isEligible ? "text-gray-500" : "text-gray-400"
+                                        }`}>
+                                          {remainingQuantity} left
+                                        </span>
+                                      )}
+                                    </div>
+                                    {!isEligible && (
+                                      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 rounded-lg">
+                                        <span className="text-xs text-gray-500 font-medium">
+                                          {numericAmount < rewardAmount
+                                            ? "Insufficient amount"
+                                            : "Out of Stock"}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {selectedReward && (
+                          <div className="mt-3 p-3 bg-gray-100 border border-gray-200 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-gray-600" />
+                              <span className="text-sm font-medium text-gray-900">
+                                Selected: {selectedReward.title}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 mt-1">
+                              {selectedReward.description}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+  
+                    {/* Payment Buttons */}
+                    <div className="flex gap-3">
+                      {/* Chapa Payment Button - Primary Button */}
+                      <button
+                        type="submit"
+                        disabled={processing || paymentStatus === 'success'}
+                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                          processing || paymentStatus === 'success'
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "bg-gray-900 text-white hover:bg-gray-800"
+                        }`}
+                      >
+                        {processing ? (
+                          <div className="flex items-center justify-center">
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            Processing...
+                          </div>
+                        ) : paymentStatus === 'success' ? (
+                          <div className="flex items-center justify-center">
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Payment Successful!
+                          </div>
+                        ) : paymentStatus === 'error' ? (
+                          <div className="flex items-center justify-center">
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Payment Failed
+                          </div>
+                        ) : (
+                          "Pay with Chapa"
+                        )}
+                      </button>
+
+                      {/* Wallet Payment Button - Secondary Button */}
+                      <button
+                        type="button"
+                        onClick={handleWalletPayment}
+                        disabled={walletProcessing || walletPaymentStatus === 'success' || !userData?.walletBalance || userData.walletBalance < parseFloat(amount)}
+                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                          walletProcessing || walletPaymentStatus === 'success' || !userData?.walletBalance || userData.walletBalance < parseFloat(amount)
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {walletProcessing ? (
+                          <div className="flex items-center justify-center">
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            Processing...
+                          </div>
+                        ) : walletPaymentStatus === 'success' ? (
+                          <div className="flex items-center justify-center">
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Payment Successful!
+                          </div>
+                        ) : walletPaymentStatus === 'error' ? (
+                          <div className="flex items-center justify-center">
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Payment Failed
+                          </div>
+                        ) : !userData?.walletBalance || userData.walletBalance < parseFloat(amount) ? (
+                          <div className="flex items-center justify-center">
+                            <Wallet className="w-4 h-4 mr-2" />
+                            Insufficient Balance
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center">
+                            <Wallet className="w-4 h-4 mr-2" />
+                            Pay with Wallet
+                          </div>
+                        )}
+                      </button>
+                    </div>
+  
+                    {/* Security Note */}
+                    <div className="flex items-center justify-center gap-2 text-sm text-gray-500 pt-4">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Secure payment processing</span>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Rewards Section */}
-        {project.rewardsList && project.rewardsList.length > 0 && (
-          <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/40 p-8 md:p-10 mt-8">
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setShowRewards(!showRewards)}
-                className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4 text-gray-600" />
-                  <h2 className="text-base font-semibold text-gray-900">Rewards ({project.rewardsList.length})</h2>
-                </div>
-                <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showRewards ? 'rotate-180' : ''}`} />
-              </button>
-              {showRewards && (
-                <div className="p-4 border-t border-gray-200">
-                  <RewardsList rewards={project.rewardsList} />
-                </div>
-              )}
+  
+          {/* Rewards Section */}
+          {project.rewardsList && project.rewardsList.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-900 transition-all duration-200">
+                <button
+                  onClick={() => setShowRewards(!showRewards)}
+                  className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-gray-600" />
+                    <h2 className="text-base font-semibold text-gray-900">Rewards ({project.rewardsList.length})</h2>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showRewards ? 'rotate-180' : ''}`} />
+                </button>
+                {showRewards && (
+                  <div className="p-4 border-t border-gray-200">
+                    <RewardsList rewards={project.rewardsList} />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-
+          )}
+  
         </div>
       </div>
     </>
