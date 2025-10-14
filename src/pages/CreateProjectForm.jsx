@@ -1089,14 +1089,14 @@ export default function CreateProjectForm() {
             >
               <div
                 ref={steplineRefs[idx]}
-                className={`w-0.5 absolute ${idx === 4 && activeStep === 5 ? "border-l-2 border-dashed border-color-b" : "bg-gradient-to-b from-color-b to-blue-600"}`}
+                className={`w-0.5 absolute ${idx === 5 && activeStep === 6 ? "border-l-2 border-dashed border-color-b" : "bg-gradient-to-b from-color-b to-blue-600"}`}
                 style={{ height: idx + 1 === activeStep ? "90vh" : "50vh" }}
               ></div>
 
               <div
                 ref={ref}
                 className={`create border-3 bg-white/90 backdrop-blur-sm h-60 w-full font-titan flex relative z-10 mx-auto flex-none cursor-pointer shadow-xl hover:shadow-2xl transition-all duration-500
-                  ${idx === 4 && activeStep === 5 ? "border-dashed rounded-xl border-color-b" : "border-solid border-color-b rounded-md"}`}
+                  ${idx === 5 && activeStep === 6 ? "border-dashed rounded-xl border-color-b" : "border-solid border-color-b rounded-md"}`}
               >
                 <p
                   className="text-color-b font-titan sm:text-xl md:text-3xl lg:text-5xl absolute"
