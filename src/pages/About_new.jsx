@@ -88,7 +88,7 @@ const About = () => {
 
   const differentiators = [
     {
-      icon: <FiShield className="w-5 h-5" />,
+      icon: <FiShield className="w-5 h-5 " />,
       title: "Risk-first investment decisions",
       description: "Every campaign is paired with contextual risk signals—ranging from milestone burn-down tracking to community sentiment—so backers can support ideas with clarity, not guesswork.",
     },
@@ -286,7 +286,7 @@ const About = () => {
                 key={index}
                 className="bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-900 transition-all duration-200 group"
               >
-                <div className="flex items-center justify-center w-12 h-12 bg-gray-900 text-white rounded-lg mb-4 group-hover:scale-105 transition-transform duration-200">
+                <div className="flex items-center justify-center w-12 h-12 bg-color-b text-white rounded-lg mb-4 group-hover:scale-105 transition-transform duration-200">
                   {item.icon}
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 mb-3">{item.title}</h3>
@@ -315,7 +315,7 @@ const About = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {values.map((value, index) => (
                 <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-900 transition-all duration-200">
-                  <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg text-gray-900 mb-3">
+                  <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg text-color-b mb-3">
                     {value.icon}
                   </div>
                   <h3 className="text-sm font-semibold text-gray-900 mb-2">{value.title}</h3>
@@ -392,7 +392,7 @@ const About = () => {
               <div className="space-y-4">
                 {builderToolkit.map((item, index) => (
                   <div key={index} className="flex items-start gap-4 bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-900 transition-all duration-200">
-                    <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg text-gray-900 flex-shrink-0">
+                    <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg text-color-b flex-shrink-0">
                       {item.icon}
                     </div>
                     <div>
@@ -408,19 +408,19 @@ const About = () => {
               <h3 className="text-3xl font-semibold text-gray-900 mb-4">Powered by Modern Technology</h3>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
-                  <FiCheckCircle className="w-5 h-5 text-gray-900 mt-0.5 flex-shrink-0" />
+                  <FiCheckCircle className="w-5 h-5 text-color-b mt-0.5 flex-shrink-0" />
                   <span className="text-sm text-gray-600">React 18 + Vite for lightning-fast interface updates.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <FiCheckCircle className="w-5 h-5 text-gray-900 mt-0.5 flex-shrink-0" />
+                  <FiCheckCircle className="w-5 h-5 text-color-b mt-0.5 flex-shrink-0" />
                   <span className="text-sm text-gray-600">Firebase Authentication, Firestore, and Storage securing profiles, funding data, and media uploads.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <FiCheckCircle className="w-5 h-5 text-gray-900 mt-0.5 flex-shrink-0" />
+                  <FiCheckCircle className="w-5 h-5 text-color-b mt-0.5 flex-shrink-0" />
                   <span className="text-sm text-gray-600">Tailwind-inspired utility styling with bespoke palettes for consistent branding.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <FiCheckCircle className="w-5 h-5 text-gray-900 mt-0.5 flex-shrink-0" />
+                  <FiCheckCircle className="w-5 h-5 text-color-b mt-0.5 flex-shrink-0" />
                   <span className="text-sm text-gray-600">GSAP-powered motion for immersive onboarding and campaign storytelling.</span>
                 </li>
               </ul>
