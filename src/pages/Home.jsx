@@ -543,9 +543,9 @@ const testimonials = [
       </div>
 
       {/* Call to Action Section */}
-      <div className="h-screen w-screen flex">
+      <div className="h-screen w-screen flex flex-col md:flex-row">
         {/* Left side */}
-        <Link to="/manage" className="group relative w-1/2 overflow-hidden cursor-pointer border-t-4 border-r-3">
+        <Link to="/manage" className="group relative md:w-1/2 w-full h-1/2 md:h-full overflow-hidden cursor-pointer border-t-4 border-r-3">
         {/* Image (covers the half) */}
         <img
         src={ImageLeft} /* replace with your left image path */
@@ -572,15 +572,11 @@ const testimonials = [
         Manage Your Projects
         </Link>
         </div>
-
-
-        {/* decorative accent (optional) */}
-        <div className="absolute bottom-6 left-6 w-3 h-3 bg-white rounded-full animate-pulse opacity-80"></div>
         </Link>
 
 
         {/* Right side */}
-        <Link to="/browse" className="group relative w-1/2 overflow-hidden cursor-pointer border-t-4 border-l-3">
+        <Link to="/browse" className="group relative md:w-1/2 w-full h-1/2 md:h-full overflow-hidden cursor-pointer border-t-4 border-l-3">
         <img
         src={ImageRight} /* replace with your right image path */
         alt="Right"
