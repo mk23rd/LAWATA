@@ -940,113 +940,161 @@ export default function CreateProjectForm() {
       </div>
     </div>,
 
-    // Step 8 - Preview & Submit (No changes)
-    <div className="space-y-3 w-full h-full overflow-hidden flex flex-col relative bottom-10">
+    // Step 8 - Preview & Submit (ProjectDetails-style preview)
+    <div className="space-y-3 w-full h-full overflow-hidden flex flex-col">
       <div className="text-center mb-2">
         <h2 className="text-lg font-bold text-gray-800 mb-1">Project Preview</h2>
-        <p className="text-xs text-gray-600">Review your project before submitting</p>
+        <p className="text-xs text-gray-600">This is how your project will look</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 flex-1 flex flex-col">
-        {/* Hero Section */}
-        <div className="relative">
-          {formData.imageFile ? (
-            <img
-              src={URL.createObjectURL(formData.imageFile)}
-              alt="Project Preview"
-              className="w-full h-20 object-cover"
-            />
-          ) : (
-            <div className="w-full h-20 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <div className="text-center">
-                <FiImage className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                <p className="text-gray-500 text-xs">No image</p>
-              </div>
-            </div>
-          )}
+      <div className="flex-1 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-full">
+          {/* Left Column - Image Only */}
+          <div className="lg:col-span-2 space-y-3 overflow-y-auto pr-1">
+            {/* Image Area */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="relative aspect-video bg-gray-100">
+                {formData.imageFile ? (
+                  <img
+                    src={URL.createObjectURL(formData.imageFile)}
+                    alt={formData.title || 'Project Image'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-10 h-10 border-4 border-color-b border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                      <p className="text-xs text-gray-500">No image uploaded</p>
+                    </div>
+                  </div>
+                )}
 
-          <div className="absolute top-1 left-1">
-            <span className="bg-white/90 backdrop-blur-sm text-color-b px-2 py-1 rounded-full text-xs font-semibold flex items-center shadow-lg">
-              <FiTag className="mr-1 w-3 h-3" />
-              {formData.category || 'General'}
-            </span>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-3 flex-1 flex flex-col">
-          <div className="mb-3">
-            <h1 className="text-sm font-bold text-gray-900 mb-1 line-clamp-1">
-              {formData.title || 'Untitled Project'}
-            </h1>
-            <p className="text-gray-600 text-xs leading-relaxed line-clamp-1">
-              {formData.shortDescription || 'No short description provided.'}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-1 mb-3">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100">
-              <div className="flex items-center mb-1">
-                <FiDollarSign className="w-3 h-3 text-color-b mr-1" />
-                <span className="font-semibold text-gray-700 text-xs">Goal</span>
-              </div>
-              <p className="text-xs font-bold text-color-b">${formData.fundingGoal || 0}</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-2 rounded-lg border border-green-100">
-              <div className="flex items-center mb-1">
-                <FiCalendar className="w-3 h-3 text-green-600 mr-1" />
-                <span className="font-semibold text-gray-700 text-xs">End Date</span>
-              </div>
-              <p className="text-xs font-bold text-green-600">{formData.endDate || 'TBD'}</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-2 rounded-lg border border-purple-100">
-              <div className="flex items-center mb-1">
-                <FiTag className="w-3 h-3 text-purple-600 mr-1" />
-                <span className="font-semibold text-gray-700 text-xs">Country</span>
-              </div>
-              <p className="text-xs font-bold text-purple-600">{formData.country || 'N/A'}</p>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-2 mb-2">
-            <h3 className="text-xs font-bold text-gray-900 mb-1">Funding Milestones</h3>
-            <div className="space-y-1 text-xs">
-              {Object.entries(formData.milestones).map(([percentage, milestone]) => (
-                <div key={percentage} className="flex items-start">
-                  <span className="font-semibold text-color-b mr-2">{percentage}%:</span>
-                  <span className="text-gray-700">{milestone.description || 'Not specified'}</span>
+                {/* Category Badge */}
+                <div className="absolute top-2 left-2">
+                  <span className="inline-block px-2 py-1 bg-white/90 text-gray-800 rounded-full text-[10px] font-medium shadow">
+                    {formData.category || 'General'}
+                  </span>
                 </div>
-              ))}
+              </div>
             </div>
+
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-2 flex-1">
-            <h3 className="text-xs font-bold text-gray-900 mb-1">About This Project</h3>
-            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-xs line-clamp-3 overflow-y-auto">
-              {formData.longDescription || 'No detailed description available.'}
-            </div>
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-gray-200">
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="w-full py-2 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  <span>Submitting...</span>
+          {/* Right Column - Funding Stats & Submit */}
+          <div className="lg:col-span-1">
+            <div className="bg-white border border-gray-200 rounded-lg p-3 sticky top-0">
+              {/* Funding Progress */}
+              <div className="mb-4">
+                <div className="flex justify-between items-baseline mb-1">
+                  <span className="text-lg font-bold text-gray-900">ETB 0</span>
+                  <span className="text-xs text-gray-500">of ETB {Number(formData.fundingGoal || 0).toLocaleString()}</span>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center">
-                  <span>Submit Project</span>
-                  <FiCheck className="w-4 h-4 ml-1" />
+                <div className="w-full bg-gray-100 rounded-full h-2 mb-1">
+                  <div className="h-2 rounded-full bg-color-b" style={{ width: '0%' }} />
+                </div>
+                <p className="text-[10px] text-gray-500">0% funded</p>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 gap-2 mb-4 pb-4 border-b border-gray-100">
+                <div>
+                  <p className="text-[10px] text-gray-500">Backers</p>
+                  <p className="text-base font-bold text-gray-900">0</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-500">End Date</p>
+                  <p className="text-base font-bold text-gray-900">{formData.endDate || 'TBD'}</p>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="w-full py-2.5 px-3 rounded-lg font-medium transition-all bg-gray-900 text-white hover:bg-gray-800 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Submitting...
+                  </span>
+                ) : (
+                  'Submit Project'
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Full-width Project Info */}
+          <div className="lg:col-span-3">
+            <div className="bg-white border border-gray-200 rounded-lg p-3">
+              <h1 className="text-xl font-bold text-gray-900 mb-2">{formData.title || 'Untitled Project'}</h1>
+              <p className="text-gray-600 mb-3 text-sm">{formData.shortDescription || 'No short description provided.'}</p>
+
+              {/* Quick Summary (from original preview) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-2 rounded-lg border border-blue-100">
+                  <div className="flex items-center mb-1">
+                    <FiDollarSign className="w-3 h-3 text-color-b mr-1" />
+                    <span className="font-semibold text-gray-700 text-xs">Goal</span>
+                  </div>
+                  <p className="text-xs font-bold text-color-b">ETB {Number(formData.fundingGoal || 0).toLocaleString()}</p>
+                </div>
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-2 rounded-lg border border-green-100">
+                  <div className="flex items-center mb-1">
+                    <FiCalendar className="w-3 h-3 text-green-600 mr-1" />
+                    <span className="font-semibold text-gray-700 text-xs">End Date</span>
+                  </div>
+                  <p className="text-xs font-bold text-green-600">{formData.endDate || 'TBD'}</p>
+                </div>
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-2 rounded-lg border border-purple-100">
+                  <div className="flex items-center mb-1">
+                    <FiTag className="w-3 h-3 text-purple-600 mr-1" />
+                    <span className="font-semibold text-gray-700 text-xs">Country</span>
+                  </div>
+                  <p className="text-xs font-bold text-purple-600">{formData.country || 'N/A'}</p>
+                </div>
+              </div>
+
+              {/* Long Description */}
+              <div className="mb-3">
+                <h2 className="text-sm font-semibold text-gray-900 mb-2">About This Project</h2>
+                <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {formData.longDescription || 'No detailed description available.'}
+                </div>
+              </div>
+
+              {/* Milestones Preview */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+                <h2 className="text-sm font-semibold text-gray-900 mb-2">Funding Milestones</h2>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(formData.milestones).map(([percentage, milestone]) => (
+                    <div key={percentage} className="p-2 bg-white rounded-lg border border-gray-200">
+                      <div className="text-xs text-gray-500">{percentage}%</div>
+                      <div className="text-sm text-gray-800">{milestone.description || 'Not specified'}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rewards Preview */}
+              {formData.rewards.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg mt-3">
+                  <button type="button" className="w-full p-2 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                    <div className="text-sm font-semibold text-gray-900">Rewards ({formData.rewards.length})</div>
+                  </button>
+                  <div className="p-2 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {formData.rewards.map((r) => (
+                      <div key={r.id} className="p-2 border border-gray-200 rounded-lg bg-gray-50">
+                        <div className="text-sm font-semibold text-gray-900 mb-1">{r.title || 'Reward'}</div>
+                        <div className="text-xs text-gray-600 mb-1">{r.description || 'No description'}</div>
+                        <div className="text-xs font-bold text-gray-900">ETB {r.amount || 0}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
-            </button>
+            </div>
           </div>
         </div>
       </div>

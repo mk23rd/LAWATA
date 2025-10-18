@@ -58,7 +58,6 @@ const stats = [
 
   { id: "users", display: "1K+", label: "Active Users", percent: 60, numeric: 1000, format: (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : `${Math.round(n)}`), suffix: "+" },
 
-  { id: "rate", display: "95%", label: "Success Rate", percent: 48, numeric: 48, suffix: "%" },
 ];
 
 
@@ -168,7 +167,7 @@ useEffect(() => {
   if (!statsContainerRef.current) return;
 
   // initial zero state
-  barRefs.current.forEach((el) => el && gsap.set(el, { height: "0%" }));
+  barRefs.current.forEach((el) => el && gsap.set(el, { y: 0 }));
   textRefs.current.forEach((el, i) => {
     const s = stats[i];
     if (!el) return;
@@ -180,17 +179,24 @@ useEffect(() => {
   const tl = gsap.timeline({
     scrollTrigger: {
       trigger: statsContainerRef.current,
-      start: "top 80%",
+      start: "top bottom",
       toggleActions: "play none none none",
+      once: true,
       // markers: true, // enable to debug
     },
   });
 
+  const containerHeight = statsContainerRef.current.clientHeight || 0;
+
   stats.forEach((s, i) => {
-    // bar grow
+    // bar translate upwards so the top of the rectangle aligns with the previous fill height
+    const barEl = barRefs.current[i];
+    const barHeight = barEl ? barEl.offsetHeight : 0;
+    const targetTop = containerHeight * (s.percent / 100);
+    const targetY = -(targetTop - barHeight);
     tl.to(
-      barRefs.current[i],
-      { height: `${s.percent}%`, duration: 1.2, ease: "power3.out" },
+      barEl,
+      { y: targetY, duration: 1.2, ease: "power3.out" },
       i * 0.12
     );
 
@@ -223,10 +229,6 @@ useEffect(() => {
     }
   };
 }, []);
-
-
-
-
 
 /* useEffect(() => {
   const handleClickOutside = (event) => {
@@ -288,20 +290,19 @@ const testimonials = [
         <div className='w-screen h-1/5 flex items-center pt-25'>
           <div className=' w-0/10 h-full lg:w-2/10'></div>
           <div className=' w-10/10 h-full flex items-center lg:justify-start justify-center'>
-                <p className='sm:text-3xl md:text-3xl lg:text-4xl text-2xl text-center lg:text-start pt-30 lg:pt-0 text-color-e font-medium lg:font-light'>Crowdfunding Meets Risk Intelligence - Where Every Funding <br /> is an Informed Decision</p>
+                <p className='sm:text-3xl md:text-3xl lg:text-4xl text-2xl text-center lg:text-start pt-15 lg:pt-0 text-color-e font-medium lg:font-light'>Crowdfunding Meets Risk Intelligence - Where Every Funding <br /> is an Informed Decision</p>
           </div>       
         </div>
       </div>
 
-      <div className="h-screen w-screen flex flex-col">
-  {/* Navbar */}
-  <nav className="h-16 md:h-20"></nav>
+  <div className="w-screen flex flex-col">
+
 
   {/* Main */}
-  <main className="flex-1 flex flex-col gap-8 md:gap-12 lg:gap-16 px-4 md:px-8 lg:px-12">
+  <main className="flex flex-col gap-8 md:gap-12 lg:gap-16 px-4 md:px-8 lg:px-12">
     
     {/* Header Row */}
-    <div className="flex items-center justify-center mx-5 mt-15 lg:mt-5">
+    <div className="flex items-center justify-center mx-5 mt-15 lg:mt-5 ">
       {/* Title */}
       <div className="w-1/2 flex items-center justify-start">
         <p className="text-color-e text-3xl sm:text-3xl md:text-4xl lg:text-5xl underline">
@@ -319,7 +320,7 @@ const testimonials = [
         </button>
         <button
           onClick={scrollRight}
-          className="hover:bg-color-a border-2 md:border-3 hover:text-color-d text-color-a border-color-a w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center rotate-180"
+          className="hover:bg-color-a border-2 md:border-3 hover:text-color-d text-color-a border-color-a w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center rotate-180 "
         >
           <img src={Arrow} alt="Scroll Right" className='w-3'/>
         </button>
@@ -327,7 +328,7 @@ const testimonials = [
     </div>
 
     {/* Projects Scroll Section */}
-    <div className="relative flex-1 w-full">
+    <div className="relative w-full">
       <div
         ref={freshContainerRef}
         className="flex overflow-x-auto gap-4 scrollbar-hide py-4 px-[5vw] w-full"
@@ -374,7 +375,7 @@ const testimonials = [
                   />
 
                   {/* Progress Bar */}
-                  <div className="w-full mb-2 z-10">
+                  <div className="w-full mb-2 z-10 ">
                     <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                       <div
                         className={`h-2 rounded-full transition-all ${
@@ -398,7 +399,7 @@ const testimonials = [
 
                   {/* Funding left */}
                   {!isFullyFunded && (
-                    <p className="text-xs text-color-d mb-2 z-10">
+                    <p className="text-xs text-color-d mb-2 z-10 ">
                       {amountLeft > 0
                         ? `$${amountLeft.toLocaleString()} to go`
                         : "Goal reached!"}
@@ -406,28 +407,28 @@ const testimonials = [
                   )}
 
                   {/* Vertical Line Accent */}
-                  <div className="absolute -top-10 left-1/2 h-[115%] w-[3px] bg-color-e pointer-events-none z-0"></div>
+                  <div className="absolute -top-10 left-1/2 h-[115%] w-[3px] bg-color-e pointer-events-none z-0 "></div>
                 </div>
               </Link>
             );
           })
         ) : (
-          <p className="text-color-e ml-4">No projects yet</p>
+          <p className="text-color-e ml-4 ">No projects yet</p>
         )}
       </div>
 
       {/* Fade Effects */}
-      <div className="absolute top-0 left-0 h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
-      <div className="absolute top-0 right-0 h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
+      <div className="absolute top-0 left-0 h-90 md:h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
+      <div className="absolute top-0 right-0 h-90 md:h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
     </div>
   </main>
 </div>
 
 
       {/* Statistics Section */}
-      <div className="h-screen w-screen bg-white flex flex-col justify-center items-center relative overflow-hidden">
+      <div className="h-screen w-screen flex flex-col justify-center items-center relative overflow-hidden mt-15">
         <div className='w-full h-1/5 flex flex-col items-center'>
-          <h2 className="text-4xl md:text-6xl font-bold text-color-a mb-5 mt-5 animate-fade-in-up">
+          <h2 className="text-4xl md:text-6xl font-bold text-color-a mb-5 md:mt-5 animate-fade-in-up">
             Join the Future of
             <span className="bg-color-a bg-clip-text text-transparent"> Crowdfunding</span>
           </h2>
@@ -439,42 +440,24 @@ const testimonials = [
         {/* ====== Animated Stats Container (uses GSAP + ScrollTrigger) ====== */}
         <div
           ref={statsContainerRef}
-          className="relative w-11/12 h-4/5 flex justify-center items-end gap-10 mb-5 md:gap-38 lg:gap-48 z-10 border-b-6 border-l-6"
+          className="relative w-11/12 h-3/5 md:h-4/5 flex justify-center items-end gap-10 mb-5 md:gap-38 lg:gap-48 z-10 md:mt-10"
         >
-          {/* Arrow on top-left of the Y-axis */}
-          <FiChevronUp
-            className="absolute text-color-a"
-            style={{
-              top: '-25px',
-              left: '-35px',
-              fontSize: '4rem',
-            }}
-          />
-
-          {/* Arrow on bottom-right of the X-axis */}
-          <FiChevronRight
-            className="absolute text-color-a"
-            style={{
-              right: '-25px',
-              bottom: '-35px',
-              fontSize: '4rem',
-            }}
-          />
 
           {stats.map((s, i) => (
             <div key={s.id} className="relative text-center w-40 h-full overflow-hidden">
+              {/* Behind-rectangle vertical line, full container (y-axis) height */}
+              <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[3px] bg-color-e z-0"></div>
               <div className="absolute inset-x-0 bottom-0 h-full flex items-end justify-center">
                 <div
                   ref={(el) => setBarRef(el, i)}
-                  className="md:w-40 border-t-4 border-r-4 border-l-4 w-20 ml-2 mr-2"
+                  className="w-30 h-30 ml-2 mr-2 border-4 flex flex-col items-center justify-center relative z-10"
                   style={{
                     background: "#1C5EDD",
-                    height: "0%",
                   }}
                 >
                   <div
                     ref={(el) => setTextRef(el, i)}
-                    className="text-3xl mt-5 md:text-6xl font-bold text-white leading-none"
+                    className="text-3xl mt-5 md:text-5xl font-bold text-white leading-none"
                   >
                     {s.display}
                   </div>
@@ -495,7 +478,7 @@ const testimonials = [
           </h2>
         </div>
 
-        <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-0 lg:mt-10">
+        <div className="w-85 md:w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-0 lg:mt-10">
           {testimonials.map((t, i) => (
             <article
               key={i}
@@ -567,7 +550,7 @@ const testimonials = [
         {/* the CTA is initially hidden and revealed when hovering the half */}
         <Link
         to="/manage"
-        className="mt-8 inline-block bg-white text-black px-8 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0"
+        className="mt-8 inline-block bg-white text-black px-8 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 md:opacity-0 md:translate-y-4 group-hover:md:opacity-100 group-hover:md:translate-y-0"
         >
         Manage Your Projects
         </Link>
@@ -594,7 +577,7 @@ const testimonials = [
 
         <Link
         to="/browse"
-        className="mt-8 inline-block bg-blue-600 text-white px-8 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0"
+        className="mt-8 inline-block bg-blue-600 text-white px-8 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 md:opacity-0 md:translate-y-4 group-hover:md:opacity-100 group-hover:md:translate-y-0"
         >
         Explore Projects
         </Link>

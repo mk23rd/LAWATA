@@ -231,49 +231,51 @@ const Navbar = () => {
 
       {/* Mobile Menu Dropdown */}
       {menuOpen && (
-        <div className="md:hidden absolute top-16 right-0 left-0 bg-white shadow-lg border-t border-gray-200 z-40">
-          <div className="px-4 py-6 space-y-4">
-            {/* Mobile Navigation Links */}
-            <Link 
-              to="/home" 
-              className={`block text-lg font-semibold py-2 px-4 rounded-lg transition-all ${
-                location.pathname === '/manage' 
-                  ? 'bg-color-b text-white shadow-md' 
-                  : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
-              }`}
-              onClick={toggleMenu}
-            >
-              Home
-            </Link>
-            <Link 
-              to="/browse" 
-              className={`block text-lg font-semibold py-2 px-4 rounded-lg transition-all ${
-                location.pathname === '/browse' 
-                  ? 'bg-color-b text-white shadow-md' 
-                  : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
-              }`}
-              onClick={toggleMenu}
-            >
-              Browse Works
-            </Link>
-            <Link 
-              to="/about" 
-              className={`block text-lg font-semibold py-2 px-4 rounded-lg transition-all ${
-                location.pathname === '/about' 
-                  ? 'bg-color-b text-white shadow-md' 
-                  : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
-              }`}
-              onClick={toggleMenu}
-            >
-              About
-            </Link>
+        <div className="md:hidden absolute top-16 right-0 left-0 bg-color-e shadow-lg border-t border-gray-200 z-40">
+          <div className="px-4 py-5 space-y-2">
+            <div className="flex justify-center gap-15">
+              {/* Mobile Navigation Links */}
+              <Link 
+                to="/home" 
+                className={`block text-2xl font-semibold py-2 px-2 rounded-lg transition-all ${
+                  location.pathname === '/manage' 
+                    ? 'bg-color-b text-white shadow-md' 
+                    : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
+                }`}
+                onClick={toggleMenu}
+              >
+                Home
+              </Link>
+              <Link 
+                to="/browse" 
+                className={`block text-2xl font-semibold py-2 px-2 rounded-lg transition-all ${
+                  location.pathname === '/browse' 
+                    ? 'bg-color-b text-white shadow-md' 
+                    : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
+                }`}
+                onClick={toggleMenu}
+              >
+                Browse Works
+              </Link>
+              <Link 
+                to="/about" 
+                className={`block text-2xl font-semibold py-2 px-2 rounded-lg transition-all ${
+                  location.pathname === '/about' 
+                    ? 'bg-color-b text-white shadow-md' 
+                    : 'text-color-d hover:bg-color-b hover:bg-opacity-80 hover:text-white'
+                }`}
+                onClick={toggleMenu}
+              >
+                About
+              </Link>
+            </div>
             
             {/* Mobile User Section */}
             <div className="border-t border-gray-200 pt-4 mt-4">
               {user ? (
                 <>
                   {/* If user IS logged in */}
-                  <div className="px-2 py-2 text-sm text-color-d border-b border-color-d border-opacity-20 mb-2 flex items-center gap-2">
+                  <div className="px-2 py-2 text-xl text-color-d border-b border-color-d border-opacity-20 mb-2 flex items-center gap-2">
                     {userData?.profileImageUrl ? (
                       <img 
                         src={userData.profileImageUrl} 
@@ -292,25 +294,25 @@ const Navbar = () => {
                   </div>
                   <button
                     onClick={() => { navigate("/profile"); toggleMenu(); }}
-                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    className="block w-full text-xl text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
                     Profile
                   </button>
                   <button
                     onClick={() => { navigate("/manage"); toggleMenu(); }}
-                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    className="block w-full text-xl text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
                     Manage
                   </button>
                   <button
                     onClick={() => { navigate("/wallet"); toggleMenu(); }}
-                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    className="block w-full text-xl text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
                     Wallet
                   </button>
                   <button
                     onClick={() => { handleLogout(); toggleMenu(); }}
-                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    className="block w-full text-xl text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
                     Logout
                   </button>
@@ -320,13 +322,13 @@ const Navbar = () => {
                   {/* If user is NOT logged in */}
                   <button
                     onClick={() => { navigate("/signing", { state: { panel: "signup" } }); toggleMenu(); }}
-                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    className="block w-full text-xl text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
                     Sign Up
                   </button>
                   <button
                     onClick={() => { navigate("/signing", { state: { panel: "login" } }); toggleMenu(); }}
-                    className="block w-full text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
+                    className="block w-full text-xl text-left px-2 py-2 text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                   >
                     Login
                   </button>
