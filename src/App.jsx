@@ -23,13 +23,16 @@ import Wallet from "./pages/Wallet";
 import Bookmarks from "./pages/Bookmarks";
 import AboutNew from "./pages/About_new";
 import Navbar from "./components/NavBar";
+import Loading from "./pages/Loading";
 
 function App() {
   // Track whether the splash/loading experience has finished running
   const [loadingComplete, setLoadingComplete] = useState(false);
-  //   // Display the loading component until the asynchronous setup finishes
-  //   return <Loading onComplete={() => setLoadingComplete(true)} />;
-  // }
+
+  // Show the loading screen until it calls onComplete
+  if (!loadingComplete) {
+    return <Loading onComplete={() => setLoadingComplete(true)} />;
+  }
 
   return (
     <>
