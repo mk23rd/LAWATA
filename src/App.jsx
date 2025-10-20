@@ -30,9 +30,9 @@ function App() {
   const [loadingComplete, setLoadingComplete] = useState(false);
 
   // Show the loading screen until it calls onComplete
-  if (!loadingComplete) {
+  /* if (!loadingComplete) {
     return <Loading onComplete={() => setLoadingComplete(true)} />;
-  }
+  } */
 
   return (
     <>

@@ -166,67 +166,95 @@ const scrollRight = () => {
 useEffect(() => {
   if (!statsContainerRef.current) return;
 
-  // initial zero state
-  barRefs.current.forEach((el) => el && gsap.set(el, { y: 0 }));
-  textRefs.current.forEach((el, i) => {
-    const s = stats[i];
-    if (!el) return;
-    if (s.suffix === "%") el.innerText = "0%";
-    else if (s.format) el.innerText = s.format(0) + (s.suffix || "");
-    else el.innerText = "0" + (s.suffix || "");
-  });
+  const container = statsContainerRef.current;
 
-  const tl = gsap.timeline({
-    scrollTrigger: {
-      trigger: statsContainerRef.current,
-      start: "top bottom",
-      toggleActions: "play none none none",
-      once: true,
-      // markers: true, // enable to debug
-    },
-  });
+  const resetZero = () => {
+    barRefs.current.forEach((el) => el && gsap.set(el, { y: 0 }));
+    textRefs.current.forEach((el, i) => {
+      const s = stats[i];
+      if (!el) return;
+      if (s.suffix === "%") el.innerText = "0%";
+      else if (s.format) el.innerText = s.format(0) + (s.suffix || "");
+      else el.innerText = "0" + (s.suffix || "");
+    });
+  };
 
-  const containerHeight = statsContainerRef.current.clientHeight || 0;
+  const buildTimeline = () => {
+    const tl = gsap.timeline();
+    const containerHeight = container.clientHeight || 0;
 
-  stats.forEach((s, i) => {
-    // bar translate upwards so the top of the rectangle aligns with the previous fill height
-    const barEl = barRefs.current[i];
-    const barHeight = barEl ? barEl.offsetHeight : 0;
-    const targetTop = containerHeight * (s.percent / 100);
-    const targetY = -(targetTop - barHeight);
-    tl.to(
-      barEl,
-      { y: targetY, duration: 1.2, ease: "power3.out" },
-      i * 0.12
-    );
+    stats.forEach((s, i) => {
+      const barEl = barRefs.current[i];
+      const barHeight = barEl ? barEl.offsetHeight : 0;
+      const targetTop = containerHeight * (s.percent / 100);
+      const targetY = -(targetTop - barHeight);
 
-    // count-up
-    const obj = { val: 0 };
-    tl.to(
-      obj,
-      {
-        val: s.numeric,
-        duration: 1.2,
-        ease: "power1.out",
-        onUpdate: () => {
-          const el = textRefs.current[i];
-          if (!el) return;
-          if (s.suffix === "%") el.innerText = Math.round(obj.val) + "%";
-          else if (s.format) el.innerText = s.format(obj.val) + (s.suffix || "");
-          else el.innerText = Math.round(obj.val) + (s.suffix || "");
+      tl.to(barEl, { y: targetY, duration: 3.2, ease: "power3.out" }, i * 0.12);
+
+      const obj = { val: 0 };
+      tl.to(
+        obj,
+        {
+          val: s.numeric,
+          duration: 3.2,
+          ease: "power1.out",
+          onUpdate: () => {
+            const el = textRefs.current[i];
+            if (!el) return;
+            if (s.suffix === "%") el.innerText = Math.round(obj.val) + "%";
+            else if (s.format) el.innerText = s.format(obj.val) + (s.suffix || "");
+            else el.innerText = Math.round(obj.val) + (s.suffix || "");
+          },
         },
-      },
-      i * 0.12
-    );
+        i * 0.12
+      );
+    });
+
+    return tl;
+  };
+
+  let tl = null;
+
+  const st = ScrollTrigger.create({
+    trigger: container,
+    start: "top bottom",
+    end: "bottom top",
+    onEnter: () => {
+      if (tl) {
+        try { tl.kill(); } catch {}
+      }
+      resetZero();
+      tl = buildTimeline();
+    },
+    onEnterBack: () => {
+      if (tl) {
+        try { tl.kill(); } catch {}
+      }
+      resetZero();
+      tl = buildTimeline();
+    },
+    onLeave: () => {
+      if (tl) {
+        try { tl.kill(); } catch {}
+        tl = null;
+      }
+    },
+    onLeaveBack: () => {
+      if (tl) {
+        try { tl.kill(); } catch {}
+        tl = null;
+      }
+    },
+    // markers: true, // enable for debug
   });
 
   return () => {
     try {
-      if (tl && tl.scrollTrigger) tl.scrollTrigger.kill();
-      tl.kill();
-    } catch (e) {
-      // ignore
-    }
+      if (tl) tl.kill();
+    } catch {}
+    try {
+      st.kill();
+    } catch {}
   };
 }, []);
 
@@ -332,7 +360,16 @@ const testimonials = [
       <div
         ref={freshContainerRef}
         className="flex overflow-x-auto gap-4 scrollbar-hide py-4 px-[5vw] w-full"
-        style={{ scrollSnapType: "x mandatory" }}
+        style={{ scrollSnapType: "x mandatory", overscrollBehaviorX: "contain", touchAction: "pan-y" }}
+        onWheel={(e) => {
+          // Only consume horizontal-intent gestures; let vertical scrolling bubble to the page
+          const absX = Math.abs(e.deltaX);
+          const absY = Math.abs(e.deltaY);
+          if (absX > absY) {
+            e.preventDefault();
+            e.currentTarget.scrollLeft += e.deltaX;
+          }
+        }}
       >
         {freshProjects.length > 0 ? (
           freshProjects.map((project) => {
