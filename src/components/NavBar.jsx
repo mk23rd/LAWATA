@@ -192,13 +192,13 @@ const Navbar = () => {
                   <>
                     {/* If user is NOT logged in */}
                     <button
-                      onClick={() => navigate("/signing", { state: { panel: "signup" } })}
+                      onClick={() => navigate("/signing", { state: { panel: "login" } })}
                       className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                     >
                       Sign Up
                     </button>
                     <button
-                      onClick={() => navigate("/signing", { state: { panel: "login" } })}
+                      onClick={() => navigate("/signing", { state: { panel: "signup" } })}
                       className="block w-full text-left px-4 py-2 text-sm text-color-d hover:bg-color-b hover:bg-opacity-10 transition-colors"
                     >
                       Login

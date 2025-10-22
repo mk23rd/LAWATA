@@ -7,7 +7,8 @@ import { useNavigate } from "react-router-dom";
 import { FiUser, FiTag, FiAlignLeft, FiDollarSign, FiCalendar, FiImage, FiChevronRight, FiChevronLeft, FiUpload, FiCheck, FiX, FiTarget, FiTrash2, FiPlus } from "react-icons/fi";
 import imgLogo from '../assets/images/img-logo.svg'
 import { useAuth } from "../context/AuthContext";
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function CreateProjectForm() {
   const navigate = useNavigate();
@@ -104,22 +105,48 @@ export default function CreateProjectForm() {
     updateReward(rewardId, 'imageFile', file);
   };
 
+  // Allowed image mime types for uploads in Step 6
+  const ALLOWED_IMAGE_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+  ]);
+
+  const filterValidImages = (files) => {
+    const valid = [];
+    const invalid = [];
+    files.forEach((file) => {
+      const typeOk = file.type && ALLOWED_IMAGE_TYPES.has(file.type);
+      const name = (file.name || '').toLowerCase();
+      const extOk = name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif');
+      if (typeOk || extOk) valid.push(file);
+      else invalid.push(file);
+    });
+    return { valid, invalid };
+  };
+
   // Improved file handling logic
   const handleFileChange = (e, isMainImage = false) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
+    const { valid, invalid } = filterValidImages(files);
+    if (invalid.length > 0) {
+      toast.error('Only PNG, JPG, or GIF images are allowed.');
+    }
+    if (valid.length === 0) return;
+
     if (isMainImage) {
       // Set the first file as main image
       setFormData(prev => ({
         ...prev,
-        imageFile: files[0]
+        imageFile: valid[0]
       }));
     } else {
       // Add all files to secondary images
       setFormData(prev => ({
         ...prev,
-        secondaryImages: [...prev.secondaryImages, ...files]
+        secondaryImages: [...prev.secondaryImages, ...valid]
       }));
     }
   };
@@ -127,18 +154,24 @@ export default function CreateProjectForm() {
   // Handle drag and drop for images
   const handleDrop = (e, isMainImage = false) => {
     e.preventDefault();
-    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+    const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
+
+    const { valid, invalid } = filterValidImages(files);
+    if (invalid.length > 0) {
+      toast.error('Only PNG, JPG, or GIF images are allowed.');
+    }
+    if (valid.length === 0) return;
 
     if (isMainImage) {
       setFormData(prev => ({
         ...prev,
-        imageFile: files[0]
+        imageFile: valid[0]
       }));
     } else {
       setFormData(prev => ({
         ...prev,
-        secondaryImages: [...prev.secondaryImages, ...files]
+        secondaryImages: [...prev.secondaryImages, ...valid]
       }));
     }
   };
@@ -1104,6 +1137,7 @@ export default function CreateProjectForm() {
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
+        <ToastContainer position="top-center" autoClose={4000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" />
         {/* Mobile Step Navigation */}
         <div className="md:hidden w-full mb-6">
           <div className="flex justify-between items-center bg-white/80 backdrop-blur-sm rounded-2xl p-3 shadow-lg border border-white/20">

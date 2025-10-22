@@ -97,6 +97,7 @@ const Signing = () => {
   const signupInput = useRef(null);
   const signupBtn = useRef(null);
   const googleinBtn = useRef(null);
+  const googlesignupBtn = useRef(null);
 
 
   // Form state
@@ -215,7 +216,17 @@ const Signing = () => {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (signupformData.username) {
-        checkUsernameAvailability(signupformData.username);
+        const u = signupformData.username.trim();
+        const syntaxValid = u.length >= 3 && u.length <= 20 && /^[a-zA-Z0-9_]+$/.test(u);
+        if (syntaxValid) {
+          checkUsernameAvailability(u);
+        } else {
+          setUsernameAvailable(null);
+          setUsernameChecking(false);
+        }
+      } else {
+        setUsernameAvailable(null);
+        setUsernameChecking(false);
       }
     }, 500);
 
@@ -462,6 +473,7 @@ const Signing = () => {
       gsap.to(googleinBtn.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
       gsap.to(signupInput.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
       gsap.to(signupBtn.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
+      gsap.to(googlesignupBtn.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
     } else {
       gsap.to(signupRef.current, { width: "10%", duration: 0.6 });
       gsap.to(signinRef.current, { width: "90%", duration: 0.6 });
@@ -480,6 +492,7 @@ const Signing = () => {
       gsap.to(googleinBtn.current, { opacity: 1, pointerEvents: "auto", duration: 0.6, delay: 0.2 });
       gsap.to(signupInput.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
       gsap.to(signupBtn.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
+      gsap.to(googlesignupBtn.current, { opacity: 0, pointerEvents: "none", duration: 0.4 });
     }
   }, [activePanel, isMobile]);
 
@@ -747,87 +760,37 @@ const Signing = () => {
           <div ref={signupWid1} className='h-0/5 w-full hidden md:block'></div>
           <div ref={signupWid2} className='bg-color-e h-1/5 w-1.5 hidden md:block'></div>
           <div ref={signupWid3} className='bg-color-e h-full md:h-4/5 w-full font-titan text-5xl text-color-b flex items-center justify-center'>
-            <div className='text-color-b w-11/12 md:w-3xl max-w-[560px] px-4 md:px-0 gap-10 flex flex-col items-center justify-center'>
+            <div className='text-color-b w-11/12 md:w-3xl max-w-[560px] px-4 md:px-0 gap-8 flex flex-col items-center justify-center'>
               <div
                 ref={signupLabel}
-                className={`font-titan pointer-events-none transition-transform duration-300 ${isMobile && activePanel !== 'signup' ? 'translate-y-8' : ''}`}
-              >
-                Sign Up
-              </div>
-              <form
-                ref={signupInput}
-                className={`flex flex-col gap-2 ${isMobile && activePanel !== 'signup' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : ''}`}
-                onSubmit={handleSignUpSubmit}
-                autoComplete="on"
-              >
-                <div className="relative">
-                  <InputField classname="border-b-3 text-2xl border-color-b w-72 md:w-100 mx-auto outline-0" inputtype="text" name="username" value={signupformData.username} onChange={handleSignUpChange} placeholder="User Name" autoComplete="username"/>
-                  {usernameChecking && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                      <svg className="animate-spin h-5 w-5 text-color-b" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    </div>
-                  )}
-                  {!usernameChecking && signupformData.username && signupformData.username.length >= 3 && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                      {usernameAvailable === true ? (
-                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      ) : usernameAvailable === false ? (
-                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-                <InputField classname="border-b-3 text-2xl border-color-b w-72 md:w-100 mx-auto outline-0" inputtype="email" name="email" value={signupformData.email} onChange={handleSignUpChange} placeholder="Email" autoComplete="email"/>
-                <InputField classname="border-b-3 text-2xl border-color-b w-72 md:w-100 mx-auto outline-0" inputtype="password" name="password" value={signupformData.password} onChange={handleSignUpChange} placeholder="Password" autoComplete="new-password"/>
-                <InputField classname="border-b-3 text-2xl border-color-b w-72 md:w-100 mx-auto outline-0" inputtype="password" name="confirmPassword" value={signupformData.confirmPassword} onChange={handleSignUpChange} placeholder="Confirm Password" autoComplete="new-password"/>
-                <div className="flex gap-2 items-center opacity-85 text-2xl relative top-5">
-                  <input 
-                    className='w-4 h-4 rounded-sm' 
-                    type="checkbox" 
-                    checked={rememberMeSignUp}
-                    onChange={(e) => setRememberMeSignUp(e.target.checked)}
-                  />
-                  <span>Remember Me !</span>
-                </div>
-              </form>
-              <div ref={signupBtn} className={`${isMobile && activePanel !== 'signup' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : ''}`}>
-                <Button text="SIGN UP" callfunc={handleSignUp} loading={loading}/>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sign In Panel */}
-        <div
-          ref={signinRef}
-          className='w-full md:w-1/5 h-auto md:h-screen flex flex-col items-center overflow-hidden order-1 md:order-none'
-          onClick={() => setActivePanel("login")}
-          style={isMobile ? { height: activePanel === 'login' ? 'calc(100% - 64px)' : '84px', transition: 'height 300ms ease' } : undefined}
-        >
-          <div ref={signinWid1} className='h-full md:h-1/5 w-full border-color-b border-b-6 border-l-6 border-r-6 font-titan text-5xl text-color-b flex items-center justify-center relative z-20'>
-            <div className='text-color-e w-11/12 md:w-3xl max-w-[560px] px-4 md:px-0 gap-5 flex flex-col items-center justify-center'>
-              <div
-                ref={signinLabel}
-                className={`font-titan pointer-events-none transition-transform duration-300 ${isMobile && activePanel !== 'login' ? 'translate-y-10' : ''}`}
+                className={`font-titan pointer-events-none transition-transform duration-300 text-center ${isMobile && activePanel !== 'signup' ? 'translate-y-8' : ''}`}
               >
                 Login
               </div>
               <form
-                ref={signinInput}
-                className={`flex flex-col gap-5 transition-opacity duration-300 ${isMobile && activePanel !== 'login' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : 'opacity-100'}`}
+                ref={signupInput}
+                className={`flex flex-col gap-5 transition-opacity duration-300 ${isMobile && activePanel !== 'signup' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : ''}`}
                 onSubmit={handleSignInSubmit}
                 autoComplete="on"
               >
-                <InputField classname="border-b-3 text-2xl border-color-e w-72 md:w-100 mx-auto outline-0" inputtype="email" name="email" value={signinformData.email} onChange={handleSignInChange} placeholder="Email" autoComplete="email"/>
-                <InputField classname="border-b-3 text-2xl border-color-e w-72 md:w-100 mx-auto outline-0" inputtype="password" name="password" value={signinformData.password} onChange={handleSignInChange} placeholder="Password" autoComplete="current-password"/>
-                <div className="flex text-xl justify-between relative top-5">
+                <div className="relative">
+                  <InputField classname="border-b-3 text-2xl border-color-b text-color-b w-72 md:w-100 mx-auto outline-0" inputtype="email" name="email" value={signinformData.email} onChange={handleSignInChange} placeholder="Email" autoComplete="email"/>
+                  {signinformData.email && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signinformData.email.trim()) ? (
+                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <InputField classname="border-b-3 text-2xl border-color-b text-color-b w-72 md:w-100 mx-auto outline-0" inputtype="password" name="password" value={signinformData.password} onChange={handleSignInChange} placeholder="Password" autoComplete="current-password"/>
+                <div className="flex text-xl justify-between mt-4">
                   <div className="flex gap-2 items-center justify-center">
                     <input 
                       className='w-4 h-4 rounded-sm' 
@@ -852,16 +815,114 @@ const Signing = () => {
                   </p>
                 </div>
               </form>
-              
-              <div ref={signinBtn} className={`relative top-10 transition-opacity duration-300 ${isMobile && activePanel !== 'login' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : 'opacity-100'}`}>
+              <div ref={signupBtn} className={`${isMobile && activePanel !== 'signup' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : ''} mt-6`}>
                 <Button text="LOG IN" callfunc={handleSignIn} loading={loading}/>
               </div>
+              <div
+                ref={googlesignupBtn}
+                className={`bg-color-b flex items-center rounded-xl text-2xl justify-center text-color-d w-60 h-10 cursor-pointer mt-4 transition-opacity duration-300 ${isMobile && activePanel !== 'signup' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : 'opacity-100'}`}
+                onClick={handleGoogleSignIn}
+              >
+                <img
+                  src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                  alt="Google"
+                  className="w-6 h-6 mr-2"
+                />
+                Sign in with Google
+              </div>
+            </div>
+          </div>
+        </div>
 
-              <div ref={googleinBtn} className={`bg-color-b flex items-center rounded-xl text-2xl justify-center text-color-d w-60 h-10 cursor-pointer relative top-10 transition-opacity duration-300 ${isMobile && activePanel !== 'login' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : 'opacity-100'}`}
+        {/* Sign In Panel */}
+        <div
+          ref={signinRef}
+          className='w-full md:w-1/5 h-auto md:h-screen flex flex-col items-center overflow-hidden order-1 md:order-none'
+          onClick={() => setActivePanel("login")}
+          style={isMobile ? { height: activePanel === 'login' ? 'calc(100% - 64px)' : '84px', transition: 'height 300ms ease' } : undefined}
+        >
+          <div ref={signinWid1} className='h-full md:h-1/5 w-full border-color-b border-b-6 border-l-6 border-r-6 font-titan text-5xl text-color-b flex items-center justify-center relative z-20'>
+            <div className='text-color-e w-11/12 md:w-3xl max-w-[560px] px-4 md:px-0 g flex flex-col items-center justify-center relative top-10'>
+              <div
+                ref={signinLabel}
+                className={`font-titan relative bottom-2 pointer-events-none transition-transform duration-300 text-center ${isMobile && activePanel !== 'login' ? 'translate-y-10' : ''}`}
+              >
+                Sign Up
+              </div>
+              <form
+                ref={signinInput}
+                className={`flex flex-col gap-3 ${isMobile && activePanel !== 'login' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : 'opacity-100'}`}
+                onSubmit={handleSignUpSubmit}
+                autoComplete="on"
+              >
+                <div className="relative">
+                  <InputField classname="border-b-3 text-2xl border-color-b w-72 md:w-100 mx-auto outline-0" inputtype="text" name="username" value={signupformData.username} onChange={handleSignUpChange} placeholder="User Name" autoComplete="username"/>
+                  {usernameChecking && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      <svg className="animate-spin h-5 w-5 text-color-b" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  )}
+                  {!usernameChecking && signupformData.username && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      {(/^[a-zA-Z0-9_]+$/.test(signupformData.username.trim()) && signupformData.username.trim().length >= 3 && signupformData.username.trim().length <= 20)
+                        ? (usernameAvailable === true ? (
+                            <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          ) : usernameAvailable === false ? (
+                            <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                          ) : null)
+                        : (
+                            <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <InputField classname="border-b-3 text-2xl border-color-b w-72 md:w-100 mx-auto outline-0" inputtype="email" name="email" value={signupformData.email} onChange={handleSignUpChange} placeholder="Email" autoComplete="email"/>
+                  {signupformData.email && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupformData.email.trim()) ? (
+                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <InputField classname="border-b-3 text-2xl border-color-b w-72 md:w-100 mx-auto outline-0" inputtype="password" name="password" value={signupformData.password} onChange={handleSignUpChange} placeholder="Password" autoComplete="new-password"/>
+                <InputField classname="border-b-3 text-2xl border-color-b w-72 md:w-100 mx-auto outline-0" inputtype="password" name="confirmPassword" value={signupformData.confirmPassword} onChange={handleSignUpChange} placeholder="Confirm Password" autoComplete="new-password"/>
+                <div className="flex gap-2 items-center opacity-85 text-2xl relative top-2">
+                  <input 
+                    className='w-4 h-4 rounded-sm' 
+                    type="checkbox" 
+                    checked={rememberMeSignUp}
+                    onChange={(e) => setRememberMeSignUp(e.target.checked)}
+                  />
+                  <span>Remember Me !</span>
+                </div>
+              </form>
+              
+              <div ref={signinBtn} className={`mt-5 transition-opacity duration-300 ${isMobile && activePanel !== 'login' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : 'opacity-100'}`}>
+                <Button text="SIGN UP" callfunc={handleSignUp} loading={loading}/>
+              </div>
+
+              <div ref={googleinBtn} className={`bg-color-b flex items-center rounded-xl text-2xl justify-center text-color-d w-60 h-10 cursor-pointer mt-6 transition-opacity duration-300 ${isMobile && activePanel !== 'login' ? 'opacity-0 pointer-events-none h-0 overflow-hidden' : 'opacity-100'}`}
                   onClick={handleGoogleSignIn}>
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
                     alt="Google" className="w-6 h-6 mr-2"/>
-                Sign in with Google
+                Sign up with Google
               </div>
             </div>
           </div>

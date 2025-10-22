@@ -280,22 +280,22 @@ const yTicks = [0, 25, 50, 75, 100]; // adjust values if you want different divi
 
 const testimonials = [
   {
-    initial: "A",
-    name: "Alex Chen",
+    initial: "https://images.pexels.com/photos/9351804/pexels-photo-9351804.jpeg",
+    name: "Ephrata Mekbib",
     role: "Project Creator",
     quote:
-      '“LAWATA helped me raise $50K for my tech startup in just 2 weeks. The risk analysis gave investors confidence in my project.”',
+      '“LAWATA helped me raise 50K for my tech startup in just 2 weeks. The risk analysis gave investors confidence in my project.”',
   },
   {
-    initial: "M",
-    name: "Maria Rodriguez",
+    initial: "https://images.pexels.com/photos/7345675/pexels-photo-7345675.jpeg",
+    name: "Samuel Kidanu",
     role: "Investor",
     quote:
       '“The AI risk assessment is incredible. I\'ve made 3 successful investments with 200% returns. LAWATA changed my investment game!”',
   },
   {
-    initial: "J",
-    name: "James Wilson",
+    initial: "https://images.pexels.com/photos/8197946/pexels-photo-8197946.jpeg",
+    name: "Mideksa Lafto",
     role: "Entrepreneur",
     quote:
       '“The platform is intuitive and the community is amazing. I found both funding and mentorship here. Highly recommended!”',
@@ -532,8 +532,8 @@ const testimonials = [
               {/* Foreground content */}
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex items-center mb-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-color-b flex items-center justify-center mr-4">
-                    <span className="text-white font-bold text-lg">{t.initial}</span>
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-color-b overflow-hidden flex items-center justify-center mr-4">
+                    <img src={t.initial} alt={t.name} className="w-full h-full object-cover" />
                   </div>
 
                   <div className="min-w-0">
