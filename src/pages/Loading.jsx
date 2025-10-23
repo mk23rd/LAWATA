@@ -55,7 +55,7 @@ const Loading = ({ onComplete }) => {
   }, [onComplete]);
 
   return (
-    <div className="h-screen w-screen overflow-clip flex justify-center items-center bg-color-d">
+    <div className="h-screen w-screen overflow-clip flex justify-center items-center bg-white">
       <div className="w-1/24 h-full"></div>
       <div className="w-22/24 h-full flex flex-col justify-center items-center">
         {/* Animated Bars */}
@@ -86,14 +86,14 @@ const Loading = ({ onComplete }) => {
           <div className="w-full h-1/2 flex justify-start items-center relative">
             <p
               ref={percentRef}
-              className="text-color-e text-6xl absolute left-0"
+              className="text-color-b text-6xl absolute left-0"
             >
               {progress}%
             </p>
           </div>
 
           <div className="w-full h-1/2 flex justify-center items-center">
-            <p className="text-color-e text-6xl">Loading...</p>
+            <p className="text-color-e text-6xl font-titan">Loading...</p>
           </div>
         </div>
       </div>

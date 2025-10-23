@@ -143,16 +143,7 @@ const tabs = [
             })}
           </nav>
 
-          {/* Sidebar Footer */}
-          <div className="flex-shrink-0 p-4 border-t border-gray-200">
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <h3 className="text-sm font-semibold text-gray-900 mb-1">Need Help?</h3>
-              <p className="text-xs text-gray-600 mb-3">Check out our guide to get started</p>
-              <button className="w-full py-2 px-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">
-                View Guide
-              </button>
-            </div>
-          </div>
+          
         </div>
 
         {/* Mobile Overlay */}

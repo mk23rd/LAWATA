@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../firebase/firebase-config";
 import { doc, onSnapshot } from "firebase/firestore";
+import Loading from "../pages/Loading";
 
 // Context for exposing Firebase authentication state and profile metadata
 const AuthContext = createContext();
@@ -80,7 +81,7 @@ export const AuthProvider = ({ children }) => {
   }, [auth]);
 
   if (loading) {
-    return <p className="text-center text-gray-500 mt-6">Loading...</p>;
+    return <Loading />;
   }
 
   return (
