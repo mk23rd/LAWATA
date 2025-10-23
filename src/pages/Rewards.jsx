@@ -250,7 +250,7 @@ const Rewards = () => {
                     
                     {/* View Project Button */}
                     <button
-                      onClick={() => navigate(`/project/${reward.projectId}`)}
+                      onClick={() => navigate(`/projectDet/${reward.projectId}`)}
                       className="w-full mt-4 bg-gray-900 text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                     >
                       <FiExternalLink className="w-4 h-4" />
