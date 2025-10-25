@@ -213,7 +213,7 @@ export default function Wallet() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-color-b mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading wallet...</p>
         </div>
       </div>
@@ -226,7 +226,7 @@ export default function Wallet() {
         <div className="flex items-center justify-between mb-8">
           <a 
             href="/home" 
-            className="text-indigo-600 hover:text-indigo-800 text-sm font-medium inline-flex items-center"
+            className="text-color-b hover:text-blue-500 text-sm font-medium inline-flex items-center"
           >
             <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -245,7 +245,7 @@ export default function Wallet() {
               </h3>
             </div>
             <div className="bg-indigo-100 p-3 rounded-full">
-              <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-8 h-8 text-color-b" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
               </svg>
             </div>
@@ -255,8 +255,8 @@ export default function Wallet() {
           <button
             className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-200 ${
               activeTab === 'topup' 
-                ? 'bg-indigo-600 text-white shadow' 
-                : 'text-gray-600 hover:text-indigo-600'
+                ? 'bg-color-b text-white shadow' 
+                : 'text-gray-600 hover:text-blue-400'
             }`}
             onClick={() => setActiveTab('topup')}
           >
@@ -265,8 +265,8 @@ export default function Wallet() {
           <button
             className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-200 ${
               activeTab === 'withdraw' 
-                ? 'bg-indigo-600 text-white shadow' 
-                : 'text-gray-600 hover:text-indigo-600'
+                ? 'bg-color-b text-white shadow' 
+                : 'text-gray-600 hover:text-blue-400'
             }`}
             onClick={() => setActiveTab('withdraw')}
           >
