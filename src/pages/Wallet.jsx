@@ -296,18 +296,7 @@ export default function Wallet() {
                 />
               </div>
             </div>
-            <div className="mb-6">
-              <label htmlFor="videoUpload" className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Video (optional)
-              </label>
-              <input
-                type="file"
-                id="videoUpload"
-                name="video"
-                accept="video/*"
-                className="block w-full py-2 px-4 border border-gray-300 rounded-xl"
-              />
-            </div>
+            
             <div>
               <button
                 type="submit"
