@@ -14,7 +14,7 @@ const Browse = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('active'); // 'active' is the default selected status
   const [sortBy, setSortBy] = useState('newest');
 
   // Fetch approved projects
@@ -59,14 +59,19 @@ const Browse = () => {
     }
 
     // Status filter
+    const currentDate = new Date();
     if (selectedStatus === 'completed') {
       filtered = filtered.filter(project => 
         project.fundedMoney >= project.fundingGoal
       );
     } else if (selectedStatus === 'expired') {
-      const currentDate = new Date();
       filtered = filtered.filter(project => 
         new Date(project.endDate) < currentDate
+      );
+    } else if (selectedStatus === 'active') {
+      filtered = filtered.filter(project => 
+        project.fundedMoney < project.fundingGoal && 
+        new Date(project.endDate) >= currentDate
       );
     }
 
@@ -145,7 +150,8 @@ const Browse = () => {
   );
 
   const categories = ['all', 'cars', 'cloth', 'books'];
-  const statuses = ['all', 'expired', 'completed'];
+  // 'all' is first in the array, but 'active' is the default selected status
+  const statuses = ['all', 'active', 'expired', 'completed'];
   const sortOptions = [
     { value: 'newest', label: 'Newest First' },
     { value: 'oldest', label: 'Oldest First' },
@@ -195,7 +201,7 @@ const Browse = () => {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {statusItem === 'all' ? 'All Status' : statusItem.charAt(0).toUpperCase() + statusItem.slice(1)}
+                  {statusItem === 'all' ? 'All' : statusItem.charAt(0).toUpperCase() + statusItem.slice(1)}
                 </button>
               ))}
               
