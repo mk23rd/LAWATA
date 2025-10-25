@@ -109,7 +109,7 @@ const Profile = () => {
         {/* Main Profile Card */}
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           {/* Header Section with Gradient */}
-          <div className="relative h-48 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
+          <div className="relative h-48 bg-color-a">
             <div className="absolute inset-0 bg-black/20"></div>
             <div className="absolute -bottom-16 left-8">
               <div className="relative">
@@ -179,7 +179,7 @@ const Profile = () => {
                   {userData.preferredCategories?.map((category) => (
                     <span
                       key={category}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold text-sm shadow-md"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-color-b text-white font-semibold text-sm shadow-md"
                     >
                       <Heart size={16} />
                       {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -194,7 +194,7 @@ const Profile = () => {
               {/* Email */}
               <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-color-b rounded-lg flex items-center justify-center flex-shrink-0">
                     <Mail className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -208,7 +208,7 @@ const Profile = () => {
               {userData.phoneNumber && (
                 <div className="bg-gradient-to-br from-gray-50 to-green-50 rounded-xl p-6 border border-gray-200">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-color-b rounded-lg flex items-center justify-center flex-shrink-0">
                       <Phone className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -223,7 +223,7 @@ const Profile = () => {
               {userData.location?.city && userData.location?.country && (
                 <div className="bg-gradient-to-br from-gray-50 to-purple-50 rounded-xl p-6 border border-gray-200">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 bg-color-b rounded-lg flex items-center justify-center flex-shrink-0">
                       <MapPin className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -239,7 +239,7 @@ const Profile = () => {
               {/* Join Date */}
               <div className="bg-gradient-to-br from-gray-50 to-orange-50 rounded-xl p-6 border border-gray-200">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-color-b rounded-lg flex items-center justify-center flex-shrink-0">
                     <Calendar className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -260,14 +260,14 @@ const Profile = () => {
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
               <button
                 onClick={() => navigate("/manage")}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all font-semibold shadow-lg"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-color-b text-white rounded-lg hover:bg-blue-600 transition-all font-semibold shadow-lg"
               >
                 <TrendingUp size={20} />
                 Manage Projects
               </button>
               <button
                 onClick={() => navigate("/wallet")}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-semibold shadow-lg"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-color-a text-white rounded-lg hover:bg-gray-800 transition-all font-semibold shadow-lg"
               >
                 <DollarSign size={20} />
                 My Wallet

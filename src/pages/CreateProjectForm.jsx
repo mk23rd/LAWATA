@@ -20,7 +20,8 @@ export default function CreateProjectForm() {
   const [formData, setFormData] = useState({
     title: "",
     category: "",
-    country: "",
+    country: "Ethiopia",
+    city: "",
     shortDescription: "",
     longDescription: "",
     fundingGoal: "",
@@ -57,6 +58,8 @@ export default function CreateProjectForm() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  // City selection is limited to Ethiopia only
 
   const handleMilestoneChange = (percentage, value) => {
     setFormData(prev => ({
@@ -244,7 +247,7 @@ export default function CreateProjectForm() {
 
     if (!formData.title) return setMessage("❌ Title is missing");
     if (!formData.category) return setMessage("❌ Category is missing");
-    if (!formData.country) return setMessage("❌ Country is missing");
+    if (!formData.city) return setMessage("❌ City is missing");
     if (!formData.shortDescription) return setMessage("❌ Short description is missing");
     if (!formData.longDescription) return setMessage("❌ Long description is missing");
     if (!formData.fundingGoal) return setMessage("❌ Funding goal is missing");
@@ -331,6 +334,7 @@ export default function CreateProjectForm() {
           name: user.displayName,
         },
         milestones: formData.milestones,
+        location: { city: formData.city, country: formData.country },
         rewardsList: rewardsWithImages
       };
 
@@ -356,7 +360,8 @@ export default function CreateProjectForm() {
       setFormData({
         title: "",
         category: "",
-        country: "",
+        country: "Ethiopia",
+        city: "",
         shortDescription: "",
         longDescription: "",
         fundingGoal: "",
@@ -488,21 +493,36 @@ export default function CreateProjectForm() {
           </div>
 
           <div className="relative group">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Country *</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">City (Ethiopia) *</label>
             <div className="relative">
               <FiTag className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400 group-focus-within:text-color-b transition-colors pointer-events-none" />
               <select
-                name="country"
-                value={formData.country}
+                name="city"
+                value={formData.city}
                 onChange={handleChange}
                 className="appearance-none w-full pl-10 pr-8 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 bg-white cursor-pointer text-sm"
               >
-                <option value="">Select Country</option>
-                <option value="Ethiopia">🇪🇹 Ethiopia</option>
-                <option value="USA">🇺🇸 United States</option>
-                <option value="Germany">🇩🇪 Germany</option>
-                <option value="India">🇮🇳 India</option>
-                <option value="Japan">🇯🇵 Japan</option>
+                <option value="">Select City</option>
+                <option value="Addis Ababa">Addis Ababa</option>
+                <option value="Dire Dawa">Dire Dawa</option>
+                <option value="Mekelle">Mekelle</option>
+                <option value="Gondar">Gondar</option>
+                <option value="Awasa">Awasa</option>
+                <option value="Bahir Dar">Bahir Dar</option>
+                <option value="Jimma">Jimma</option>
+                <option value="Jijiga">Jijiga</option>
+                <option value="Shashamane">Shashamane</option>
+                <option value="Bishoftu">Bishoftu</option>
+                <option value="Arba Minch">Arba Minch</option>
+                <option value="Hosaena">Hosaena</option>
+                <option value="Harar">Harar</option>
+                <option value="Dilla">Dilla</option>
+                <option value="Nekemte">Nekemte</option>
+                <option value="Debre Markos">Debre Markos</option>
+                <option value="Debre Birhan">Debre Birhan</option>
+                <option value="Adigrat">Adigrat</option>
+                <option value="Woldiya">Woldiya</option>
+                <option value="Kombolcha">Kombolcha</option>
               </select>
               <FiChevronRight className="absolute right-3 top-1/2 transform -translate-y-1/2 rotate-90 text-gray-400 pointer-events-none" />
             </div>
@@ -1083,9 +1103,9 @@ export default function CreateProjectForm() {
                 <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-2 rounded-lg border border-purple-100">
                   <div className="flex items-center mb-1">
                     <FiTag className="w-3 h-3 text-purple-600 mr-1" />
-                    <span className="font-semibold text-gray-700 text-xs">Country</span>
+                    <span className="font-semibold text-gray-700 text-xs">City</span>
                   </div>
-                  <p className="text-xs font-bold text-purple-600">{formData.country || 'N/A'}</p>
+                  <p className="text-xs font-bold text-purple-600">{formData.city || 'N/A'}</p>
                 </div>
               </div>
 
