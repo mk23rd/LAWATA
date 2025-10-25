@@ -321,7 +321,7 @@ const ManageProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-16 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="relative md:top-5 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-16 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Main Form Card */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -524,7 +524,7 @@ const ManageProfile = () => {
                 type="button"
                 onClick={handleSave}
                 disabled={loading || uploading || usernameChecking || (usernameAvailable === false && formData.username.toLowerCase() !== originalUsername)}
-                className="flex-1 flex items-center justify-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="flex-1 flex items-center justify-center gap-2 bg-color-b text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 {loading ? (
                   <>

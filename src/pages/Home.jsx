@@ -56,7 +56,7 @@ const stats = [
     suffix: "+",
   },
 
-  { id: "users", display: "1K+", label: "Active Users", percent: 60, numeric: 1000, format: (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : `${Math.round(n)}`), suffix: "+" },
+  { id: "users", display: "100+", label: "Active Users", percent: 60, numeric: 100, format: (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : `${Math.round(n)}`), suffix: "+" },
 
 ];
 
@@ -329,17 +329,42 @@ const testimonials = [
   {/* Main */}
   <main className="flex flex-col gap-8 md:gap-12 lg:gap-16 px-4 md:px-8 lg:px-12">
     
-    {/* Header Row */}
-    <div className="flex items-center justify-center mx-5 mt-15 lg:mt-5 ">
+    {/* Header Row - Mobile */}
+    <div className="flex md:hidden items-center justify-between mx-5 mt-15">
+      <button
+        onClick={scrollLeft}
+        className="hover:bg-color-a border-2 hover:text-color-d text-color-a border-color-a w-10 h-10 rounded-full flex items-center justify-center"
+      >
+        <img src={Arrow} alt="Scroll Left" className='w-3'/>
+      </button>
+      <p className="text-color-e text-3xl underline text-center">Fresh Favorites</p>
+      <button
+        onClick={scrollRight}
+        className="hover:bg-color-a border-2 hover:text-color-d text-color-a border-color-a w-10 h-10 rounded-full flex items-center justify-center rotate-180"
+      >
+        <img src={Arrow} alt="Scroll Right" className='w-3'/>
+      </button>
+    </div>
+
+    {/* Header Row - Desktop/Tablet */}
+    <div className="hidden md:flex items-center justify-center mx-5 mt-15 lg:mt-5 ">
       {/* Title */}
-      <div className="w-1/2 flex items-center justify-start">
+      <div className="w-1/3 flex items-center justify-start">
         <p className="text-color-e text-3xl sm:text-3xl md:text-4xl lg:text-5xl underline">
           Fresh Favorites
         </p>
       </div>
 
+      {/* Explore More (center, desktop only) */}
+      <div className="w-1/3 flex items-center justify-center">
+        <Link to="/browse" className="bg-blue-600 hover:bg-blue-700 border-3 border-color-a text-white rounded-xl w-40 h-12 justify-center items-center flex text-xl sm:text-2xl md:text-3xl lg:text-3xl z-10">
+          Explore More
+        </Link>
+        <div className='w-0.5 h-20 bg-color-a absolute'></div>
+      </div>
+
       {/* Scroll Buttons */}
-      <div className="w-1/2 flex justify-end items-center gap-3 lg:px-0">
+      <div className="w-1/3 flex justify-end items-center gap-3 lg:px-0">
         <button
           onClick={scrollLeft}
           className="hover:bg-color-a border-2 md:border-3 hover:text-color-d text-color-a border-color-a w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center"
@@ -458,12 +483,22 @@ const testimonials = [
       <div className="absolute top-0 left-0 h-90 md:h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
       <div className="absolute top-0 right-0 h-90 md:h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
     </div>
+
+    {/* Explore More CTA - Mobile only */}
+    <div className="w-full flex justify-center mt-7 md:hidden">
+      <Link
+        to="/browse"
+        className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-xl rounded-xl font-semibold shadow-sm transition-colors"
+      >
+        Explore More
+      </Link>
+    </div>
   </main>
 </div>
 
 
       {/* Statistics Section */}
-      <div className="h-screen w-screen flex flex-col justify-center items-center relative overflow-hidden mt-15">
+      <div className="h-screen w-screen flex flex-col justify-center items-center relative overflow-hidden md:mt-15">
         <div className='w-full h-1/5 flex flex-col items-center'>
           <h2 className="text-4xl md:text-6xl font-bold text-color-a mb-5 md:mt-5 animate-fade-in-up">
             Join the Future of
@@ -477,7 +512,7 @@ const testimonials = [
         {/* ====== Animated Stats Container (uses GSAP + ScrollTrigger) ====== */}
         <div
           ref={statsContainerRef}
-          className="relative w-11/12 h-3/5 md:h-4/5 flex justify-center items-end gap-10 mb-5 md:gap-38 lg:gap-48 z-10 md:mt-10"
+          className="relative w-11/12 h-3/5 md:h-4/5 flex justify-center items-end gap-7 mb-5 md:gap-38 lg:gap-48 z-10 md:mt-10"
         >
 
           {stats.map((s, i) => (

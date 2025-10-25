@@ -92,6 +92,22 @@ const Browse = () => {
     return amount?.toLocaleString('en-US', { style: 'currency', currency: 'ETB', minimumFractionDigits: 0 }) || '$0';
   };
 
+  // Format remaining time precisely as years, months, and days
+  const formatTimeLeft = (totalDays) => {
+    const d = Math.max(Number(totalDays) || 0, 0);
+    if (d === 0) return '0 days';
+    const years = Math.floor(d / 365);
+    const remAfterYears = d % 365;
+    const months = Math.floor(remAfterYears / 30);
+    const days = remAfterYears % 30;
+
+    const parts = [];
+    if (years > 0) parts.push(`${years} year${years !== 1 ? 's,' : ','}`);
+    if (months > 0) parts.push(`${months} month${months !== 1 ? 's,' : ','}`);
+    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+    return parts.join(' ');
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-white pt-20 flex justify-center items-center">
       <div className="text-center">
@@ -241,7 +257,7 @@ const Browse = () => {
                     <div className="mb-3">
                       <div className="w-full bg-gray-100 rounded-full h-1.5">
                         <div
-                          className="h-1.5 rounded-full bg-blue-500 transition-all"
+                          className={(fundedPercentage==100) ? "h-1.5 rounded-full bg-green-600 transition-all" : "h-1.5 rounded-full bg-color-b transition-all"} 
                           style={{ width: `${fundedPercentage}%` }}
                         />
                       </div>
@@ -257,7 +273,7 @@ const Browse = () => {
                       {daysLeft > 0 && (
                         <span className="flex items-center gap-1">
                           <FiClock className="w-3 h-3" />
-                          {daysLeft}d left
+                          {formatTimeLeft(daysLeft)} left
                         </span>
                       )}
                     </div>

@@ -63,6 +63,7 @@ function App() {
         <Route path="/support/:id" element={<Support />} />
         {/* Wallet and finance management */}
         <Route path="/wallet" element={<Wallet />} />
+        {/* <Route path="/loading" element={<Loading />} /> */}
       </Routes>
       <ToastContainer 
         position="top-right"
