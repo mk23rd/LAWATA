@@ -302,7 +302,7 @@ export default function Wallet() {
                 type="submit"
                 onClick={handleTopup}
                 disabled={isLoading}
-                className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-color-b hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-color-b disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Processing...' : 'Add Funds'}
               </button>
