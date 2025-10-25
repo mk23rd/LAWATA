@@ -323,7 +323,7 @@ export default function Wallet() {
                   type="number"
                   name="withdraw-amount"
                   id="withdraw-amount"
-                  className="block w-full pl-7 pr-12 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                  className="block w-full pl-7 pr-12 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-color-b focus:border-color-b text-lg"
                   placeholder="0.00"
                   step="0.01"
                   min="0"
@@ -339,7 +339,7 @@ export default function Wallet() {
               <input
                 type="text"
                 id="mobile-number"
-                className="block w-full py-4 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                className="block w-full py-4 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-color-b focus:border-color-b text-lg"
                 placeholder="+251912345678"
                 value={withdrawPhone}
                 onChange={(e) => setWithdrawPhone(e.target.value)}
