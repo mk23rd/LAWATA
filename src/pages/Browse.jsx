@@ -149,7 +149,8 @@ const Browse = () => {
     </div>
   );
 
-  const categories = ['all', 'cars', 'cloth', 'books'];
+  const categories = ['Agriculture', 'Arts', 'Automotives', 'Books', 'Business', 'Charity', 'Community', 'Education', 'Energy', 'Entertainment', 'Environment', 'Fashion', 'Health', 'Infrastructure', 'Research', 'Sports', 'Technology', 'Tourism']
+;
   // 'all' is first in the array, but 'active' is the default selected status
   const statuses = ['all', 'active', 'expired', 'completed'];
   const sortOptions = [
