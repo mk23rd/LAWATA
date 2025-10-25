@@ -14,6 +14,7 @@ const Browse = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
   // Fetch approved projects
@@ -57,6 +58,18 @@ const Browse = () => {
       filtered = filtered.filter(project => project.category === selectedCategory);
     }
 
+    // Status filter
+    if (selectedStatus === 'completed') {
+      filtered = filtered.filter(project => 
+        project.fundedMoney >= project.fundingGoal
+      );
+    } else if (selectedStatus === 'expired') {
+      const currentDate = new Date();
+      filtered = filtered.filter(project => 
+        new Date(project.endDate) < currentDate
+      );
+    }
+
     // Sort
     switch (sortBy) {
       case 'newest':
@@ -79,7 +92,7 @@ const Browse = () => {
     }
 
     setFilteredProjects(filtered);
-  }, [projects, searchTerm, selectedCategory, sortBy]);
+  }, [projects, searchTerm, selectedCategory, selectedStatus, sortBy]);
 
   // Guard against divide-by-zero while computing progress
   const calculateFundingPercentage = (fundedMoney, fundingGoal) => {
@@ -132,6 +145,7 @@ const Browse = () => {
   );
 
   const categories = ['all', 'cars', 'cloth', 'books'];
+  const statuses = ['all', 'expired', 'completed'];
   const sortOptions = [
     { value: 'newest', label: 'Newest First' },
     { value: 'oldest', label: 'Oldest First' },
@@ -169,21 +183,37 @@ const Browse = () => {
               />
             </div>
 
-            {/* Category Filter */}
+            {/* Status Filter */}
             <div className="flex gap-2 overflow-x-auto">
-              {categories.map(category => (
+              {statuses.map(statusItem => (
                 <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
+                  key={`status-${statusItem}`}
+                  onClick={() => setSelectedStatus(statusItem)}
                   className={`px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                    selectedCategory === category
+                    selectedStatus === statusItem
                       ? 'bg-gray-900 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {category === 'all' ? 'All' : category.charAt(0).toUpperCase() + category.slice(1)}
+                  {statusItem === 'all' ? 'All Status' : statusItem.charAt(0).toUpperCase() + statusItem.slice(1)}
                 </button>
               ))}
+              
+              {/* Category Dropdown */}
+              <div className="border-l border-gray-200 h-6 self-center mx-2"></div>
+              
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-4 py-2.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-300 transition-all"
+              >
+                <option value="all">All Categories</option>
+                {categories.filter(cat => cat !== 'all').map(category => (
+                  <option key={`cat-${category}`} value={category}>
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Sort Dropdown */}
