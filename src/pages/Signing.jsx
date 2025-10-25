@@ -59,18 +59,18 @@ const Signing = () => {
     }
   }, []);
 
-  // Firebase auth listener
+  // Firebase auth listener (no auto-redirect; only handle unverified case)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        // Check if email is verified
-        if (currentUser.emailVerified) {
-          navigate('/home');
-        } else {
-          // Show verification screen for unverified users
+        if (!currentUser.emailVerified) {
           setPendingUser(currentUser);
           setShowEmailVerification(true);
+        } else {
+          // Do not auto-navigate; handlers will route appropriately
+          setShowEmailVerification(false);
+          setPendingUser(null);
         }
       } else {
         setUser(null);
@@ -79,7 +79,7 @@ const Signing = () => {
       }
     });
     return () => unsubscribe();
-  }, [navigate]);
+  }, []);
 
   // GSAP refs
   const signupRef = useRef(null);
@@ -383,8 +383,8 @@ const Signing = () => {
         autoClose: 3000,
       });
       
-      // Navigate to home since email is already verified
-      navigate('/home');
+      // First-time signup complete: go to profile setup page
+      navigate('/profile');
     } catch (error) {
       console.error("Account setup error:", error);
       toast.error("Error completing account setup: " + error.message, {
@@ -430,6 +430,9 @@ const Signing = () => {
           autoClose: 5000,
         });
         // The auth listener will handle showing verification screen
+      } else {
+        // Login success: go to browse
+        navigate('/browse');
       }
     } catch (error) {
       console.error("Sign in error:", error);
@@ -526,6 +529,7 @@ const Signing = () => {
       
       // Get existing user data from Firestore
       const userDoc = await getDoc(doc(db, "users", user.uid));
+      const isNewUser = !userDoc.exists();
       const existingData = userDoc.exists() ? userDoc.data() : {};
       
       // Generate random username for new Google users
@@ -578,7 +582,7 @@ const Signing = () => {
         draggable: true,
         progress: undefined,
       });
-      navigate('/home');
+      navigate('/browse');
     } catch (error) {
       console.error("Google Sign-In error:", error);
       
@@ -629,7 +633,7 @@ const Signing = () => {
         autoClose: 3000,
       });
       
-      navigate('/home');
+      navigate('/browse');
     } catch (error) {
       console.error('Error updating verification status:', error);
       toast.error('Error updating verification status', {

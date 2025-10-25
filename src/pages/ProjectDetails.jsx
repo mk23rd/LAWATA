@@ -324,6 +324,20 @@ const ProjectDetails = () => {
     }) || '$0';
   };
 
+  // Format remaining time as y/m/d
+  const formatTimeLeft = (days) => {
+    if (!days || days <= 0) return '0d';
+    if (days >= 365) {
+      const years = Math.floor(days / 365);
+      return `${years}y`;
+    }
+    if (days >= 30) {
+      const months = Math.floor(days / 30);
+      return `${months}m`;
+    }
+    return `${Math.max(days, 0)}d`;
+  };
+
   const handleComment = async () => {
     if (!newComment.trim()) return;
     try {
@@ -678,9 +692,9 @@ const ProjectDetails = () => {
                 <div>
                   <div className="flex items-center gap-1 mb-1">
                     <Clock className="w-3 h-3 text-gray-500" />
-                    <p className="text-xs text-gray-500">Days Left</p>
+                    <p className="text-xs text-gray-500">Time Left</p>
                   </div>
-                  <p className="text-lg font-bold text-gray-900">{daysLeft > 0 ? daysLeft : '0'}</p>
+                  <p className="text-lg font-bold text-gray-900">{formatTimeLeft(daysLeft)}</p>
                 </div>
               </div>
 

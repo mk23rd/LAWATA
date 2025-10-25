@@ -92,6 +92,20 @@ const Browse = () => {
     return amount?.toLocaleString('en-US', { style: 'currency', currency: 'ETB', minimumFractionDigits: 0 }) || '$0';
   };
 
+  // Format remaining time as y/m/d
+  const formatTimeLeft = (days) => {
+    if (!days || days <= 0) return '0d';
+    if (days >= 365) {
+      const years = Math.floor(days / 365);
+      return `${years}y`;
+    }
+    if (days >= 30) {
+      const months = Math.floor(days / 30);
+      return `${months}m`;
+    }
+    return `${Math.max(days, 0)}d`;
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-white pt-20 flex justify-center items-center">
       <div className="text-center">
@@ -241,7 +255,7 @@ const Browse = () => {
                     <div className="mb-3">
                       <div className="w-full bg-gray-100 rounded-full h-1.5">
                         <div
-                          className="h-1.5 rounded-full bg-blue-500 transition-all"
+                          className={(fundedPercentage==100) ? "h-1.5 rounded-full bg-green-600 transition-all" : "h-1.5 rounded-full bg-color-b transition-all"} 
                           style={{ width: `${fundedPercentage}%` }}
                         />
                       </div>
@@ -257,7 +271,7 @@ const Browse = () => {
                       {daysLeft > 0 && (
                         <span className="flex items-center gap-1">
                           <FiClock className="w-3 h-3" />
-                          {daysLeft}d left
+                          {formatTimeLeft(daysLeft)} left
                         </span>
                       )}
                     </div>
