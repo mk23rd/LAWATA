@@ -213,7 +213,7 @@ export default function Wallet() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-color-b mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading wallet...</p>
         </div>
       </div>
@@ -226,7 +226,7 @@ export default function Wallet() {
         <div className="flex items-center justify-between mb-8">
           <a 
             href="/home" 
-            className="text-indigo-600 hover:text-indigo-800 text-sm font-medium inline-flex items-center"
+            className="text-color-b hover:text-blue-500 text-sm font-medium inline-flex items-center"
           >
             <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -245,7 +245,7 @@ export default function Wallet() {
               </h3>
             </div>
             <div className="bg-indigo-100 p-3 rounded-full">
-              <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-8 h-8 text-color-b" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
               </svg>
             </div>
@@ -255,8 +255,8 @@ export default function Wallet() {
           <button
             className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-200 ${
               activeTab === 'topup' 
-                ? 'bg-indigo-600 text-white shadow' 
-                : 'text-gray-600 hover:text-indigo-600'
+                ? 'bg-color-b text-white shadow' 
+                : 'text-gray-600 hover:text-blue-400'
             }`}
             onClick={() => setActiveTab('topup')}
           >
@@ -265,8 +265,8 @@ export default function Wallet() {
           <button
             className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-200 ${
               activeTab === 'withdraw' 
-                ? 'bg-indigo-600 text-white shadow' 
-                : 'text-gray-600 hover:text-indigo-600'
+                ? 'bg-color-b text-white shadow' 
+                : 'text-gray-600 hover:text-blue-400'
             }`}
             onClick={() => setActiveTab('withdraw')}
           >
@@ -296,24 +296,13 @@ export default function Wallet() {
                 />
               </div>
             </div>
-            <div className="mb-6">
-              <label htmlFor="videoUpload" className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Video (optional)
-              </label>
-              <input
-                type="file"
-                id="videoUpload"
-                name="video"
-                accept="video/*"
-                className="block w-full py-2 px-4 border border-gray-300 rounded-xl"
-              />
-            </div>
+            
             <div>
               <button
                 type="submit"
                 onClick={handleTopup}
                 disabled={isLoading}
-                className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-color-b hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-color-b disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Processing...' : 'Add Funds'}
               </button>
@@ -334,7 +323,7 @@ export default function Wallet() {
                   type="number"
                   name="withdraw-amount"
                   id="withdraw-amount"
-                  className="block w-full pl-7 pr-12 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                  className="block w-full pl-7 pr-12 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-color-b focus:border-color-b text-lg"
                   placeholder="0.00"
                   step="0.01"
                   min="0"
@@ -350,7 +339,7 @@ export default function Wallet() {
               <input
                 type="text"
                 id="mobile-number"
-                className="block w-full py-4 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                className="block w-full py-4 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-color-b focus:border-color-b text-lg"
                 placeholder="+251912345678"
                 value={withdrawPhone}
                 onChange={(e) => setWithdrawPhone(e.target.value)}
