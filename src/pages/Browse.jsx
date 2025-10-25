@@ -92,18 +92,20 @@ const Browse = () => {
     return amount?.toLocaleString('en-US', { style: 'currency', currency: 'ETB', minimumFractionDigits: 0 }) || '$0';
   };
 
-  // Format remaining time as y/m/d
-  const formatTimeLeft = (days) => {
-    if (!days || days <= 0) return '0d';
-    if (days >= 365) {
-      const years = Math.floor(days / 365);
-      return `${years}y`;
-    }
-    if (days >= 30) {
-      const months = Math.floor(days / 30);
-      return `${months}m`;
-    }
-    return `${Math.max(days, 0)}d`;
+  // Format remaining time precisely as years, months, and days
+  const formatTimeLeft = (totalDays) => {
+    const d = Math.max(Number(totalDays) || 0, 0);
+    if (d === 0) return '0 days';
+    const years = Math.floor(d / 365);
+    const remAfterYears = d % 365;
+    const months = Math.floor(remAfterYears / 30);
+    const days = remAfterYears % 30;
+
+    const parts = [];
+    if (years > 0) parts.push(`${years} year${years !== 1 ? 's,' : ','}`);
+    if (months > 0) parts.push(`${months} month${months !== 1 ? 's,' : ','}`);
+    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+    return parts.join(' ');
   };
 
   if (loading) return (
