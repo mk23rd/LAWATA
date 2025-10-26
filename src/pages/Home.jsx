@@ -78,6 +78,21 @@ const stats = [
     fetchUserData()
   }, [user])
 
+  const formatTimeLeft = (totalDays) => {
+    const d = Math.max(Number(totalDays) || 0, 0);
+    if (d === 0) return '0 days';
+    const years = Math.floor(d / 365);
+    const remAfterYears = d % 365;
+    const months = Math.floor(remAfterYears / 30);
+    const days = remAfterYears % 30;
+
+    const parts = [];
+    if (years > 0) parts.push(`${years} year${years !== 1 ? 's' : ''}`);
+    if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+    return parts.join(', ');
+  };
+
   const handleLogout = async () => {
     try {
       await signOut(auth)
@@ -100,7 +115,9 @@ const stats = [
     }
 
     document.addEventListener('mousedown', handleClickOutside)
-    return () => {
+
+
+  return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
@@ -396,8 +413,22 @@ const testimonials = [
           }
         }}
       >
-        {freshProjects.length > 0 ? (
-          freshProjects.map((project) => {
+        {freshProjects.some((project) => {
+          const fundedPercentage =
+            project.fundedMoney && project.fundingGoal
+              ? (project.fundedMoney / project.fundingGoal) * 100
+              : 0;
+          return fundedPercentage < 100;
+        }) ? (
+          freshProjects
+            .filter((project) => {
+              const fundedPercentage =
+                project.fundedMoney && project.fundingGoal
+                  ? (project.fundedMoney / project.fundingGoal) * 100
+                  : 0;
+              return fundedPercentage < 100;
+            })
+            .map((project) => {
             const fundedPercentage =
               project.fundedMoney && project.fundingGoal
                 ? Math.min((project.fundedMoney / project.fundingGoal) * 100, 100)
@@ -450,7 +481,7 @@ const testimonials = [
                     </div>
                     <div className="flex justify-between text-xs text-color-d w-full">
                       <span>{Math.round(fundedPercentage)}% funded</span>
-                      <span>{daysLeft} days left</span>
+                      <span>{typeof daysLeft === 'number' ? `${formatTimeLeft(daysLeft)} left` : 'N/A'}</span>
                     </div>
                   </div>
 

@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { Mail, RefreshCw, CheckCircle, ArrowLeft, Shield, Clock } from 'lucide-react';
 import { auth } from '../firebase/firebase-config';
 import { createUserWithEmailAndPassword, sendEmailVerification, deleteUser, reload } from 'firebase/auth';
+import { gsap } from 'gsap';
 
 const PreSignupEmailVerification = ({ 
   email, 
@@ -17,6 +18,8 @@ const PreSignupEmailVerification = ({
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const initializationRef = useRef(false);
+  const containerRef = useRef(null);
+  const contentRef = useRef(null);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -189,9 +192,41 @@ const PreSignupEmailVerification = ({
     return () => clearTimeout(timer);
   }, []);
 
+  // Animate container width on mount and reveal content afterwards
+  useEffect(() => {
+    if (!containerRef.current || !contentRef.current) return;
+
+    // Determine target width based on breakpoint (md = 768px)
+    const isMd = window.matchMedia('(min-width: 768px)').matches;
+    const targetWidth = isMd ? '600px' : '91.6667%'; // 11/12 = 91.6667%
+
+    // Ensure initial state (in case SSR or hot reload)
+    gsap.set(containerRef.current, { width: 25, overflow: 'hidden' });
+    gsap.set(contentRef.current, { opacity: 0 });
+
+    const tl = gsap.timeline();
+    tl.to(containerRef.current, {
+      width: targetWidth,
+      duration: 1,
+      ease: 'power2.out',
+    })
+      .set(containerRef.current, { overflow: 'visible' })
+      .to(contentRef.current, {
+        opacity: 1,
+        duration: 0.1,
+        ease: 'power1.out',
+      });
+
+    return () => {
+      try { tl.kill(); } catch {}
+    };
+  }, []);
+
   return (
     <div className="fixed left-0 right-0 bottom-0 top-16 bg-color-a flex items-center md:items-start justify-center md:pt-10 z-[60]">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-5 h-[80vh] max-w-md w-11/12 md:w-[600px] mx-auto flex flex-col justify-between">
+      <div className='absolute w-2 h-[46rem] md:h-[38rem] bg-color-b top-5 rounded-2xl'></div>
+      <div ref={containerRef} style={{ width: '25px', overflow: 'hidden' }} className="bg-white border-color-b border-5 rounded-xl shadow-2xl p-6 md:p-5 h-[80vh] max-w-md w-11/12 md:w-[600px] mx-auto flex flex-col justify-between z-10">
+        <div ref={contentRef} className="opacity-0">
         {/* Top section */}
         <div className="space-y-6 md:space-y-5 flex-1">
         {/* Header */}
@@ -285,12 +320,7 @@ const PreSignupEmailVerification = ({
             <ArrowLeft className="w-4 h-4" />
             Back to Sign Up
           </button>
-          {/* Help Text */}
-          <div className="text-center">
-            <p className="text-[10px] text-gray-500">
-              Didn't receive the email? Check your spam folder or try resending.
-            </p>
-          </div>
+        </div>
         </div>
       </div>
     </div>

@@ -112,6 +112,8 @@ const Signing = () => {
   const [resetEmailSending, setResetEmailSending] = useState(false);
   const [usernameChecking, setUsernameChecking] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(null);
+  const [emailChecking, setEmailChecking] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState(null);
 
   // Form handlers
   const handleSignInChange = (e) => {
@@ -126,6 +128,10 @@ const Signing = () => {
     // Reset username availability when username changes
     if (name === 'username') {
       setUsernameAvailable(null);
+    }
+    // Reset email availability when email changes
+    if (name === 'email') {
+      setEmailAvailable(null);
     }
   };
 
@@ -232,6 +238,40 @@ const Signing = () => {
 
     return () => clearTimeout(timeoutId);
   }, [signupformData.username]);
+
+  // Debounced email availability check
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const email = signupformData.email?.trim() || '';
+      if (!email) {
+        setEmailAvailable(null);
+        setEmailChecking(false);
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const syntaxValid = emailRegex.test(email);
+      if (!syntaxValid) {
+        setEmailAvailable(null);
+        setEmailChecking(false);
+        return;
+      }
+      const run = async () => {
+        setEmailChecking(true);
+        try {
+          const exists = await checkEmailExists(email.toLowerCase());
+          setEmailAvailable(!exists);
+        } catch (err) {
+          console.error('Error checking email availability:', err);
+          setEmailAvailable(null);
+        } finally {
+          setEmailChecking(false);
+        }
+      };
+      run();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [signupformData.email]);
 
   // Step 1: Validate form and show email verification
   const handleSignUp = async () => {
@@ -893,14 +933,38 @@ const Signing = () => {
                   <InputField classname="border-b-3 text-2xl border-color-b w-72 md:w-100 mx-auto outline-0" inputtype="email" name="email" value={signupformData.email} onChange={handleSignUpChange} placeholder="Email" autoComplete="email"/>
                   {signupformData.email && (
                     <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                      {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupformData.email.trim()) ? (
-                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      {emailChecking ? (
+                        <svg className="animate-spin h-5 w-5 text-color-b" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                       ) : (
-                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
+                        (() => {
+                          const email = signupformData.email.trim();
+                          const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+                          if (!valid) {
+                            return (
+                              <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                              </svg>
+                            );
+                          }
+                          if (emailAvailable === true) {
+                            return (
+                              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                            );
+                          }
+                          if (emailAvailable === false) {
+                            return (
+                              <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                              </svg>
+                            );
+                          }
+                          return null;
+                        })()
                       )}
                     </div>
                   )}
