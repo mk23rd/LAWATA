@@ -9,7 +9,11 @@ const CHAPA_PUBLIC_KEY = import.meta.env.VITE_CHAPA_API_KEY;
 
 export default function Wallet() {
   const { currentUser } = useAuth();
-  const [balance, setBalance] = useState(0);
+  const [wallet, setWallet] = useState({
+    withdrawable: 0,
+    nonWithdrawable: 0,
+    total: 0
+  });
   const [topupAmount, setTopupAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawPhone, setWithdrawPhone] = useState('');
@@ -18,17 +22,54 @@ export default function Wallet() {
   const formRef = useRef(null);
   const paymentProcessedRef = useRef(false);
 
-  const updateWalletBalance = async (amount) => {
+  const updateWalletBalance = async (amount, type = 'withdrawable') => {
     if (!currentUser) return;
     try {
       const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
-        walletBalance: increment(Number(amount))
-      });
-      setBalance(prev => (prev || 0) + Number(amount));
+      const updateData = {};
+      
+      if (type === 'withdrawable') {
+        updateData['wallet.withdrawable'] = increment(Number(amount));
+      } else if (type === 'nonWithdrawable') {
+        updateData['wallet.nonWithdrawable'] = increment(Number(amount));
+      }
+      updateData['wallet.total'] = increment(Number(amount));
+      
+      await updateDoc(userRef, updateData);
+      
+      setWallet(prev => ({
+        ...prev,
+        [type]: (prev[type] || 0) + Number(amount),
+        total: (prev.total || 0) + Number(amount)
+      }));
+      
       return true;
     } catch (error) {
+      console.error('Error updating wallet:', error);
       throw error;
+    }
+  };
+  
+  const transferToWithdrawable = async (amount) => {
+    if (!currentUser || amount <= 0 || amount > wallet.nonWithdrawable) return false;
+    
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        'wallet.nonWithdrawable': increment(-Number(amount)),
+        'wallet.withdrawable': increment(Number(amount))
+      });
+      
+      setWallet(prev => ({
+        ...prev,
+        nonWithdrawable: prev.nonWithdrawable - Number(amount),
+        withdrawable: prev.withdrawable + Number(amount)
+      }));
+      
+      return true;
+    } catch (error) {
+      console.error('Error transferring funds:', error);
+      return false;
     }
   };
 
@@ -48,13 +89,17 @@ export default function Wallet() {
         paymentProcessedRef.current = true;
         try {
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          const currentBalance = userDoc.data()?.walletBalance || 0;
+          const currentBalance = userDoc.data()?.wallet?.withdrawable || 0;
           const amountToAdd = Number(amount);
           const newBalance = Number(currentBalance) + amountToAdd;
           await updateDoc(doc(db, 'users', currentUser.uid), {
-            walletBalance: newBalance
+            'wallet.withdrawable': newBalance
           });
-          setBalance(newBalance);
+          setWallet(prev => ({
+            ...prev,
+            withdrawable: newBalance,
+            total: (prev.total || 0) + amountToAdd
+          }));
           toast.success(`Successfully added $${amount} to your wallet`);
           const cleanUrl = window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
@@ -65,13 +110,17 @@ export default function Wallet() {
         paymentProcessedRef.current = true;
         try {
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          const currentBalance = userDoc.data()?.walletBalance || 0;
+          const currentBalance = userDoc.data()?.wallet?.withdrawable || 0;
           const amountToSubtract = Number(amount);
           const newBalance = Number(currentBalance) - amountToSubtract;
           await updateDoc(doc(db, 'users', currentUser.uid), {
-            walletBalance: newBalance
+            'wallet.withdrawable': newBalance
           });
-          setBalance(newBalance);
+          setWallet(prev => ({
+            ...prev,
+            withdrawable: newBalance,
+            total: (prev.total || 0) - amountToSubtract
+          }));
           toast.success(`Successfully withdrew $${amount} from your wallet`);
           const cleanUrl = window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
@@ -87,21 +136,26 @@ export default function Wallet() {
 
   useEffect(() => {
     const fetchWallet = async () => {
-      if (!currentUser) {
-        return;
-      }
+      if (!currentUser) return;
+      
       try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (userDoc.exists()) {
-          const walletBalance = userDoc.data().walletBalance || 0;
-          setBalance(walletBalance);
+          const userData = userDoc.data();
+          setWallet({
+            withdrawable: userData.wallet?.withdrawable || 0,
+            nonWithdrawable: userData.wallet?.nonWithdrawable || 0,
+            total: (userData.wallet?.withdrawable || 0) + (userData.wallet?.nonWithdrawable || 0)
+          });
         }
       } catch (error) {
-        toast.error('Failed to load wallet');
+        console.error('Error fetching wallet:', error);
+        toast.error('Failed to load wallet data');
       } finally {
         setIsLoading(false);
       }
     };
+    
     fetchWallet();
   }, [currentUser]);
 
@@ -152,16 +206,21 @@ export default function Wallet() {
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
-    if (!withdrawAmount || isNaN(withdrawAmount) || withdrawAmount <= 0) {
+    if (!currentUser) return;
+    
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount <= 0) {
       toast.error('Please enter a valid amount');
       return;
     }
-    if (Number(withdrawAmount) > balance) {
-      toast.error('Insufficient balance');
+    
+    if (amount > wallet.withdrawable) {
+      toast.error('Insufficient withdrawable balance');
       return;
     }
-    if (!withdrawPhone) {
-      toast.error('Please enter mobile number');
+    
+    if (!withdrawPhone || withdrawPhone.length < 10) {
+      toast.error('Please enter a valid phone number');
       return;
     }
     try {
@@ -212,9 +271,27 @@ export default function Wallet() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-color-b mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading wallet...</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">${wallet?.total?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+            <p className="text-gray-600">Total Balance</p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-semibold text-green-600 mb-2">${wallet?.withdrawable?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+            <p className="text-gray-600">Withdrawable</p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-semibold text-blue-600 mb-2">${wallet?.nonWithdrawable?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+            <p className="text-gray-600">Non-Withdrawable</p>
+            {wallet?.nonWithdrawable > 0 && (
+              <button 
+                onClick={() => transferToWithdrawable(wallet.nonWithdrawable)}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+              >
+                Transfer to Withdrawable
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -241,7 +318,7 @@ export default function Wallet() {
             <div>
               <p className="text-sm font-medium text-gray-500">Current Balance</p>
               <h3 className="text-3xl font-bold text-gray-900 mt-1">
-                ${balance?.toFixed(2) || '0.00'}
+                ${wallet?.total?.toFixed(2) || '0.00'}
               </h3>
             </div>
             <div className="bg-indigo-100 p-3 rounded-full">
