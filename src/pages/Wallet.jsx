@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/firebase-config';
-import { doc, getDoc, updateDoc, increment, collection, addDoc, setDoc, serverTimestamp, query, where, orderBy, limit, getDocs, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, collection, addDoc, setDoc, serverTimestamp, query, where, orderBy, limit, getDocs, runTransaction, onSnapshot } from 'firebase/firestore';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -95,49 +95,47 @@ export default function Wallet() {
     try {
       const userRef = doc(db, 'users', currentUser.uid);
       
-      // First get the current wallet state to calculate the new total
-      const userDoc = await getDoc(userRef);
-      const currentWallet = userDoc.data()?.wallet || { withdrawable: 0, nonWithdrawable: 0 };
-      
-      // Calculate new values
-      const newWithdrawable = type === 'withdrawable' 
-        ? (currentWallet.withdrawable || 0) + numericAmount 
-        : (currentWallet.withdrawable || 0);
+      // Use a transaction to ensure data consistency
+      await runTransaction(db, async (transaction) => {
+        // Get the current wallet state
+        const userDoc = await transaction.get(userRef);
+        const currentWallet = userDoc.data()?.wallet || { withdrawable: 0, nonWithdrawable: 0 };
         
-      const newNonWithdrawable = type === 'nonWithdrawable' 
-        ? (currentWallet.nonWithdrawable || 0) + numericAmount 
-        : (currentWallet.nonWithdrawable || 0);
+        // Calculate new values
+        const newWithdrawable = type === 'withdrawable' 
+          ? (currentWallet.withdrawable || 0) + numericAmount 
+          : (currentWallet.withdrawable || 0);
+          
+        const newNonWithdrawable = type === 'nonWithdrawable' 
+          ? (currentWallet.nonWithdrawable || 0) + numericAmount 
+          : (currentWallet.nonWithdrawable || 0);
+          
+        const newTotal = newWithdrawable + newNonWithdrawable;
         
-      const newTotal = newWithdrawable + newNonWithdrawable;
-      
-      // Prepare update data
-      const updateData = {
-        'wallet.withdrawable': type === 'withdrawable' ? newWithdrawable : currentWallet.withdrawable || 0,
-        'wallet.nonWithdrawable': type === 'nonWithdrawable' ? newNonWithdrawable : currentWallet.nonWithdrawable || 0,
-        'wallet.total': newTotal
-      };
-      
-      // Update the document
-      await updateDoc(userRef, updateData);
-      
-      // Log the transaction
-      await logTransaction(
-        transactionType,
-        numericAmount,
-        'completed',
-        {
+        // Prepare update data
+        const updateData = {
+          'wallet.withdrawable': type === 'withdrawable' ? newWithdrawable : currentWallet.withdrawable || 0,
+          'wallet.nonWithdrawable': type === 'nonWithdrawable' ? newNonWithdrawable : currentWallet.nonWithdrawable || 0,
+          'wallet.total': newTotal
+        };
+        
+        // Update the document
+        transaction.update(userRef, updateData);
+        
+        // Log the transaction
+        const transactionsCol = collection(db, 'transactions');
+        const newTransRef = doc(transactionsCol);
+        transaction.set(newTransRef, {
+          userId: currentUser.uid,
+          type: transactionType,
+          amount: Math.abs(numericAmount),
+          status: 'completed',
           balanceType: type,
           previousBalance: currentWallet[type] || 0,
           newBalance: type === 'withdrawable' ? newWithdrawable : newNonWithdrawable,
-          total: newTotal
-        }
-      );
-      
-      // Update local state
-      setWallet({
-        withdrawable: newWithdrawable,
-        nonWithdrawable: newNonWithdrawable,
-        total: newTotal
+          total: newTotal,
+          transactionTime: serverTimestamp()
+        });
       });
       
       return true;
@@ -297,29 +295,38 @@ export default function Wallet() {
   }, [currentUser]);
 
   useEffect(() => {
-    const fetchWallet = async () => {
-      if (!currentUser) return;
-      
+    if (!currentUser) return;
+    
+    // Set up real-time listener for wallet data
+    const userDocRef = doc(db, 'users', currentUser.uid);
+    const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
       try {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
+        if (docSnapshot.exists()) {
+          const userData = docSnapshot.data();
+          const withdrawable = userData.wallet?.withdrawable || 0;
+          const nonWithdrawable = userData.wallet?.nonWithdrawable || 0;
+          
           setWallet({
-            withdrawable: userData.wallet?.withdrawable || 0,
-            nonWithdrawable: userData.wallet?.nonWithdrawable || 0,
-            total: (userData.wallet?.withdrawable || 0) + (userData.wallet?.nonWithdrawable || 0)
+            withdrawable,
+            nonWithdrawable,
+            total: withdrawable + nonWithdrawable
           });
         }
       } catch (error) {
-        console.error('Error fetching wallet:', error);
-        toast.error('Failed to load wallet data');
+        console.error('Error in wallet listener:', error);
+        toast.error('Error updating wallet data');
       } finally {
         setIsLoading(false);
       }
-    };
+    }, (error) => {
+      console.error('Error setting up wallet listener:', error);
+      toast.error('Failed to set up real-time updates');
+      setIsLoading(false);
+    });
     
-    fetchWallet();
-  }, [currentUser]);
+    // Clean up the listener when component unmounts or user changes
+    return () => unsubscribe();
+  }, [currentUser?.uid]); // Only re-run if user ID changes
 
   const handleTopup = (e) => {
     e.preventDefault();
