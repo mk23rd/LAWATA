@@ -484,9 +484,24 @@ export default function CreateProjectForm() {
                 className="appearance-none w-full pl-10 pr-8 py-3 border-2 border-gray-200 rounded-xl focus:border-color-b focus:ring-2 focus:ring-color-b/20 transition-all duration-300 text-gray-800 bg-white cursor-pointer text-sm"
               >
                 <option value="">Select Category</option>
-                <option value="cars">🚗 Cars & Automotive</option>
-                <option value="cloth">👕 Fashion & Clothing</option>
-                <option value="books">📚 Books & Literature</option>
+                <option value="Agriculture">Agriculture</option>
+                <option value="Arts">Arts</option>
+                <option value="Automotives">Automotives</option>
+                <option value="Books">Books</option>
+                <option value="Business">Business</option>
+                <option value="Charity">Charity</option>
+                <option value="Community">Community</option>
+                <option value="Education">Education</option>
+                <option value="Energy">Energy</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Environment">Environment</option>
+                <option value="Fashion">Fashion</option>
+                <option value="Health">Health</option>
+                <option value="Infrastructure">Infrastructure</option>
+                <option value="Research">Research</option>
+                <option value="Sports">Sports</option>
+                <option value="Technology">Technology</option>
+                
               </select>
               <FiChevronRight className="absolute right-3 top-1/2 transform -translate-y-1/2 rotate-90 text-gray-400 pointer-events-none" />
             </div>

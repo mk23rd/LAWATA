@@ -9,26 +9,66 @@ const CHAPA_PUBLIC_KEY = import.meta.env.VITE_CHAPA_API_KEY;
 
 export default function Wallet() {
   const { currentUser } = useAuth();
-  const [balance, setBalance] = useState(0);
+  const [wallet, setWallet] = useState({
+    withdrawable: 0,
+    nonWithdrawable: 0,
+    total: 0
+  });
   const [topupAmount, setTopupAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawPhone, setWithdrawPhone] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('topup');
   const formRef = useRef(null);
   const paymentProcessedRef = useRef(false);
 
-  const updateWalletBalance = async (amount) => {
+  const updateWalletBalance = async (amount, type = 'withdrawable') => {
     if (!currentUser) return;
     try {
       const userRef = doc(db, 'users', currentUser.uid);
-      await updateDoc(userRef, {
-        walletBalance: increment(Number(amount))
-      });
-      setBalance(prev => (prev || 0) + Number(amount));
+      const updateData = {};
+      
+      if (type === 'withdrawable') {
+        updateData['wallet.withdrawable'] = increment(Number(amount));
+      } else if (type === 'nonWithdrawable') {
+        updateData['wallet.nonWithdrawable'] = increment(Number(amount));
+      }
+      updateData['wallet.total'] = increment(Number(amount));
+      
+      await updateDoc(userRef, updateData);
+      
+      setWallet(prev => ({
+        ...prev,
+        [type]: (prev[type] || 0) + Number(amount),
+        total: (prev.total || 0) + Number(amount)
+      }));
+      
       return true;
     } catch (error) {
+      console.error('Error updating wallet:', error);
       throw error;
+    }
+  };
+  
+  const transferToWithdrawable = async (amount) => {
+    if (!currentUser || amount <= 0 || amount > wallet.nonWithdrawable) return false;
+    
+    try {
+      const userRef = doc(db, 'users', currentUser.uid);
+      await updateDoc(userRef, {
+        'wallet.nonWithdrawable': increment(-Number(amount)),
+        'wallet.withdrawable': increment(Number(amount))
+      });
+      
+      setWallet(prev => ({
+        ...prev,
+        nonWithdrawable: prev.nonWithdrawable - Number(amount),
+        withdrawable: prev.withdrawable + Number(amount)
+      }));
+      
+      return true;
+    } catch (error) {
+      console.error('Error transferring funds:', error);
+      return false;
     }
   };
 
@@ -48,13 +88,17 @@ export default function Wallet() {
         paymentProcessedRef.current = true;
         try {
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          const currentBalance = userDoc.data()?.walletBalance || 0;
+          const currentBalance = userDoc.data()?.wallet?.withdrawable || 0;
           const amountToAdd = Number(amount);
           const newBalance = Number(currentBalance) + amountToAdd;
           await updateDoc(doc(db, 'users', currentUser.uid), {
-            walletBalance: newBalance
+            'wallet.withdrawable': newBalance
           });
-          setBalance(newBalance);
+          setWallet(prev => ({
+            ...prev,
+            withdrawable: newBalance,
+            total: (prev.total || 0) + amountToAdd
+          }));
           toast.success(`Successfully added $${amount} to your wallet`);
           const cleanUrl = window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
@@ -65,13 +109,17 @@ export default function Wallet() {
         paymentProcessedRef.current = true;
         try {
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          const currentBalance = userDoc.data()?.walletBalance || 0;
+          const currentBalance = userDoc.data()?.wallet?.withdrawable || 0;
           const amountToSubtract = Number(amount);
           const newBalance = Number(currentBalance) - amountToSubtract;
           await updateDoc(doc(db, 'users', currentUser.uid), {
-            walletBalance: newBalance
+            'wallet.withdrawable': newBalance
           });
-          setBalance(newBalance);
+          setWallet(prev => ({
+            ...prev,
+            withdrawable: newBalance,
+            total: (prev.total || 0) - amountToSubtract
+          }));
           toast.success(`Successfully withdrew $${amount} from your wallet`);
           const cleanUrl = window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
@@ -87,21 +135,26 @@ export default function Wallet() {
 
   useEffect(() => {
     const fetchWallet = async () => {
-      if (!currentUser) {
-        return;
-      }
+      if (!currentUser) return;
+      
       try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         if (userDoc.exists()) {
-          const walletBalance = userDoc.data().walletBalance || 0;
-          setBalance(walletBalance);
+          const userData = userDoc.data();
+          setWallet({
+            withdrawable: userData.wallet?.withdrawable || 0,
+            nonWithdrawable: userData.wallet?.nonWithdrawable || 0,
+            total: (userData.wallet?.withdrawable || 0) + (userData.wallet?.nonWithdrawable || 0)
+          });
         }
       } catch (error) {
-        toast.error('Failed to load wallet');
+        console.error('Error fetching wallet:', error);
+        toast.error('Failed to load wallet data');
       } finally {
         setIsLoading(false);
       }
     };
+    
     fetchWallet();
   }, [currentUser]);
 
@@ -152,18 +205,19 @@ export default function Wallet() {
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
-    if (!withdrawAmount || isNaN(withdrawAmount) || withdrawAmount <= 0) {
+    if (!currentUser) return;
+    
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount <= 0) {
       toast.error('Please enter a valid amount');
       return;
     }
-    if (Number(withdrawAmount) > balance) {
-      toast.error('Insufficient balance');
+    
+    if (amount > wallet.withdrawable) {
+      toast.error('Insufficient withdrawable balance');
       return;
     }
-    if (!withdrawPhone) {
-      toast.error('Please enter mobile number');
-      return;
-    }
+    
     try {
       setIsLoading(true);
       const tempForm = document.createElement('form');
@@ -212,9 +266,27 @@ export default function Wallet() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-color-b mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading wallet...</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">${wallet?.total?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+            <p className="text-gray-600">Total Balance</p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-semibold text-green-600 mb-2">${wallet?.withdrawable?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+            <p className="text-gray-600">Withdrawable</p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-semibold text-blue-600 mb-2">${wallet?.nonWithdrawable?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
+            <p className="text-gray-600">Non-Withdrawable</p>
+            {wallet?.nonWithdrawable > 0 && (
+              <button 
+                onClick={() => transferToWithdrawable(wallet.nonWithdrawable)}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+              >
+                Transfer to Withdrawable
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -236,18 +308,59 @@ export default function Wallet() {
           <h2 className="text-2xl font-bold text-gray-800">Wallet</h2>
           <div className="w-10"></div>
         </div>
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Current Balance</p>
-              <h3 className="text-3xl font-bold text-gray-900 mt-1">
-                ${balance?.toFixed(2) || '0.00'}
-              </h3>
+        <div className="space-y-4 mb-8">
+          {/* Total Balance Card */}
+          <div className="bg-white border border-gray-100 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Total Balance</p>
+                <p className="text-2xl font-bold text-gray-900">ETB {wallet?.total?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+              <div className="bg-gray-100 p-2 rounded-lg">
+                <svg className="w-6 h-6 text-color-b" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
             </div>
-            <div className="bg-indigo-100 p-3 rounded-full">
-              <svg className="w-8 h-8 text-color-b" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Withdrawable Balance */}
+            <div className="bg-white border border-gray-100 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Withdrawable</p>
+                  <p className="text-xl font-semibold text-green-600">ETB {wallet?.withdrawable?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div className="bg-green-50 p-2 rounded-lg">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Non-Withdrawable Balance */}
+            <div className="bg-white border border-gray-100 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Non-Withdrawable</p>
+                  <p className="text-xl font-semibold text-blue-600">ETB {wallet?.nonWithdrawable?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div className="bg-blue-50 p-2 rounded-lg">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              {wallet?.nonWithdrawable > 0 && (
+                <button 
+                  onClick={() => transferToWithdrawable(wallet.nonWithdrawable)}
+                  className="mt-2 text-xs font-medium text-color-b hover:text-blue-700 transition-colors duration-200"
+                >
+                  Transfer to Withdrawable
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -313,37 +426,25 @@ export default function Wallet() {
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
             <div className="mb-6">
               <label htmlFor="withdraw-amount" className="block text-sm font-medium text-gray-700 mb-2">
-                Amount to Withdraw
+                Amount to Withdraw (Available: ETB {wallet?.withdrawable?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm">$</span>
+                  <span className="text-gray-500 sm:text-sm">ETB</span>
                 </div>
                 <input
                   type="number"
                   name="withdraw-amount"
                   id="withdraw-amount"
-                  className="block w-full pl-7 pr-12 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-color-b focus:border-color-b text-lg"
+                  className="block w-full pl-12 pr-12 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-color-b focus:border-color-b text-lg"
                   placeholder="0.00"
                   step="0.01"
                   min="0"
+                  max={wallet?.withdrawable || 0}
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                 />
               </div>
-            </div>
-            <div className="mb-6">
-              <label htmlFor="mobile-number" className="block text-sm font-medium text-gray-700 mb-2">
-                Mobile Number
-              </label>
-              <input
-                type="text"
-                id="mobile-number"
-                className="block w-full py-4 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-color-b focus:border-color-b text-lg"
-                placeholder="+251912345678"
-                value={withdrawPhone}
-                onChange={(e) => setWithdrawPhone(e.target.value)}
-              />
             </div>
             <div className="mb-6 p-4 bg-red-50 rounded-xl border border-red-100">
               <div className="flex">
@@ -360,7 +461,7 @@ export default function Wallet() {
                 type="submit"
                 onClick={handleWithdraw}
                 disabled={isLoading}
-                className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-red-500 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Processing...' : 'Withdraw Funds'}
               </button>
