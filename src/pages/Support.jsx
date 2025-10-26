@@ -279,11 +279,7 @@ const Support = () => {
 
         if (!creatorSnap.exists()) throw new Error("Project creator not found in database.");
 
-        // Check withdrawable balance
-        const withdrawableBalance = userData.wallet?.withdrawable || 0;
-        if (withdrawableBalance < numericAmount) {
-          throw new Error(`Insufficient withdrawable balance. You have ETB ${withdrawableBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} but need ETB ${numericAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}.`);
-        }
+        // Note: Chapa is an external payment method, so no wallet balance check needed
 
         // Prevent supporting own project
         if (projectData.createdBy?.uid === currentUser.uid) {
@@ -369,9 +365,8 @@ const Support = () => {
           !userData.roles?.includes("Investor");
 
         // Prepare update data for user
+        // Note: Chapa is external payment, so we don't deduct from wallet
         const updateData = {
-          'wallet.withdrawable': increment(-numericAmount), // Deduct from withdrawable balance
-          'wallet.total': increment(-numericAmount), // Update total wallet balance
           totalFunded: newTotalFunded,
           fundingCounter: newFundingCounter,
           fundings: userFundings,
