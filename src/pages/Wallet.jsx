@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/firebase-config';
-import { doc, getDoc, updateDoc, increment, collection, addDoc, setDoc, serverTimestamp, query, where, orderBy, limit, getDocs, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, collection, addDoc, setDoc, serverTimestamp, query, where, orderBy, limit, getDocs, runTransaction, onSnapshot } from 'firebase/firestore';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -297,28 +297,35 @@ export default function Wallet() {
   }, [currentUser]);
 
   useEffect(() => {
-    const fetchWallet = async () => {
-      if (!currentUser) return;
-      
-      try {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
+    if (!currentUser) {
+      setIsLoading(false);
+      return;
+    }
+    
+    const userRef = doc(db, 'users', currentUser.uid);
+    
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(userRef, 
+      (doc) => {
+        if (doc.exists()) {
+          const userData = doc.data();
           setWallet({
             withdrawable: userData.wallet?.withdrawable || 0,
             nonWithdrawable: userData.wallet?.nonWithdrawable || 0,
             total: (userData.wallet?.withdrawable || 0) + (userData.wallet?.nonWithdrawable || 0)
           });
         }
-      } catch (error) {
-        console.error('Error fetching wallet:', error);
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error('Error listening to wallet updates:', error);
         toast.error('Failed to load wallet data');
-      } finally {
         setIsLoading(false);
       }
-    };
+    );
     
-    fetchWallet();
+    // Clean up the listener when the component unmounts
+    return () => unsubscribe();
   }, [currentUser]);
 
   const handleTopup = (e) => {
