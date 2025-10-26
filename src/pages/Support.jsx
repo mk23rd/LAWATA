@@ -273,6 +273,12 @@ const Support = () => {
         const projectData = projectSnap.data();
         const userData = userSnap.data();
 
+        // Get project creator's user document
+        const creatorRef = doc(db, "users", projectData.createdBy.uid);
+        const creatorSnap = await transaction.get(creatorRef);
+
+        if (!creatorSnap.exists()) throw new Error("Project creator not found in database.");
+
         // Check withdrawable balance
         const withdrawableBalance = userData.wallet?.withdrawable || 0;
         if (withdrawableBalance < numericAmount) {
@@ -401,6 +407,9 @@ const Support = () => {
         const newFundedMoney = currentFunded + numericAmount;
         const milestones = projectData.milestones || {};
 
+        // Track total amount to transfer from non-withdrawable to withdrawable
+        let totalTransferAmount = 0;
+
         // Check which milestones are reached
         [25, 50, 75, 100].forEach(percentage => {
           if (milestones[percentage]) {
@@ -410,10 +419,15 @@ const Support = () => {
 
             // If this milestone was just crossed
             if (previousPercentage < percentage && newPercentage >= percentage) {
+              // Calculate 25% of funding goal to transfer
+              const transferAmount = (fundingGoal * 25) / 100;
+              totalTransferAmount += transferAmount;
+
               milestonesReached.push({
                 percentage,
                 description: milestones[percentage].description,
-                amount: milestoneAmount
+                amount: milestoneAmount,
+                transferAmount: transferAmount
               });
 
               // Update milestone status to completed
@@ -458,6 +472,23 @@ const Support = () => {
 
         // Update user record
         transaction.update(userRef, updateData);
+
+        // Add funds to project creator's wallet
+        // New support goes to non-withdrawable, but if milestones were reached, 
+        // transfer 25% of funding goal per milestone from non-withdrawable to withdrawable
+        const creatorData = creatorSnap.data();
+        const currentNonWithdrawable = creatorData.wallet?.nonWithdrawable || 0;
+        
+        // Calculate how much can actually be transferred (can't transfer more than available)
+        const actualTransferAmount = Math.min(totalTransferAmount, currentNonWithdrawable + numericAmount);
+        
+        const creatorWalletUpdate = {
+          'wallet.nonWithdrawable': increment(numericAmount - actualTransferAmount),
+          'wallet.withdrawable': increment(actualTransferAmount),
+          'wallet.total': increment(numericAmount)
+        };
+        
+        transaction.update(creatorRef, creatorWalletUpdate);
 
         // Create transaction record
         const transactionsCol = collection(db, "transactions");
@@ -561,7 +592,7 @@ const Support = () => {
               userId: project.createdBy.uid,
               projectId: project.id,
               projectTitle: project.title,
-              message: `🎉 Milestone Reached! Your project "${project.title}" has reached ${milestone.percentage}% funding (ETB ${milestone.amount.toFixed(2)})! ${milestone.description}`,
+              message: `🎉 Milestone Reached! Your project "${project.title}" has reached ${milestone.percentage}% funding (ETB ${milestone.amount.toFixed(2)})! ${milestone.description} 💰 ETB ${milestone.transferAmount.toFixed(2)} has been transferred to your withdrawable balance!`,
               type: "Milestone_Completed",
               read: false,
               createdAt: Timestamp.now()
@@ -831,6 +862,12 @@ const Support = () => {
         const projectData = projectSnap.data();
         const userData = userSnap.data();
 
+        // Get project creator's user document
+        const creatorRef = doc(db, "users", projectData.createdBy.uid);
+        const creatorSnap = await transaction.get(creatorRef);
+
+        if (!creatorSnap.exists()) throw new Error("Project creator not found in database.");
+
         // Check withdrawable balance
         const withdrawableBalance = userData.wallet?.withdrawable || 0;
         if (withdrawableBalance < numericAmount) {
@@ -959,6 +996,9 @@ const Support = () => {
         const newFundedMoney = currentFunded + numericAmount;
         const milestones = projectData.milestones || {};
 
+        // Track total amount to transfer from non-withdrawable to withdrawable
+        let totalTransferAmount = 0;
+
         // Check which milestones are reached
         [25, 50, 75, 100].forEach(percentage => {
           if (milestones[percentage]) {
@@ -968,10 +1008,15 @@ const Support = () => {
 
             // If this milestone was just crossed
             if (previousPercentage < percentage && newPercentage >= percentage) {
+              // Calculate 25% of funding goal to transfer
+              const transferAmount = (fundingGoal * 25) / 100;
+              totalTransferAmount += transferAmount;
+
               milestonesReached.push({
                 percentage,
                 description: milestones[percentage].description,
-                amount: milestoneAmount
+                amount: milestoneAmount,
+                transferAmount: transferAmount
               });
 
               // Update milestone status to completed
@@ -1011,6 +1056,23 @@ const Support = () => {
 
         transaction.update(projectRef, projectUpdate);
         transaction.update(userRef, updateData);
+
+        // Add funds to project creator's wallet
+        // New support goes to non-withdrawable, but if milestones were reached, 
+        // transfer 25% of funding goal per milestone from non-withdrawable to withdrawable
+        const creatorData = creatorSnap.data();
+        const currentNonWithdrawable = creatorData.wallet?.nonWithdrawable || 0;
+        
+        // Calculate how much can actually be transferred (can't transfer more than available)
+        const actualTransferAmount = Math.min(totalTransferAmount, currentNonWithdrawable + numericAmount);
+        
+        const creatorWalletUpdate = {
+          'wallet.nonWithdrawable': increment(numericAmount - actualTransferAmount),
+          'wallet.withdrawable': increment(actualTransferAmount),
+          'wallet.total': increment(numericAmount)
+        };
+        
+        transaction.update(creatorRef, creatorWalletUpdate);
 
         // Create transaction record
         const transactionsCol = collection(db, "transactions");
@@ -1137,11 +1199,7 @@ const Support = () => {
       // Update local state immediately for better UX
       setUserData(prev => ({
         ...prev,
-        wallet: {
-          ...prev.wallet,
-          withdrawable: (prev?.wallet?.withdrawable || 0) - numericAmount,
-          total: (prev?.wallet?.total || 0) - numericAmount
-        }
+        walletBalance: (prev?.walletBalance || 0) - numericAmount
       }));
 
       // Refresh project data in background
@@ -1495,7 +1553,7 @@ const Support = () => {
               <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-1">Available Balance</p>
+                    <p className="text-sm font-medium text-gray-600 mb-1">Available Withdrawable Balance</p>
                     <p className="text-3xl font-bold text-gray-900">
                       ETB {(userData.wallet?.withdrawable || 0).toLocaleString()}
                     </p>
@@ -1509,7 +1567,7 @@ const Support = () => {
                 {/* Balance Status Indicator */}
                 {amount && parseFloat(amount) > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
-                      {userData.wallet?.withdrawable >= parseFloat(amount) ? (
+                    {(userData.wallet?.withdrawable || 0) >= parseFloat(amount) ? (
                       <div className="flex items-center gap-2 text-green-600">
                         <CheckCircle className="w-4 h-4" />
                         <span className="text-sm font-medium">
@@ -1832,7 +1890,7 @@ const Support = () => {
                         onClick={handleWalletPayment}
                         disabled={walletProcessing || walletPaymentStatus === 'success' || !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount)}
                         className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                          walletProcessing || walletPaymentStatus === 'success' || !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount)
+                          walletProcessing || walletPaymentStatus === 'success' || !userData?.walletBalance || userData.walletBalance < parseFloat(amount)
                             ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
@@ -1852,7 +1910,7 @@ const Support = () => {
                             <XCircle className="w-4 h-4 mr-2" />
                             Payment Failed
                           </div>
-                        ) : !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount) ? (
+                        ) : !userData?.walletBalance || userData.walletBalance < parseFloat(amount) ? (
                           <div className="flex items-center justify-center">
                             <Wallet className="w-4 h-4 mr-2" />
                             Insufficient Balance

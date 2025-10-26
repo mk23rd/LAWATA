@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase/firebase-config';
-import { doc, getDoc, updateDoc, increment, collection, addDoc, setDoc, serverTimestamp, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, collection, addDoc, setDoc, serverTimestamp, query, where, orderBy, limit, getDocs, runTransaction } from 'firebase/firestore';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -25,68 +25,55 @@ export default function Wallet() {
     try {
       if (!currentUser?.uid) {
         console.error('Cannot log transaction: No user is logged in');
-        return;
+        return null;
       }
 
+      const numericAmount = Math.abs(Number(amount));
       const transactionData = {
         userId: currentUser.uid,
         type,
-        amount: Math.abs(Number(amount)),
+        amount: numericAmount,
         status,
-        timestamp: serverTimestamp(),
+        transactionTime: serverTimestamp(),
         ...metadata,
         debug_timestamp: new Date().toISOString()
       };
+
+      // Add specific fields based on transaction type
+      if (type === 'withdrawal' || type === 'deposit') {
+        transactionData.funding = false;
+        transactionData.equityBought = 0;
+      }
       
-      console.log('Attempting to log transaction:', {
-        collection: 'transactions',
-        data: transactionData
+      console.log('Creating transaction:', transactionData);
+      
+      // Use a transaction to ensure data consistency
+      let transactionId = null;
+      await runTransaction(db, async (transaction) => {
+        // Create transaction record
+        const transactionsCol = collection(db, 'transactions');
+        const newTransRef = doc(transactionsCol);
+        transaction.set(newTransRef, transactionData);
+        transactionId = newTransRef.id;
       });
       
-      const docRef = await addDoc(collection(db, 'transactions'), transactionData);
-      console.log('Transaction logged successfully with ID:', docRef.id);
+      console.log('Transaction logged successfully with ID:', transactionId);
       
       // Verify the transaction was written by reading it back
-      const verifyDoc = await getDoc(docRef);
-      if (verifyDoc.exists()) {
-        console.log('✅ Transaction verified in Firestore:', verifyDoc.data());
-      } else {
-        console.error('❌ Transaction NOT found in Firestore after write!');
-      }
-
-      // Log all recent transactions for this user
-      try {
-        const userTransactionsQuery = query(
-          collection(db, 'transactions'),
-          where('userId', '==', currentUser.uid),
-          orderBy('debug_timestamp', 'desc'),
-          limit(10)
-        );
-        const querySnapshot = await getDocs(userTransactionsQuery);
+      if (transactionId) {
+        const docRef = doc(db, 'transactions', transactionId);
+        const verifyDoc = await getDoc(docRef);
         
-        console.log('--- LAST 10 TRANSACTIONS FOR USER ---');
-        if (querySnapshot.empty) {
-          console.log('No transactions found for this user');
+        if (verifyDoc.exists()) {
+          console.log('✅ Transaction verified in Firestore:', verifyDoc.id, verifyDoc.data());
         } else {
-          querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            console.log(`Transaction ID: ${doc.id}`, {
-              type: data.type,
-              amount: data.amount,
-              status: data.status,
-              timestamp: data.debug_timestamp || data.timestamp,
-              ...(data.metadata || {})
-            });
-          });
+          console.error('❌ Transaction NOT found in Firestore after write!');
         }
-        console.log('--- END OF TRANSACTIONS ---');
-      } catch (queryError) {
-        console.error('Error fetching transactions:', queryError);
       }
       
-      return docRef.id;
+      return transactionId;
     } catch (error) {
-      console.error('Error logging transaction:', {
+      console.error('Error in logTransaction:', {
         error: error.message,
         type,
         amount,
@@ -95,6 +82,7 @@ export default function Wallet() {
         stack: error.stack
       });
       // Don't throw here to avoid blocking the main operation
+      return null;
     }
   };
 
@@ -106,15 +94,30 @@ export default function Wallet() {
 
     try {
       const userRef = doc(db, 'users', currentUser.uid);
-      const updateData = {};
       
-      if (type === 'withdrawable') {
-        updateData['wallet.withdrawable'] = increment(numericAmount);
-      } else if (type === 'nonWithdrawable') {
-        updateData['wallet.nonWithdrawable'] = increment(numericAmount);
-      }
-      updateData['wallet.total'] = increment(numericAmount);
+      // First get the current wallet state to calculate the new total
+      const userDoc = await getDoc(userRef);
+      const currentWallet = userDoc.data()?.wallet || { withdrawable: 0, nonWithdrawable: 0 };
       
+      // Calculate new values
+      const newWithdrawable = type === 'withdrawable' 
+        ? (currentWallet.withdrawable || 0) + numericAmount 
+        : (currentWallet.withdrawable || 0);
+        
+      const newNonWithdrawable = type === 'nonWithdrawable' 
+        ? (currentWallet.nonWithdrawable || 0) + numericAmount 
+        : (currentWallet.nonWithdrawable || 0);
+        
+      const newTotal = newWithdrawable + newNonWithdrawable;
+      
+      // Prepare update data
+      const updateData = {
+        'wallet.withdrawable': type === 'withdrawable' ? newWithdrawable : currentWallet.withdrawable || 0,
+        'wallet.nonWithdrawable': type === 'nonWithdrawable' ? newNonWithdrawable : currentWallet.nonWithdrawable || 0,
+        'wallet.total': newTotal
+      };
+      
+      // Update the document
       await updateDoc(userRef, updateData);
       
       // Log the transaction
@@ -124,15 +127,18 @@ export default function Wallet() {
         'completed',
         {
           balanceType: type,
-          newBalance: wallet[type] + numericAmount
+          previousBalance: currentWallet[type] || 0,
+          newBalance: type === 'withdrawable' ? newWithdrawable : newNonWithdrawable,
+          total: newTotal
         }
       );
       
-      setWallet(prev => ({
-        ...prev,
-        [type]: (prev[type] || 0) + numericAmount,
-        total: (prev.total || 0) + numericAmount
-      }));
+      // Update local state
+      setWallet({
+        withdrawable: newWithdrawable,
+        nonWithdrawable: newNonWithdrawable,
+        total: newTotal
+      });
       
       return true;
     } catch (error) {
