@@ -1885,7 +1885,7 @@ const Support = () => {
                         onClick={handleWalletPayment}
                         disabled={walletProcessing || walletPaymentStatus === 'success' || !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount)}
                         className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                          walletProcessing || walletPaymentStatus === 'success' || !userData?.walletBalance || userData.walletBalance < parseFloat(amount)
+                          walletProcessing || walletPaymentStatus === 'success' || !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount)
                             ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
@@ -1905,7 +1905,7 @@ const Support = () => {
                             <XCircle className="w-4 h-4 mr-2" />
                             Payment Failed
                           </div>
-                        ) : !userData?.walletBalance || userData.walletBalance < parseFloat(amount) ? (
+                        ) : !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount) ? (
                           <div className="flex items-center justify-center">
                             <Wallet className="w-4 h-4 mr-2" />
                             Insufficient Balance
