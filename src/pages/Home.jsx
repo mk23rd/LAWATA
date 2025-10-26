@@ -685,9 +685,6 @@ const testimonials = [
         Explore Projects
         </Link>
         </div>
-
-
-        <div className="absolute top-8 right-8 w-4 h-4 bg-yellow-300 rounded-full animate-bounce opacity-80"></div>
         </Link>
       </div>
     </div>
