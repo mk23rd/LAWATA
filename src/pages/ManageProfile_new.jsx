@@ -2,10 +2,17 @@ import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebase/firebase-config";
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { Upload, X, Loader, User, Phone, MapPin, Tag, FileText, Camera, Save, Eye } from "lucide-react";
+import { Upload, X, Loader, User, Phone, MapPin, Tag, FileText, Camera, Save, Eye, Check, ChevronDown, Plus } from "lucide-react";
 import { toast } from 'react-toastify';
 import SimplePhoneInput from '../components/ui/SimplePhoneInput';
 import CountryCitySelector from '../components/ui/CountryCitySelector';
+
+const CATEGORIES = [
+  'Agriculture', 'Arts', 'Automotives', 'Books', 'Business', 'Charity', 
+  'Community', 'Education', 'Energy', 'Entertainment', 'Environment', 
+  'Fashion', 'Health', 'Infrastructure', 'Research', 'Sports', 
+  'Technology', 'Tourism'
+];
 
 const ManageProfile = () => {
   const navigate = useNavigate();
@@ -18,7 +25,7 @@ const ManageProfile = () => {
     bio: "",
     city: "",
     country: "",
-    preferredCategories: "",
+    preferredCategories: [],
   });
 
   const [phoneData, setPhoneData] = useState({
@@ -32,7 +39,8 @@ const ManageProfile = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [filePreview, setFilePreview] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
   const [usernameChecking, setUsernameChecking] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [originalUsername, setOriginalUsername] = useState("");
@@ -57,7 +65,7 @@ const ManageProfile = () => {
             bio: data.bio || "",
             city: data.location?.city || "",
             country: data.location?.country || "",
-            preferredCategories: (data.preferredCategories || []).join(", "),
+            preferredCategories: data.preferredCategories || [],
           });
           
           setOriginalUsername(username.toLowerCase());
@@ -73,7 +81,7 @@ const ManageProfile = () => {
           }
           
           if (data.profileImageUrl) {
-            setFilePreview(data.profileImageUrl);
+            setShowPreview(true);
           }
         }
       } catch (error) {
@@ -165,7 +173,7 @@ const ManageProfile = () => {
     
     const reader = new FileReader();
     reader.onload = (e) => {
-      setFilePreview(e.target.result);
+      setShowPreview(true);
     };
     reader.readAsDataURL(file);
   };
@@ -176,7 +184,7 @@ const ManageProfile = () => {
 
   const removeSelectedFile = () => {
     setSelectedFile(null);
-    setFilePreview(formData.profileImageUrl || "");
+    setShowPreview(false);
   };
 
   const uploadToImageBB = async (file) => {
@@ -293,10 +301,7 @@ const ManageProfile = () => {
           city: formData.city.trim(), 
           country: formData.country.trim() 
         },
-        preferredCategories: formData.preferredCategories
-          .split(",")
-          .map((c) => c.trim())
-          .filter(Boolean),
+        preferredCategories: formData.preferredCategories,
       });
       
       toast.success("Profile updated successfully!");
@@ -329,10 +334,10 @@ const ManageProfile = () => {
           <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-8">
             <div className="flex flex-col items-center">
               <div className="relative group">
-                {filePreview ? (
+                {showPreview ? (
                   <div className="relative">
                     <img
-                      src={filePreview}
+                      src={formData.profileImageUrl || URL.createObjectURL(selectedFile)}
                       alt="Profile"
                       className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
                     />
@@ -366,7 +371,7 @@ const ManageProfile = () => {
                   />
                   <div className="flex items-center gap-2">
                     <Upload size={18} />
-                    {filePreview ? "Change Photo" : "Upload Photo"}
+                    {showPreview ? "Change Photo" : "Upload Photo"}
                   </div>
                 </label>
                 <p className="text-gray-300 text-sm">JPG, PNG or GIF (max. 5MB)</p>
@@ -503,19 +508,44 @@ const ManageProfile = () => {
 
             {/* Preferred Categories */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
                 <Tag size={18} />
                 Preferred Categories
               </label>
-              <input
-                type="text"
-                name="preferredCategories"
-                value={formData.preferredCategories}
-                onChange={handleChange}
-                placeholder="e.g., Technology, Art, Music (comma-separated)"
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-              />
-              <p className="text-xs text-gray-500 mt-1">Separate multiple categories with commas</p>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => {
+                        const newCategories = [...prev.preferredCategories];
+                        const index = newCategories.indexOf(category);
+                        if (index > -1) {
+                          newCategories.splice(index, 1);
+                        } else {
+                          newCategories.push(category);
+                        }
+                        return { ...prev, preferredCategories: newCategories };
+                      });
+                    }}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2
+                      ${formData.preferredCategories.includes(category)
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200'
+                        : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'}`}
+                  >
+                    {category}
+                    {formData.preferredCategories.includes(category) ? (
+                      <X size={16} className="text-blue-500" />
+                    ) : (
+                      <Plus size={16} className="text-gray-500" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {formData.preferredCategories.length} categories selected
+              </p>
             </div>
 
             {/* Action Buttons */}
