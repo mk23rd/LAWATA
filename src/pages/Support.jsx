@@ -1137,7 +1137,11 @@ const Support = () => {
       // Update local state immediately for better UX
       setUserData(prev => ({
         ...prev,
-        walletBalance: (prev?.walletBalance || 0) - numericAmount
+        wallet: {
+          ...prev.wallet,
+          withdrawable: (prev?.wallet?.withdrawable || 0) - numericAmount,
+          total: (prev?.wallet?.total || 0) - numericAmount
+        }
       }));
 
       // Refresh project data in background
@@ -1493,7 +1497,7 @@ const Support = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-600 mb-1">Available Balance</p>
                     <p className="text-3xl font-bold text-gray-900">
-                      ETB {(userData.walletBalance || 0).toLocaleString()}
+                      ETB {(userData.wallet?.withdrawable || 0).toLocaleString()}
                     </p>
                     <p className="text-sm text-gray-500 mt-1">Use your wallet to support this project instantly</p>
                   </div>
@@ -1505,7 +1509,7 @@ const Support = () => {
                 {/* Balance Status Indicator */}
                 {amount && parseFloat(amount) > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
-                    {userData.walletBalance >= parseFloat(amount) ? (
+                      {userData.wallet?.withdrawable >= parseFloat(amount) ? (
                       <div className="flex items-center gap-2 text-green-600">
                         <CheckCircle className="w-4 h-4" />
                         <span className="text-sm font-medium">
@@ -1516,7 +1520,7 @@ const Support = () => {
                       <div className="flex items-center gap-2 text-red-600">
                         <XCircle className="w-4 h-4" />
                         <span className="text-sm font-medium">
-                          Insufficient balance. Need ETB {(parseFloat(amount) - userData.walletBalance).toLocaleString()} more
+                          Insufficient balance. Need ETB {(parseFloat(amount) - (userData.wallet?.withdrawable || 0)).toLocaleString()} more
                         </span>
                       </div>
                     )}
@@ -1828,7 +1832,7 @@ const Support = () => {
                         onClick={handleWalletPayment}
                         disabled={walletProcessing || walletPaymentStatus === 'success' || !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount)}
                         className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                          walletProcessing || walletPaymentStatus === 'success' || !userData?.walletBalance || userData.walletBalance < parseFloat(amount)
+                          walletProcessing || walletPaymentStatus === 'success' || !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount)
                             ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
@@ -1848,7 +1852,7 @@ const Support = () => {
                             <XCircle className="w-4 h-4 mr-2" />
                             Payment Failed
                           </div>
-                        ) : !userData?.walletBalance || userData.walletBalance < parseFloat(amount) ? (
+                        ) : !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount) ? (
                           <div className="flex items-center justify-center">
                             <Wallet className="w-4 h-4 mr-2" />
                             Insufficient Balance
