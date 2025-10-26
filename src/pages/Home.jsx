@@ -674,7 +674,7 @@ const testimonials = [
 
 
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6 mt-20">
-        <h3 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg">Discover & Invest</h3>
+        <h3 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg">Discover & Crowdfund</h3>
         <p className="mt-4 text-sm md:text-xl text-white/90 max-w-xs">Explore rising creators and join their journeys.</p>
 
 
