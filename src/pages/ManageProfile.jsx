@@ -15,14 +15,59 @@ const ManageProfile = () => {
     bio: "",
     city: "",
     country: "",
-    preferredCategories: "",
+    preferredCategories: [],
   });
+
+  const categories = ['Agriculture', 'Arts', 'Automotives', 'Books', 'Business', 'Charity', 'Community', 'Education', 'Energy', 'Entertainment', 'Environment', 'Fashion', 'Health', 'Infrastructure', 'Research', 'Sports', 'Technology', 'Tourism'];
 
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState("");
+
+  const steps = [
+    {
+      label: "Contact Information",
+      milestone: "Contact",
+      name: "phoneNumber",
+      type: "tel",
+      icon: <Phone size={20} className="mr-2" />,
+    },
+    {
+      label: "Profile Picture",
+      milestone: "Photo",
+      name: "profileImageUrl",
+      type: "file",
+      icon: <Camera size={20} className="mr-2" />,
+    },
+    {
+      label: "Tell us about yourself",
+      milestone: "Bio",
+      name: "bio",
+      type: "textarea",
+      icon: <FileText size={20} className="mr-2" />,
+    },
+    {
+      label: "Your Location",
+      milestone: "Location",
+      name: "location",
+      type: "location",
+      icon: <MapPin size={20} className="mr-2" />,
+    },
+    {
+      label: "Your Interests",
+      milestone: "Interests",
+      name: "preferredCategories",
+      type: "categories",
+      icon: <Tag size={20} className="mr-2" />,
+    },
+  ];
+  
+  const step = steps[currentStep];
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -40,7 +85,7 @@ const ManageProfile = () => {
             bio: data.bio || "",
             city: data.location?.city || "",
             country: data.location?.country || "",
-            preferredCategories: (data.preferredCategories || []).join(", "),
+            preferredCategories: data.preferredCategories || [],
           });
           
           if (data.profileImageUrl) {
@@ -60,6 +105,14 @@ const ManageProfile = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+  
+  const handleCategoriesChange = (e) => {
+    const selected = Array.from(e.target.selectedOptions, option => option.value);
+    setFormData(prev => ({
+      ...prev,
+      preferredCategories: selected
+    }));
   };
 
   const handleFileSelect = (file) => {
@@ -175,10 +228,7 @@ const ManageProfile = () => {
         profileImageUrl: profileImageUrl,
         bio: formData.bio,
         location: { city: formData.city, country: formData.country },
-        preferredCategories: formData.preferredCategories
-          .split(",")
-          .map((c) => c.trim())
-          .filter(Boolean),
+        preferredCategories: formData.preferredCategories,
       });
       
       toast.success("Profile updated successfully!");
@@ -257,6 +307,22 @@ const ManageProfile = () => {
               onChange={handleChange}
               className="w-full p-3 rounded border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
+          </div>
+        ) : step.type === "categories" ? (
+          <div className="w-full">
+            <p className="text-sm text-gray-600 mb-2">Select categories that interest you (hold Ctrl/Cmd to select multiple):</p>
+            <select
+              multiple
+              value={formData.preferredCategories}
+              onChange={handleCategoriesChange}
+              className="w-full p-3 rounded border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-400 h-auto min-h-[150px]"
+            >
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
         ) : step.type === "file" ? (
           <div className="flex flex-col items-center">
@@ -383,7 +449,7 @@ const ManageProfile = () => {
               <p><strong>Phone:</strong> {formData.phoneNumber}</p>
               <p><strong>Bio:</strong> {formData.bio}</p>
               <p><strong>Location:</strong> {formData.city}, {formData.country}</p>
-              <p><strong>Preferences:</strong> {formData.preferredCategories}</p>
+              <p><strong>Preferences:</strong> {formData.preferredCategories.join(", ")}</p>
             </div>
             <button
               className="mt-4 w-full px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition"
