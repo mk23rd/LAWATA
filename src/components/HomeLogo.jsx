@@ -124,42 +124,42 @@ const sectionRef = useRef(null);
       <div ref={sectionRef} className='w-20/20 h-full gap-5 hidden md:flex'>
         <div className="w-1/20 h-full flex items-center justify-center relative">
           <div className="bg-color-b w-0.5 h-90 absolute top-10"></div>
-          <Link to="/projects" ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="create border-color-b border-3 bg-white h-50 w-full font-titan flex justify-center items-center relative z-10 mx-auto flex-none">
+          <Link to={{ pathname: "/manage", state: { activeTab: 'create' } }} ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="create border-color-b border-3 bg-white h-50 w-full font-titan flex justify-center items-center relative z-10 mx-auto flex-none">
             <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">C</p>
           </Link>
         </div>
 
         <div className="w-1/20 h-full flex items-center justify-center relative top-20">
           <div className="bg-color-b w-0.5 h-115 absolute"></div>
-          <Link to="/projects" ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="border-color-b border-3 bg-white w-full h-30 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "23%" }}>
+          <Link to={{ pathname: "/manage", state: { activeTab: 'create' } }} ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="border-color-b border-3 bg-white w-full h-30 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ bottom: "23%" }}>
             <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">R</p>
           </Link>
         </div>
 
         <div className="w-1/20 h-full  flex items-center justify-center relative">
           <div className="bg-color-b w-0.5 h-115 absolute"></div>
-          <Link to="/projects" ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="create border-color-b border-3 bg-white w-full h-45 font-titan flex justify-center items-center z-10 relative mx-auto flex-none">
+          <Link to={{ pathname: "/manage", state: { activeTab: 'create' } }} ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="create border-color-b border-3 bg-white w-full h-45 font-titan flex justify-center items-center z-10 relative mx-auto flex-none">
             <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">E</p>
           </Link>
         </div>
 
         <div className="w-1/20 h-full  flex items-center justify-center relative">
           <div className="bg-color-b w-0.5 h-105 absolute"></div>
-          <Link to="/projects" ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="create border-color-b border-3 bg-white w-full h-20 font-titan flex justify-center items-center z-10 relative mx-auto flex-none">
+          <Link to={{ pathname: "/manage", state: { activeTab: 'create' } }} ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="create border-color-b border-3 bg-white w-full h-20 font-titan flex justify-center items-center z-10 relative mx-auto flex-none">
             <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">A</p>
           </Link>
         </div>
 
         <div className="w-1/20 h-full  flex items-center justify-center relative">
           <div className="bg-color-b w-0.5 h-50 absolute"></div>
-          <Link to="/projects" ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="create border-color-b border-3 bg-white w-full h-50 font-titan flex justify-center items-center z-10 relative mx-auto flex-none">
+          <Link to={{ pathname: "/manage", state: { activeTab: 'create' } }} ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="create border-color-b border-3 bg-white w-full h-50 font-titan flex justify-center items-center z-10 relative mx-auto flex-none">
             <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">T</p>
           </Link>
         </div>
 
         <div className="w-1/20 h-full  flex items-center justify-center relative">
           <div className="bg-color-b w-0.5 h-100 absolute bottom-4"></div>
-          <Link to="/projects" ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="create border-color-b border-3 bg-white w-full h-45 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ top: "0%" }}>
+          <Link to={{ pathname: "/manage", state: { activeTab: 'create' } }} ref={createaddToRefs} onMouseEnter={createhandleMouseEnter} onMouseLeave={createhandleMouseLeave} className="create border-color-b border-3 bg-white w-full h-45 font-titan flex justify-center items-center z-10 relative mx-auto flex-none" style={{ top: "0%" }}>
             <p className="text-color-b font-titan sm:text-2xl md:text-4xl lg:text-6xl">E</p>
           </Link>
         </div>
