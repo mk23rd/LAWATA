@@ -9,7 +9,7 @@ import Navbar from "../components/NavBar";
 const Browse = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
-  const [filteredProjects, setFilteredProjects] = useState([]);
+  const [filteredProjects, setFilteredProjects] = useState([]); // Start with empty array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,16 +22,17 @@ const Browse = () => {
     const fetchProjects = async () => {
       try {
         setLoading(true);
+        setError(null);
         const projectsRef = collection(db, 'projects');
         const q = query(projectsRef, where('status', '==', 'Approved'));
         const querySnapshot = await getDocs(q);
         const projectsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setProjects(projectsData);
-        setFilteredProjects(projectsData);
-        setError(null);
+        // Don't set filteredProjects here, let the effect below handle it
       } catch (err) {
         console.error('Error fetching projects:', err);
         setError('Failed to load projects');
+        setFilteredProjects([]); // Ensure empty state on error
       } finally {
         setLoading(false);
       }
@@ -39,8 +40,13 @@ const Browse = () => {
     fetchProjects();
   }, []);
 
-  // Filter and sort projects
+  // Filter and sort projects - runs when any dependency changes
   useEffect(() => {
+    if (projects.length === 0) {
+      setFilteredProjects([]);
+      return;
+    }
+
     let filtered = [...projects];
 
     // Search filter
@@ -48,7 +54,7 @@ const Browse = () => {
       filtered = filtered.filter(project =>
         project.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         project.shortDescription?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.createdBy.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.createdBy?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         project.category?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -66,22 +72,26 @@ const Browse = () => {
       );
     } else if (selectedStatus === 'expired') {
       filtered = filtered.filter(project => 
-        new Date(project.endDate) < currentDate
+        project.endDate && new Date(project.endDate) < currentDate
       );
     } else if (selectedStatus === 'active') {
       filtered = filtered.filter(project => 
         project.fundedMoney < project.fundingGoal && 
-        new Date(project.endDate) >= currentDate
+        project.endDate && new Date(project.endDate) >= currentDate
       );
     }
 
     // Sort
     switch (sortBy) {
       case 'newest':
-        filtered.sort((a, b) => new Date(b.createdAt?.seconds * 1000) - new Date(a.createdAt?.seconds * 1000));
+        filtered.sort((a, b) => 
+          (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
+        );
         break;
       case 'oldest':
-        filtered.sort((a, b) => new Date(a.createdAt?.seconds * 1000) - new Date(b.createdAt?.seconds * 1000));
+        filtered.sort((a, b) => 
+          (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
+        );
         break;
       case 'most_funded':
         filtered.sort((a, b) => (b.fundedMoney || 0) - (a.fundedMoney || 0));
@@ -90,7 +100,11 @@ const Browse = () => {
         filtered.sort((a, b) => (a.fundedMoney || 0) - (b.fundedMoney || 0));
         break;
       case 'ending_soon':
-        filtered.sort((a, b) => new Date(a.endDate) - new Date(b.endDate));
+        filtered.sort((a, b) => {
+          const dateA = a.endDate ? new Date(a.endDate) : new Date(0);
+          const dateB = b.endDate ? new Date(b.endDate) : new Date(0);
+          return dateA - dateB;
+        });
         break;
       default:
         break;

@@ -392,8 +392,6 @@ const ProjectDetails = () => {
   const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
   const allImages = [project.imageUrl, ...(project.secondaryImages || [])].filter(Boolean);
 
-  console.log(project)
-
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
