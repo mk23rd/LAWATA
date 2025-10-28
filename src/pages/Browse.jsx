@@ -16,6 +16,7 @@ const Browse = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('active'); // 'active' is the default selected status
   const [sortBy, setSortBy] = useState('newest');
+  const [filteredCount, setFilteredCount] = useState(0);
 
   // Fetch approved projects
   useEffect(() => {
@@ -111,6 +112,7 @@ const Browse = () => {
     }
 
     setFilteredProjects(filtered);
+    setFilteredCount(filtered.length);
   }, [projects, searchTerm, selectedCategory, selectedStatus, sortBy]);
 
   // Guard against divide-by-zero while computing progress
@@ -182,8 +184,11 @@ const Browse = () => {
 
       {/* Header */}
       <div className="pt-24 pb-8 px-6">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Discover Projects</h1>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Discover Projects</h1>
+            <p className="text-sm text-gray-500">{filteredCount} {filteredCount === 1 ? 'project' : 'projects'} found</p>
+          </div>
           <p className="text-gray-600">{projects.length} projects available</p>
         </div>
       </div>
