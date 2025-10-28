@@ -23,10 +23,10 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/mk23rd/Risk_Integrated_Crowdfunding_and_Investment_Platform.git
+git clone https://github.com/mk23rd/LAWATA.git
 
 # Move into the project folder
-cd/Risk_Integrated_Crowdfunding_and_Investment_Platform
+cd/LAWATA
 
 # Install dependencies
 npm install gsap/react
