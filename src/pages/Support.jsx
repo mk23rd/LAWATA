@@ -149,7 +149,16 @@ const Support = () => {
           const userRef = doc(db, "users", currentUser.uid);
           const userSnap = await getDoc(userRef);
           if (userSnap.exists()) {
-            setUserData(userSnap.data());
+            const userData = userSnap.data();
+            // Ensure wallet object exists with all required fields
+            setUserData({
+              ...userData,
+              wallet: {
+                withdrawable: userData.wallet?.withdrawable || 0,
+                nonWithdrawable: userData.wallet?.nonWithdrawable || 0,
+                total: (userData.wallet?.withdrawable || 0) + (userData.wallet?.nonWithdrawable || 0)
+              }
+            });
           }
         } catch (err) {
           console.error("Error fetching user data:", err);
@@ -166,7 +175,16 @@ const Support = () => {
         const userRef = doc(db, "users", currentUser.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
-          setUserData(userSnap.data());
+          const userData = userSnap.data();
+          // Ensure wallet object exists with all required fields
+          setUserData({
+            ...userData,
+            wallet: {
+              withdrawable: userData.wallet?.withdrawable || 0,
+              nonWithdrawable: userData.wallet?.nonWithdrawable || 0,
+              total: (userData.wallet?.withdrawable || 0) + (userData.wallet?.nonWithdrawable || 0)
+            }
+          });
         }
       } catch (err) {
         console.error("Error refreshing user data:", err);
@@ -255,8 +273,13 @@ const Support = () => {
         const projectData = projectSnap.data();
         const userData = userSnap.data();
 
-        // Store previous funded amount for milestone checking
-        previousFundedMoney = projectData.fundedMoney ?? 0;
+        // Get project creator's user document
+        const creatorRef = doc(db, "users", projectData.createdBy.uid);
+        const creatorSnap = await transaction.get(creatorRef);
+
+        if (!creatorSnap.exists()) throw new Error("Project creator not found in database.");
+
+        // Note: Chapa is an external payment method, so no wallet balance check needed
 
         // Prevent supporting own project
         if (projectData.createdBy?.uid === currentUser.uid) {
@@ -282,7 +305,7 @@ const Support = () => {
         const remaining = fundingGoal - currentFunded;
 
         if (numericAmount > remaining) {
-          throw new Error(`You can only fund up to $${remaining}.`);
+          throw new Error(`You can only fund up to ETB ${remaining}.`);
         }
 
         // Validate reward selection if applicable
@@ -294,7 +317,7 @@ const Support = () => {
           
           const rewardAmount = parseFloat(rewardFromProject.amount) || 0;
           if (numericAmount < rewardAmount) {
-            throw new Error(`Your contribution of $${numericAmount} is insufficient for the selected reward (requires $${rewardAmount}).`);
+            throw new Error(`Your contribution of ETB ${numericAmount} is insufficient for the selected reward (requires ETB ${rewardAmount}).`);
           }
           
           if (rewardFromProject.type === 'limited') {
@@ -304,6 +327,9 @@ const Support = () => {
             }
           }
         }
+
+        // Store previous funded amount for milestone checking
+        previousFundedMoney = currentFunded;
 
         // ---- PREPARE DATA LOCALLY ----
         // Determine if this is the user's first time funding this project
@@ -339,6 +365,7 @@ const Support = () => {
           !userData.roles?.includes("Investor");
 
         // Prepare update data for user
+        // Note: Chapa is external payment, so we don't deduct from wallet
         const updateData = {
           totalFunded: newTotalFunded,
           fundingCounter: newFundingCounter,
@@ -366,17 +393,6 @@ const Support = () => {
         // Add Investor role if conditions are met
         if (shouldAddInvestorRole) {
           updateData.roles = arrayUnion("Investor", "Funder");
-          try {
-            await addDoc(collection(db, "notifications"), {
-              message: `Your Roles have been Promoted you now have access to Investment.`,
-              type: "Roles_update",
-              read: false,
-              userId: currentUser.uid,
-              createdAt: Timestamp.now()
-            });
-          } catch (notifErr) {
-            console.error("Failed to create notification:", notifErr);
-          }
         } else if (!userData.roles?.includes("Funder")) {
           // Add Funder role if not already present
           updateData.roles = arrayUnion("Funder");
@@ -386,7 +402,8 @@ const Support = () => {
         const newFundedMoney = currentFunded + numericAmount;
         const milestones = projectData.milestones || {};
 
-        
+        // Track total amount to transfer from non-withdrawable to withdrawable
+        let totalTransferAmount = 0;
 
         // Check which milestones are reached
         [25, 50, 75, 100].forEach(percentage => {
@@ -395,10 +412,19 @@ const Support = () => {
             const previousPercentage = (previousFundedMoney / fundingGoal) * 100;
             const newPercentage = (newFundedMoney / fundingGoal) * 100;
 
-
             // If this milestone was just crossed
             if (previousPercentage < percentage && newPercentage >= percentage) {
-             
+              // Calculate 25% of funding goal to transfer
+              const transferAmount = (fundingGoal * 25) / 100;
+              totalTransferAmount += transferAmount;
+
+              milestonesReached.push({
+                percentage,
+                description: milestones[percentage].description,
+                amount: milestoneAmount,
+                transferAmount: transferAmount
+              });
+
               // Update milestone status to completed
               transaction.update(projectRef, {
                 [`milestones.${percentage}.status`]: 'completed',
@@ -428,7 +454,6 @@ const Support = () => {
           if (updatedRewardsList[rewardIndex]) {
             const currentQuantity = updatedRewardsList[rewardIndex].quantity || 0;
             const newQuantity = Math.max(0, currentQuantity - 1);
-            console.log(`Updating reward ${rewardIndex}: ${currentQuantity} -> ${newQuantity}`);
             
             updatedRewardsList[rewardIndex] = {
               ...updatedRewardsList[rewardIndex],
@@ -442,6 +467,23 @@ const Support = () => {
 
         // Update user record
         transaction.update(userRef, updateData);
+
+        // Add funds to project creator's wallet
+        // New support goes to non-withdrawable, but if milestones were reached, 
+        // transfer 25% of funding goal per milestone from non-withdrawable to withdrawable
+        const creatorData = creatorSnap.data();
+        const currentNonWithdrawable = creatorData.wallet?.nonWithdrawable || 0;
+        
+        // Calculate how much can actually be transferred (can't transfer more than available)
+        const actualTransferAmount = Math.min(totalTransferAmount, currentNonWithdrawable + numericAmount);
+        
+        const creatorWalletUpdate = {
+          'wallet.nonWithdrawable': increment(numericAmount - actualTransferAmount),
+          'wallet.withdrawable': increment(actualTransferAmount),
+          'wallet.total': increment(numericAmount)
+        };
+        
+        transaction.update(creatorRef, creatorWalletUpdate);
 
         // Create transaction record
         const transactionsCol = collection(db, "transactions");
@@ -491,7 +533,7 @@ const Support = () => {
           userId: project.createdBy.uid,
           projectId: project.id,
           projectTitle: project.title,
-          message: `Your Project ${project.title} was funded ${numericAmount}$ by ${currentUser.displayName || "a supporter"}.`,
+          message: `Your Project ${project.title} was funded ETB ${numericAmount} by ${currentUser.displayName || "a supporter"}.`,
           type: "Your_project_Funded",
           read: false,
           createdAt: Timestamp.now()
@@ -503,8 +545,8 @@ const Support = () => {
       // Notification to the supporter
       try {
         const supportMessage = rewardToProcess 
-          ? `You donated ${numericAmount}$ to ${project.title} and claimed the reward: ${rewardToProcess.title}!`
-          : `You donated ${numericAmount}$ to a project called ${project.title}.`;
+          ? `You donated ETB ${numericAmount} to ${project.title} and claimed the reward: ${rewardToProcess.title}!`
+          : `You donated ETB ${numericAmount} to a project called ${project.title}.`;
           
         await addDoc(collection(db, "notifications"), {
           userId: currentUser.uid,
@@ -545,7 +587,7 @@ const Support = () => {
               userId: project.createdBy.uid,
               projectId: project.id,
               projectTitle: project.title,
-              message: `🎉 Milestone Reached! Your project "${project.title}" has reached ${milestone.percentage}% funding ($${milestone.amount.toFixed(2)})! ${milestone.description}`,
+              message: `🎉 Milestone Reached! Your project "${project.title}" has reached ${milestone.percentage}% funding (ETB ${milestone.amount.toFixed(2)})! ${milestone.description} 💰 ETB ${milestone.transferAmount.toFixed(2)} has been transferred to your withdrawable balance!`,
               type: "Milestone_Completed",
               read: false,
               createdAt: Timestamp.now()
@@ -586,7 +628,7 @@ const Support = () => {
       const rewardMessage = rewardToProcess 
         ? ` 🎁 Reward "${rewardToProcess.title}" claimed!`
         : '';
-      toast.success(`🎉 You successfully supported with $${numericAmount}!${rewardMessage}${milestoneMessage}`, {
+      toast.success(`🎉 You successfully supported with ETB ${numericAmount}!${rewardMessage}${milestoneMessage}`, {
         autoClose: 3000
       });
 
@@ -679,7 +721,7 @@ const Support = () => {
       const remaining = fundingGoal - currentFunded;
 
       if (numericAmount > remaining) {
-        toast.error(`You can only fund up to $${remaining}.`);
+        toast.error(`You can only fund up to ETB ${remaining}.`);
         return;
       }
 
@@ -718,7 +760,7 @@ const Support = () => {
       'first_name': currentUser.displayName?.split(' ')[0] || 'User',
       'last_name': currentUser.displayName?.split(' ')[1] || '',
       'title': `Support: ${project.title}`,
-      'description': `Supporting ${project.title} with $${numericAmount}`,
+      'description': `Supporting ${project.title} with ETB ${numericAmount}`,
       'logo': 'https://your-logo-url.com/logo.png',
       'return_url': `${baseUrl}/support/${id}?${returnParams.toString()}`,
       'callback_url': `${baseUrl}/api/verify-payment`,
@@ -770,7 +812,7 @@ const Support = () => {
       await processOptimizedWalletSupport(numericAmount, selectedReward);
       
       setWalletPaymentStatus('success');
-      toast.success(`🎉 Payment successful! $${numericAmount} deducted from your wallet.`, {
+      toast.success(`🎉 Payment successful! ETB ${numericAmount} deducted from your wallet.`, {
         autoClose: 2000
       });
 
@@ -815,10 +857,16 @@ const Support = () => {
         const projectData = projectSnap.data();
         const userData = userSnap.data();
 
-        // Check wallet balance
-        const walletBalance = userData.walletBalance || 0;
-        if (walletBalance < numericAmount) {
-          throw new Error(`Insufficient wallet balance. You have $${walletBalance.toLocaleString()} but need $${numericAmount.toLocaleString()}.`);
+        // Get project creator's user document
+        const creatorRef = doc(db, "users", projectData.createdBy.uid);
+        const creatorSnap = await transaction.get(creatorRef);
+
+        if (!creatorSnap.exists()) throw new Error("Project creator not found in database.");
+
+        // Check withdrawable balance
+        const withdrawableBalance = userData.wallet?.withdrawable || 0;
+        if (withdrawableBalance < numericAmount) {
+          throw new Error(`Insufficient withdrawable balance. You have ETB ${withdrawableBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} but need ETB ${numericAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}.`);
         }
 
         // Prevent supporting own project
@@ -845,7 +893,7 @@ const Support = () => {
         const remaining = fundingGoal - currentFunded;
 
         if (numericAmount > remaining) {
-          throw new Error(`You can only fund up to $${remaining}.`);
+          throw new Error(`You can only fund up to ETB ${remaining}.`);
         }
 
         // Validate reward selection if applicable
@@ -857,7 +905,7 @@ const Support = () => {
           
           const rewardAmount = parseFloat(rewardFromProject.amount) || 0;
           if (numericAmount < rewardAmount) {
-            throw new Error(`Your contribution of $${numericAmount} is insufficient for the selected reward (requires $${rewardAmount}).`);
+            throw new Error(`Your contribution of ETB ${numericAmount} is insufficient for the selected reward (requires ETB ${rewardAmount}).`);
           }
           
           if (rewardFromProject.type === 'limited') {
@@ -906,7 +954,8 @@ const Support = () => {
 
         // Prepare update data for user
         const updateData = {
-          walletBalance: increment(-numericAmount), // Deduct from wallet
+          'wallet.withdrawable': increment(-numericAmount), // Deduct from withdrawable balance
+          'wallet.total': increment(-numericAmount), // Update total wallet balance
           totalFunded: newTotalFunded,
           fundingCounter: newFundingCounter,
           fundings: userFundings,
@@ -942,6 +991,9 @@ const Support = () => {
         const newFundedMoney = currentFunded + numericAmount;
         const milestones = projectData.milestones || {};
 
+        // Track total amount to transfer from non-withdrawable to withdrawable
+        let totalTransferAmount = 0;
+
         // Check which milestones are reached
         [25, 50, 75, 100].forEach(percentage => {
           if (milestones[percentage]) {
@@ -951,10 +1003,15 @@ const Support = () => {
 
             // If this milestone was just crossed
             if (previousPercentage < percentage && newPercentage >= percentage) {
+              // Calculate 25% of funding goal to transfer
+              const transferAmount = (fundingGoal * 25) / 100;
+              totalTransferAmount += transferAmount;
+
               milestonesReached.push({
                 percentage,
                 description: milestones[percentage].description,
-                amount: milestoneAmount
+                amount: milestoneAmount,
+                transferAmount: transferAmount
               });
 
               // Update milestone status to completed
@@ -994,6 +1051,23 @@ const Support = () => {
 
         transaction.update(projectRef, projectUpdate);
         transaction.update(userRef, updateData);
+
+        // Add funds to project creator's wallet
+        // New support goes to non-withdrawable, but if milestones were reached, 
+        // transfer 25% of funding goal per milestone from non-withdrawable to withdrawable
+        const creatorData = creatorSnap.data();
+        const currentNonWithdrawable = creatorData.wallet?.nonWithdrawable || 0;
+        
+        // Calculate how much can actually be transferred (can't transfer more than available)
+        const actualTransferAmount = Math.min(totalTransferAmount, currentNonWithdrawable + numericAmount);
+        
+        const creatorWalletUpdate = {
+          'wallet.nonWithdrawable': increment(numericAmount - actualTransferAmount),
+          'wallet.withdrawable': increment(actualTransferAmount),
+          'wallet.total': increment(numericAmount)
+        };
+        
+        transaction.update(creatorRef, creatorWalletUpdate);
 
         // Create transaction record
         const transactionsCol = collection(db, "transactions");
@@ -1474,9 +1548,9 @@ const Support = () => {
               <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 mb-1">Available Balance</p>
+                    <p className="text-sm font-medium text-gray-600 mb-1">Available Withdrawable Balance</p>
                     <p className="text-3xl font-bold text-gray-900">
-                      ETB {(userData.walletBalance || 0).toLocaleString()}
+                      ETB {(userData.wallet?.withdrawable || 0).toLocaleString()}
                     </p>
                     <p className="text-sm text-gray-500 mt-1">Use your wallet to support this project instantly</p>
                   </div>
@@ -1488,7 +1562,7 @@ const Support = () => {
                 {/* Balance Status Indicator */}
                 {amount && parseFloat(amount) > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
-                    {userData.walletBalance >= parseFloat(amount) ? (
+                    {(userData.wallet?.withdrawable || 0) >= parseFloat(amount) ? (
                       <div className="flex items-center gap-2 text-green-600">
                         <CheckCircle className="w-4 h-4" />
                         <span className="text-sm font-medium">
@@ -1499,7 +1573,7 @@ const Support = () => {
                       <div className="flex items-center gap-2 text-red-600">
                         <XCircle className="w-4 h-4" />
                         <span className="text-sm font-medium">
-                          Insufficient balance. Need ETB {(parseFloat(amount) - userData.walletBalance).toLocaleString()} more
+                          Insufficient balance. Need ETB {(parseFloat(amount) - (userData.wallet?.withdrawable || 0)).toLocaleString()} more
                         </span>
                       </div>
                     )}
@@ -1809,9 +1883,9 @@ const Support = () => {
                       <button
                         type="button"
                         onClick={handleWalletPayment}
-                        disabled={walletProcessing || walletPaymentStatus === 'success' || !userData?.walletBalance || userData.walletBalance < parseFloat(amount)}
+                        disabled={walletProcessing || walletPaymentStatus === 'success' || !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount)}
                         className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                          walletProcessing || walletPaymentStatus === 'success' || !userData?.walletBalance || userData.walletBalance < parseFloat(amount)
+                          walletProcessing || walletPaymentStatus === 'success' || !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount)
                             ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
@@ -1831,7 +1905,7 @@ const Support = () => {
                             <XCircle className="w-4 h-4 mr-2" />
                             Payment Failed
                           </div>
-                        ) : !userData?.walletBalance || userData.walletBalance < parseFloat(amount) ? (
+                        ) : !userData?.wallet?.withdrawable || userData.wallet.withdrawable < parseFloat(amount) ? (
                           <div className="flex items-center justify-center">
                             <Wallet className="w-4 h-4 mr-2" />
                             Insufficient Balance

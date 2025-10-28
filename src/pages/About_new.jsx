@@ -12,6 +12,7 @@ import {
   FiAward,
   FiGlobe,
   FiTarget,
+  FiClock,
 } from "react-icons/fi";
 import { Link } from "react-router";
 
@@ -88,7 +89,7 @@ const About = () => {
 
   const differentiators = [
     {
-      icon: <FiShield className="w-5 h-5 " />,
+      icon: <FiShield className="w-5 h-5" />,
       title: "Risk-first investment decisions",
       description: "Every campaign is paired with contextual risk signals—ranging from milestone burn-down tracking to community sentiment—so backers can support ideas with clarity, not guesswork.",
     },
@@ -168,21 +169,6 @@ const About = () => {
     },
   ];
 
-  const roadmap = [
-    {
-      milestone: "Q4 2025",
-      detail: "Deploy automated risk scoring that blends platform telemetry with third-party data feeds for even richer investor insights.",
-    },
-    {
-      milestone: "Q1 2026",
-      detail: "Introduce collaborative due diligence rooms where investors can annotate milestones, share research, and vote on creator requests.",
-    },
-    {
-      milestone: "H1 2026",
-      detail: "Expand multi-currency wallets and smart contract settlement options to unlock a broader global investor base.",
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-white">
       {/* Enhanced Hero Section with Modern Layout */}
@@ -214,57 +200,77 @@ const About = () => {
               </div>
             </div>
 
-            {/* Stats Grid with Animation */}
+            {/* Stats Grid with New Animations */}
             <div ref={statsRef} className="grid grid-cols-2 gap-4">
-              {stats.map((stat, index) => (
+              {/* 24/7 - Enhanced Clock Animation */}
+              <div className="bg-white border h-60 flex flex-col justify-center items-center border-gray-200 rounded-lg p-6 text-center transition-all duration-200 relative overflow-hidden group">                
+                {/* Clock Progress Fill (Conic Gradient) */}
                 <div 
-                  key={index} 
-                  className="bg-white border h-60 flex flex-col justify-center items-center border-gray-200 rounded-lg p-6 text-center hover:border-gray-900 transition-all duration-200 relative overflow-hidden group"
-                >
-                  {/* Water Fill Effect */}
-                  <div 
-                    className="absolute bottom-0 left-0 right-0 bg-color-b transition-all duration-500 ease-out"
-                    style={{ 
-                      height: `${stat.progress}%`,
-                      background: stat.isComplete 
-                        ? 'linear-gradient(to top, rgba(37, 99, 235, 0.9) 0%, rgba(59, 130, 246, 0.95) 100%)'
-                        : 'linear-gradient(to top, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.3) 100%)'
-                    }}
-                  />
-                  
-                  {/* Ripple Effect */}
-                  <div 
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{
-                      background: `radial-gradient(circle at center, rgba(37, 99, 235, 0.1) 0%, transparent 70%)`
-                    }}
-                  />
-                  
-                  <div className="relative z-10">
-                    <div className={`text-4xl font-bold mb-2 transition-all duration-300 group-hover:scale-110 ${
-                      stat.isComplete ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      {stat.number}
-                    </div>
-                    <div className={`text-base font-medium ${
-                      stat.isComplete ? 'text-white' : 'text-gray-600'
-                    }`}>
-                      {stat.label}
-                    </div>
+                  className="absolute inset-0 transition-all duration-1000 ease-out border border-gray-200 rounded-lg"
+                  style={{
+                    background: `conic-gradient(
+                      from 0deg,
+                      #1C5EDD 0deg,
+                      #1C5EDD ${(counts.first / 24) * 360}deg,
+                      transparent ${(counts.first / 24) * 360}deg,
+                      transparent 360deg
+                    )`
+                  }}
+                />
+
+                <div className="relative z-10">
+                  <div className={`text-4xl font-bold mb-2 transition-all duration-300 group-hover:scale-110 ${
+                    counts.first === 24 && counts.second === 7 ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {stats[0].number}
                   </div>
-
-                  {/* Water Surface Effect */}
-                  <div 
-                    className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-b from-blue-200/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ top: `${100 - stat.progress}%` }}
-                  />
-
-                  {/* Completion Glow Effect */}
-                  {stat.isComplete && (
-                    <div className="absolute inset-0 rounded-lg bg-blue-500/10 animate-pulse" />
-                  )}
+                  <div className={`text-base font-medium ${
+                    counts.first === 24 && counts.second === 7 ? 'text-white' : 'text-gray-600'
+                  }`}>
+                    {stats[0].label}
+                  </div>
                 </div>
-              ))}
+              </div>
+
+              {/* 25+ - Vertical Block Stack Animation */}
+              <div className="bg-white border h-60 flex flex-col justify-center items-center border-gray-200 rounded-lg p-6 text-center transition-all duration-200 relative overflow-hidden group">
+  {/* Blocks Container - 5 full-width blocks stacked from bottom */}
+  <div className="absolute inset-0 flex flex-col-reverse">
+    {Array.from({ length: 5 }).map((_, index) => {
+      const threshold = index * 5; // 0, 5, 10, 15, 20
+      const isActive = counts.third >= threshold;
+      const blockHeight = 20; // Each block takes 20% of height
+      
+      return (
+        <div
+          key={index}
+          className="w-full transition-all duration-500 ease-out border-t border-blue-200"
+          style={{
+            height: `${blockHeight}%`,
+            backgroundColor: isActive ? '#1C5EDD' : 'transparent',
+            transform: isActive ? 'translateY(0)' : 'translateY(10px)',
+            opacity: isActive ? 1 : 0,
+          }}
+        />
+      );
+    })}
+  </div>
+
+  {/* Subtle progress indication */}
+
+  <div className="relative z-10">
+    <div className={`text-4xl font-bold mb-2 transition-all duration-300 group-hover:scale-110 ${
+      counts.third >= 15 ? 'text-white' : 'text-gray-900' // White text when 4th block appears (15+)
+    }`}>
+      {stats[1].number}
+    </div>
+    <div className={`text-base font-medium ${
+      counts.third >= 15 ? 'text-white' : 'text-gray-600' // White text when 4th block appears (15+)
+    }`}>
+      {stats[1].label}
+    </div>
+  </div>
+</div>
             </div>
           </div>
         </div>
@@ -286,7 +292,7 @@ const About = () => {
                 key={index}
                 className="bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-900 transition-all duration-200 group"
               >
-                <div className="flex items-center justify-center w-12 h-12 bg-color-b text-white rounded-lg mb-4 group-hover:scale-105 transition-transform duration-200">
+                <div className="flex items-center justify-center w-12 h-12 bg-gray-900 text-white rounded-lg mb-4 group-hover:scale-105 transition-transform duration-200">
                   {item.icon}
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 mb-3">{item.title}</h3>
@@ -315,7 +321,7 @@ const About = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {values.map((value, index) => (
                 <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-900 transition-all duration-200">
-                  <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg text-color-b mb-3">
+                  <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg text-gray-900 mb-3">
                     {value.icon}
                   </div>
                   <h3 className="text-sm font-semibold text-gray-900 mb-2">{value.title}</h3>
@@ -392,7 +398,7 @@ const About = () => {
               <div className="space-y-4">
                 {builderToolkit.map((item, index) => (
                   <div key={index} className="flex items-start gap-4 bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-900 transition-all duration-200">
-                    <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg text-color-b flex-shrink-0">
+                    <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg text-gray-900 flex-shrink-0">
                       {item.icon}
                     </div>
                     <div>
@@ -408,19 +414,19 @@ const About = () => {
               <h3 className="text-3xl font-semibold text-gray-900 mb-4">Powered by Modern Technology</h3>
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
-                  <FiCheckCircle className="w-5 h-5 text-color-b mt-0.5 flex-shrink-0" />
+                  <FiCheckCircle className="w-5 h-5 text-gray-900 mt-0.5 flex-shrink-0" />
                   <span className="text-sm text-gray-600">React 18 + Vite for lightning-fast interface updates.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <FiCheckCircle className="w-5 h-5 text-color-b mt-0.5 flex-shrink-0" />
+                  <FiCheckCircle className="w-5 h-5 text-gray-900 mt-0.5 flex-shrink-0" />
                   <span className="text-sm text-gray-600">Firebase Authentication, Firestore, and Storage securing profiles, funding data, and media uploads.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <FiCheckCircle className="w-5 h-5 text-color-b mt-0.5 flex-shrink-0" />
+                  <FiCheckCircle className="w-5 h-5 text-gray-900 mt-0.5 flex-shrink-0" />
                   <span className="text-sm text-gray-600">Tailwind-inspired utility styling with bespoke palettes for consistent branding.</span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <FiCheckCircle className="w-5 h-5 text-color-b mt-0.5 flex-shrink-0" />
+                  <FiCheckCircle className="w-5 h-5 text-gray-900 mt-0.5 flex-shrink-0" />
                   <span className="text-sm text-gray-600">GSAP-powered motion for immersive onboarding and campaign storytelling.</span>
                 </li>
               </ul>

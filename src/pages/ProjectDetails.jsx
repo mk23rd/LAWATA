@@ -324,6 +324,22 @@ const ProjectDetails = () => {
     }) || '$0';
   };
 
+  // Format remaining time precisely as years, months, and days
+  const formatTimeLeft = (totalDays) => {
+    const d = Math.max(Number(totalDays) || 0, 0);
+    if (d === 0) return '0 days';
+    const years = Math.floor(d / 365);
+    const remAfterYears = d % 365;
+    const months = Math.floor(remAfterYears / 30);
+    const days = remAfterYears % 30;
+
+    const parts = [];
+    if (years > 0) parts.push(`${years} year${years !== 1 ? 's' : ''}`);
+    if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+    return parts.join(' ');
+  };
+
   const handleComment = async () => {
     if (!newComment.trim()) return;
     try {
@@ -678,9 +694,9 @@ const ProjectDetails = () => {
                 <div>
                   <div className="flex items-center gap-1 mb-1">
                     <Clock className="w-3 h-3 text-gray-500" />
-                    <p className="text-xs text-gray-500">Days Left</p>
+                    <p className="text-xs text-gray-500">Time Left</p>
                   </div>
-                  <p className="text-lg font-bold text-gray-900">{daysLeft > 0 ? daysLeft : '0'}</p>
+                  <p className="text-lg font-bold text-gray-900">{formatTimeLeft(daysLeft)}</p>
                 </div>
               </div>
 

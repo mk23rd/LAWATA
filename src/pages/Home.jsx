@@ -56,9 +56,8 @@ const stats = [
     suffix: "+",
   },
 
-  { id: "users", display: "1K+", label: "Active Users", percent: 60, numeric: 1000, format: (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : `${Math.round(n)}`), suffix: "+" },
+  { id: "users", display: "100+", label: "Active Users", percent: 60, numeric: 100, format: (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : `${Math.round(n)}`), suffix: "+" },
 
-  { id: "rate", display: "95%", label: "Success Rate", percent: 48, numeric: 48, suffix: "%" },
 ];
 
 
@@ -78,6 +77,21 @@ const stats = [
 
     fetchUserData()
   }, [user])
+
+  const formatTimeLeft = (totalDays) => {
+    const d = Math.max(Number(totalDays) || 0, 0);
+    if (d === 0) return '0 days';
+    const years = Math.floor(d / 365);
+    const remAfterYears = d % 365;
+    const months = Math.floor(remAfterYears / 30);
+    const days = remAfterYears % 30;
+
+    const parts = [];
+    if (years > 0) parts.push(`${years} year${years !== 1 ? 's' : ''}`);
+    if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+    return parts.join(', ');
+  };
 
   const handleLogout = async () => {
     try {
@@ -101,7 +115,9 @@ const stats = [
     }
 
     document.addEventListener('mousedown', handleClickOutside)
-    return () => {
+
+
+  return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
@@ -167,66 +183,97 @@ const scrollRight = () => {
 useEffect(() => {
   if (!statsContainerRef.current) return;
 
-  // initial zero state
-  barRefs.current.forEach((el) => el && gsap.set(el, { height: "0%" }));
-  textRefs.current.forEach((el, i) => {
-    const s = stats[i];
-    if (!el) return;
-    if (s.suffix === "%") el.innerText = "0%";
-    else if (s.format) el.innerText = s.format(0) + (s.suffix || "");
-    else el.innerText = "0" + (s.suffix || "");
-  });
+  const container = statsContainerRef.current;
 
-  const tl = gsap.timeline({
-    scrollTrigger: {
-      trigger: statsContainerRef.current,
-      start: "top 80%",
-      toggleActions: "play none none none",
-      // markers: true, // enable to debug
-    },
-  });
+  const resetZero = () => {
+    barRefs.current.forEach((el) => el && gsap.set(el, { y: 0 }));
+    textRefs.current.forEach((el, i) => {
+      const s = stats[i];
+      if (!el) return;
+      if (s.suffix === "%") el.innerText = "0%";
+      else if (s.format) el.innerText = s.format(0) + (s.suffix || "");
+      else el.innerText = "0" + (s.suffix || "");
+    });
+  };
 
-  stats.forEach((s, i) => {
-    // bar grow
-    tl.to(
-      barRefs.current[i],
-      { height: `${s.percent}%`, duration: 1.2, ease: "power3.out" },
-      i * 0.12
-    );
+  const buildTimeline = () => {
+    const tl = gsap.timeline();
+    const containerHeight = container.clientHeight || 0;
 
-    // count-up
-    const obj = { val: 0 };
-    tl.to(
-      obj,
-      {
-        val: s.numeric,
-        duration: 1.2,
-        ease: "power1.out",
-        onUpdate: () => {
-          const el = textRefs.current[i];
-          if (!el) return;
-          if (s.suffix === "%") el.innerText = Math.round(obj.val) + "%";
-          else if (s.format) el.innerText = s.format(obj.val) + (s.suffix || "");
-          else el.innerText = Math.round(obj.val) + (s.suffix || "");
+    stats.forEach((s, i) => {
+      const barEl = barRefs.current[i];
+      const barHeight = barEl ? barEl.offsetHeight : 0;
+      const targetTop = containerHeight * (s.percent / 100);
+      const targetY = -(targetTop - barHeight);
+
+      tl.to(barEl, { y: targetY, duration: 3.2, ease: "power3.out" }, i * 0.12);
+
+      const obj = { val: 0 };
+      tl.to(
+        obj,
+        {
+          val: s.numeric,
+          duration: 3.2,
+          ease: "power1.out",
+          onUpdate: () => {
+            const el = textRefs.current[i];
+            if (!el) return;
+            if (s.suffix === "%") el.innerText = Math.round(obj.val) + "%";
+            else if (s.format) el.innerText = s.format(obj.val) + (s.suffix || "");
+            else el.innerText = Math.round(obj.val) + (s.suffix || "");
+          },
         },
-      },
-      i * 0.12
-    );
+        i * 0.12
+      );
+    });
+
+    return tl;
+  };
+
+  let tl = null;
+
+  const st = ScrollTrigger.create({
+    trigger: container,
+    start: "top bottom",
+    end: "bottom top",
+    onEnter: () => {
+      if (tl) {
+        try { tl.kill(); } catch {}
+      }
+      resetZero();
+      tl = buildTimeline();
+    },
+    onEnterBack: () => {
+      if (tl) {
+        try { tl.kill(); } catch {}
+      }
+      resetZero();
+      tl = buildTimeline();
+    },
+    onLeave: () => {
+      if (tl) {
+        try { tl.kill(); } catch {}
+        tl = null;
+      }
+    },
+    onLeaveBack: () => {
+      if (tl) {
+        try { tl.kill(); } catch {}
+        tl = null;
+      }
+    },
+    // markers: true, // enable for debug
   });
 
   return () => {
     try {
-      if (tl && tl.scrollTrigger) tl.scrollTrigger.kill();
-      tl.kill();
-    } catch (e) {
-      // ignore
-    }
+      if (tl) tl.kill();
+    } catch {}
+    try {
+      st.kill();
+    } catch {}
   };
 }, []);
-
-
-
-
 
 /* useEffect(() => {
   const handleClickOutside = (event) => {
@@ -250,22 +297,22 @@ const yTicks = [0, 25, 50, 75, 100]; // adjust values if you want different divi
 
 const testimonials = [
   {
-    initial: "A",
-    name: "Alex Chen",
+    initial: "https://images.pexels.com/photos/9351804/pexels-photo-9351804.jpeg",
+    name: "Ephrata Mekbib",
     role: "Project Creator",
     quote:
-      '“LAWATA helped me raise $50K for my tech startup in just 2 weeks. The risk analysis gave investors confidence in my project.”',
+      '“LAWATA helped me raise 50K for my tech startup in just 2 weeks. The risk analysis gave investors confidence in my project.”',
   },
   {
-    initial: "M",
-    name: "Maria Rodriguez",
+    initial: "https://images.pexels.com/photos/7345675/pexels-photo-7345675.jpeg",
+    name: "Samuel Kidanu",
     role: "Investor",
     quote:
       '“The AI risk assessment is incredible. I\'ve made 3 successful investments with 200% returns. LAWATA changed my investment game!”',
   },
   {
-    initial: "J",
-    name: "James Wilson",
+    initial: "https://images.pexels.com/photos/8197946/pexels-photo-8197946.jpeg",
+    name: "Mideksa Lafto",
     role: "Entrepreneur",
     quote:
       '“The platform is intuitive and the community is amazing. I found both funding and mentorship here. Highly recommended!”',
@@ -288,29 +335,53 @@ const testimonials = [
         <div className='w-screen h-1/5 flex items-center pt-25'>
           <div className=' w-0/10 h-full lg:w-2/10'></div>
           <div className=' w-10/10 h-full flex items-center lg:justify-start justify-center'>
-                <p className='sm:text-3xl md:text-3xl lg:text-4xl text-2xl text-center lg:text-start pt-30 lg:pt-0 text-color-e font-medium lg:font-light'>Crowdfunding Meets Risk Intelligence - Where Every Funding <br /> is an Informed Decision</p>
+                <p className='sm:text-3xl md:text-3xl lg:text-4xl text-2xl text-center lg:text-start pt-15 lg:pt-0 text-color-e font-medium lg:font-light'>Crowdfunding Meets Risk Intelligence - Where Every Funding <br /> is an Informed Decision</p>
           </div>       
         </div>
       </div>
 
-      <div className="h-screen w-screen flex flex-col">
-  {/* Navbar */}
-  <nav className="h-16 md:h-20"></nav>
+  <div className="w-screen flex flex-col">
+
 
   {/* Main */}
-  <main className="flex-1 flex flex-col gap-8 md:gap-12 lg:gap-16 px-4 md:px-8 lg:px-12">
+  <main className="flex flex-col gap-8 md:gap-12 lg:gap-16 px-4 md:px-8 lg:px-12">
     
-    {/* Header Row */}
-    <div className="flex items-center justify-center mx-5 mt-15 lg:mt-5">
+    {/* Header Row - Mobile */}
+    <div className="flex md:hidden items-center justify-between mx-5 mt-15">
+      <button
+        onClick={scrollLeft}
+        className="hover:bg-color-a border-2 hover:text-color-d text-color-a border-color-a w-10 h-10 rounded-full flex items-center justify-center"
+      >
+        <img src={Arrow} alt="Scroll Left" className='w-3'/>
+      </button>
+      <p className="text-color-e text-3xl underline text-center">Fresh Favorites</p>
+      <button
+        onClick={scrollRight}
+        className="hover:bg-color-a border-2 hover:text-color-d text-color-a border-color-a w-10 h-10 rounded-full flex items-center justify-center rotate-180"
+      >
+        <img src={Arrow} alt="Scroll Right" className='w-3'/>
+      </button>
+    </div>
+
+    {/* Header Row - Desktop/Tablet */}
+    <div className="hidden md:flex items-center justify-center mx-5 mt-15 lg:mt-5 ">
       {/* Title */}
-      <div className="w-1/2 flex items-center justify-start">
+      <div className="w-1/3 flex items-center justify-start">
         <p className="text-color-e text-3xl sm:text-3xl md:text-4xl lg:text-5xl underline">
           Fresh Favorites
         </p>
       </div>
 
+      {/* Explore More (center, desktop only) */}
+      <div className="w-1/3 flex items-center justify-center">
+        <Link to="/browse" className="bg-blue-600 hover:bg-blue-700 border-3 border-color-a text-white rounded-xl w-40 h-12 justify-center items-center flex text-xl sm:text-2xl md:text-3xl lg:text-3xl z-10">
+          Explore More
+        </Link>
+        <div className='w-0.5 h-20 bg-color-a absolute'></div>
+      </div>
+
       {/* Scroll Buttons */}
-      <div className="w-1/2 flex justify-end items-center gap-3 lg:px-0">
+      <div className="w-1/3 flex justify-end items-center gap-3 lg:px-0">
         <button
           onClick={scrollLeft}
           className="hover:bg-color-a border-2 md:border-3 hover:text-color-d text-color-a border-color-a w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center"
@@ -319,7 +390,7 @@ const testimonials = [
         </button>
         <button
           onClick={scrollRight}
-          className="hover:bg-color-a border-2 md:border-3 hover:text-color-d text-color-a border-color-a w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center rotate-180"
+          className="hover:bg-color-a border-2 md:border-3 hover:text-color-d text-color-a border-color-a w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center rotate-180 "
         >
           <img src={Arrow} alt="Scroll Right" className='w-3'/>
         </button>
@@ -327,14 +398,37 @@ const testimonials = [
     </div>
 
     {/* Projects Scroll Section */}
-    <div className="relative flex-1 w-full">
+    <div className="relative w-full">
       <div
         ref={freshContainerRef}
         className="flex overflow-x-auto gap-4 scrollbar-hide py-4 px-[5vw] w-full"
-        style={{ scrollSnapType: "x mandatory" }}
+        style={{ scrollSnapType: "x mandatory", overscrollBehaviorX: "contain", touchAction: "pan-y" }}
+        onWheel={(e) => {
+          // Only consume horizontal-intent gestures; let vertical scrolling bubble to the page
+          const absX = Math.abs(e.deltaX);
+          const absY = Math.abs(e.deltaY);
+          if (absX > absY) {
+            e.preventDefault();
+            e.currentTarget.scrollLeft += e.deltaX;
+          }
+        }}
       >
-        {freshProjects.length > 0 ? (
-          freshProjects.map((project) => {
+        {freshProjects.some((project) => {
+          const fundedPercentage =
+            project.fundedMoney && project.fundingGoal
+              ? (project.fundedMoney / project.fundingGoal) * 100
+              : 0;
+          return fundedPercentage < 100;
+        }) ? (
+          freshProjects
+            .filter((project) => {
+              const fundedPercentage =
+                project.fundedMoney && project.fundingGoal
+                  ? (project.fundedMoney / project.fundingGoal) * 100
+                  : 0;
+              return fundedPercentage < 100;
+            })
+            .map((project) => {
             const fundedPercentage =
               project.fundedMoney && project.fundingGoal
                 ? Math.min((project.fundedMoney / project.fundingGoal) * 100, 100)
@@ -374,7 +468,7 @@ const testimonials = [
                   />
 
                   {/* Progress Bar */}
-                  <div className="w-full mb-2 z-10">
+                  <div className="w-full mb-2 z-10 ">
                     <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                       <div
                         className={`h-2 rounded-full transition-all ${
@@ -387,7 +481,7 @@ const testimonials = [
                     </div>
                     <div className="flex justify-between text-xs text-color-d w-full">
                       <span>{Math.round(fundedPercentage)}% funded</span>
-                      <span>{daysLeft} days left</span>
+                      <span>{typeof daysLeft === 'number' ? `${formatTimeLeft(daysLeft)} left` : 'N/A'}</span>
                     </div>
                   </div>
 
@@ -398,7 +492,7 @@ const testimonials = [
 
                   {/* Funding left */}
                   {!isFullyFunded && (
-                    <p className="text-xs text-color-d mb-2 z-10">
+                    <p className="text-xs text-color-d mb-2 z-10 ">
                       {amountLeft > 0
                         ? `$${amountLeft.toLocaleString()} to go`
                         : "Goal reached!"}
@@ -406,28 +500,38 @@ const testimonials = [
                   )}
 
                   {/* Vertical Line Accent */}
-                  <div className="absolute -top-10 left-1/2 h-[115%] w-[3px] bg-color-e pointer-events-none z-0"></div>
+                  <div className="absolute -top-10 left-1/2 h-[115%] w-[3px] bg-color-e pointer-events-none z-0 "></div>
                 </div>
               </Link>
             );
           })
         ) : (
-          <p className="text-color-e ml-4">No projects yet</p>
+          <p className="text-color-e ml-4 ">No projects yet</p>
         )}
       </div>
 
       {/* Fade Effects */}
-      <div className="absolute top-0 left-0 h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
-      <div className="absolute top-0 right-0 h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
+      <div className="absolute top-0 left-0 h-90 md:h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
+      <div className="absolute top-0 right-0 h-90 md:h-full w-5 sm:w-8 md:w-10 lg:w-10 bg-white pointer-events-none z-10"></div>
+    </div>
+
+    {/* Explore More CTA - Mobile only */}
+    <div className="w-full flex justify-center mt-7 md:hidden">
+      <Link
+        to="/browse"
+        className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-xl rounded-xl font-semibold shadow-sm transition-colors"
+      >
+        Explore More
+      </Link>
     </div>
   </main>
 </div>
 
 
       {/* Statistics Section */}
-      <div className="h-screen w-screen bg-white flex flex-col justify-center items-center relative overflow-hidden">
+      <div className="h-screen w-screen flex flex-col justify-center items-center relative overflow-hidden md:mt-15">
         <div className='w-full h-1/5 flex flex-col items-center'>
-          <h2 className="text-4xl md:text-6xl font-bold text-color-a mb-5 mt-5 animate-fade-in-up">
+          <h2 className="text-4xl md:text-6xl font-bold text-color-a mb-5 md:mt-5 animate-fade-in-up">
             Join the Future of
             <span className="bg-color-a bg-clip-text text-transparent"> Crowdfunding</span>
           </h2>
@@ -439,42 +543,24 @@ const testimonials = [
         {/* ====== Animated Stats Container (uses GSAP + ScrollTrigger) ====== */}
         <div
           ref={statsContainerRef}
-          className="relative w-11/12 h-4/5 flex justify-center items-end gap-10 mb-5 md:gap-38 lg:gap-48 z-10 border-b-6 border-l-6"
+          className="relative w-11/12 h-3/5 md:h-4/5 flex justify-center items-end gap-7 mb-5 md:gap-38 lg:gap-48 z-10 md:mt-10"
         >
-          {/* Arrow on top-left of the Y-axis */}
-          <FiChevronUp
-            className="absolute text-color-a"
-            style={{
-              top: '-25px',
-              left: '-35px',
-              fontSize: '4rem',
-            }}
-          />
-
-          {/* Arrow on bottom-right of the X-axis */}
-          <FiChevronRight
-            className="absolute text-color-a"
-            style={{
-              right: '-25px',
-              bottom: '-35px',
-              fontSize: '4rem',
-            }}
-          />
 
           {stats.map((s, i) => (
             <div key={s.id} className="relative text-center w-40 h-full overflow-hidden">
+              {/* Behind-rectangle vertical line, full container (y-axis) height */}
+              <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[3px] bg-color-e z-0"></div>
               <div className="absolute inset-x-0 bottom-0 h-full flex items-end justify-center">
                 <div
                   ref={(el) => setBarRef(el, i)}
-                  className="md:w-40 border-t-4 border-r-4 border-l-4 w-20 ml-2 mr-2"
+                  className="w-30 h-30 ml-2 mr-2 border-4 flex flex-col items-center justify-center relative z-10"
                   style={{
                     background: "#1C5EDD",
-                    height: "0%",
                   }}
                 >
                   <div
                     ref={(el) => setTextRef(el, i)}
-                    className="text-3xl mt-5 md:text-6xl font-bold text-white leading-none"
+                    className="text-3xl mt-5 md:text-5xl font-bold text-white leading-none"
                   >
                     {s.display}
                   </div>
@@ -495,7 +581,7 @@ const testimonials = [
           </h2>
         </div>
 
-        <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-0 lg:mt-10">
+        <div className="w-85 md:w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-0 lg:mt-10">
           {testimonials.map((t, i) => (
             <article
               key={i}
@@ -512,8 +598,8 @@ const testimonials = [
               {/* Foreground content */}
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex items-center mb-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-color-b flex items-center justify-center mr-4">
-                    <span className="text-white font-bold text-lg">{t.initial}</span>
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-color-b overflow-hidden flex items-center justify-center mr-4">
+                    <img src={t.initial} alt={t.name} className="w-full h-full object-cover" />
                   </div>
 
                   <div className="min-w-0">
@@ -543,9 +629,9 @@ const testimonials = [
       </div>
 
       {/* Call to Action Section */}
-      <div className="h-screen w-screen flex">
+      <div className="h-screen w-screen flex flex-col md:flex-row">
         {/* Left side */}
-        <Link to="/manage" className="group relative w-1/2 overflow-hidden cursor-pointer border-t-4 border-r-3">
+        <Link to="/manage" className="group relative md:w-1/2 w-full h-1/2 md:h-full overflow-hidden cursor-pointer border-t-4 border-r-3">
         {/* Image (covers the half) */}
         <img
         src={ImageLeft} /* replace with your left image path */
@@ -567,20 +653,16 @@ const testimonials = [
         {/* the CTA is initially hidden and revealed when hovering the half */}
         <Link
         to="/manage"
-        className="mt-8 inline-block bg-white text-black px-8 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0"
+        className="mt-8 inline-block bg-white text-black px-8 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 md:opacity-0 md:translate-y-4 group-hover:md:opacity-100 group-hover:md:translate-y-0"
         >
         Manage Your Projects
         </Link>
         </div>
-
-
-        {/* decorative accent (optional) */}
-        <div className="absolute bottom-6 left-6 w-3 h-3 bg-white rounded-full animate-pulse opacity-80"></div>
         </Link>
 
 
         {/* Right side */}
-        <Link to="/browse" className="group relative w-1/2 overflow-hidden cursor-pointer border-t-4 border-l-3">
+        <Link to="/browse" className="group relative md:w-1/2 w-full h-1/2 md:h-full overflow-hidden cursor-pointer border-t-4 border-l-3">
         <img
         src={ImageRight} /* replace with your right image path */
         alt="Right"
@@ -592,20 +674,17 @@ const testimonials = [
 
 
         <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6 mt-20">
-        <h3 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg">Discover & Invest</h3>
+        <h3 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-lg">Discover & Crowdfund</h3>
         <p className="mt-4 text-sm md:text-xl text-white/90 max-w-xs">Explore rising creators and join their journeys.</p>
 
 
         <Link
         to="/browse"
-        className="mt-8 inline-block bg-blue-600 text-white px-8 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0"
+        className="mt-8 inline-block bg-blue-600 text-white px-8 py-3 rounded-full font-semibold shadow-lg transform transition-all duration-300 md:opacity-0 md:translate-y-4 group-hover:md:opacity-100 group-hover:md:translate-y-0"
         >
         Explore Projects
         </Link>
         </div>
-
-
-        <div className="absolute top-8 right-8 w-4 h-4 bg-yellow-300 rounded-full animate-bounce opacity-80"></div>
         </Link>
       </div>
     </div>

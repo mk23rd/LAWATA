@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { Mail, RefreshCw, CheckCircle, ArrowLeft, Shield, Clock } from 'lucide-react';
 import { auth } from '../firebase/firebase-config';
 import { createUserWithEmailAndPassword, sendEmailVerification, deleteUser, reload } from 'firebase/auth';
+import { gsap } from 'gsap';
 
 const PreSignupEmailVerification = ({ 
   email, 
@@ -17,6 +18,8 @@ const PreSignupEmailVerification = ({
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const initializationRef = useRef(false);
+  const containerRef = useRef(null);
+  const contentRef = useRef(null);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -189,32 +192,66 @@ const PreSignupEmailVerification = ({
     return () => clearTimeout(timer);
   }, []);
 
+  // Animate container width on mount and reveal content afterwards
+  useEffect(() => {
+    if (!containerRef.current || !contentRef.current) return;
+
+    // Determine target width based on breakpoint (md = 768px)
+    const isMd = window.matchMedia('(min-width: 768px)').matches;
+    const targetWidth = isMd ? '600px' : '91.6667%'; // 11/12 = 91.6667%
+
+    // Ensure initial state (in case SSR or hot reload)
+    gsap.set(containerRef.current, { width: 25, overflow: 'hidden' });
+    gsap.set(contentRef.current, { opacity: 0 });
+
+    const tl = gsap.timeline();
+    tl.to(containerRef.current, {
+      width: targetWidth,
+      duration: 1,
+      ease: 'power2.out',
+    })
+      .set(containerRef.current, { overflow: 'visible' })
+      .to(contentRef.current, {
+        opacity: 1,
+        duration: 0.1,
+        ease: 'power1.out',
+      });
+
+    return () => {
+      try { tl.kill(); } catch {}
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+    <div className="fixed left-0 right-0 bottom-0 top-16 bg-color-a flex items-center md:items-start justify-center md:pt-10 z-[60]">
+      <div className='absolute w-2 h-[46rem] md:h-[38rem] bg-color-b top-5 rounded-2xl'></div>
+      <div ref={containerRef} style={{ width: '25px', overflow: 'hidden' }} className="bg-white border-color-b border-5 rounded-xl shadow-2xl p-6 md:p-5 h-[80vh] max-w-md w-11/12 md:w-[600px] mx-auto flex flex-col justify-between z-10">
+        <div ref={contentRef} className="opacity-0">
+        {/* Top section */}
+        <div className="space-y-6 md:space-y-5 flex-1">
         {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-8 h-8 text-blue-600" />
+        <div className="text-center mb-8 md:mb-6">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Shield className="w-6 h-6 text-blue-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-xl font-bold text-gray-900 mb-1">
             Verify Your Email
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-sm">
             We've sent a verification link to
           </p>
-          <p className="font-semibold text-gray-900 mt-1">
+          <p className="font-semibold text-gray-900 mt-1 text-sm break-words">
             {email}
           </p>
         </div>
 
         {/* Instructions */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-600" />
+        <div className="bg-gray-50 rounded-lg p-3 mb-6">
+          <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2 text-sm">
+            <CheckCircle className="w-4 h-4 text-color-b" />
             Next Steps:
           </h3>
-          <ol className="text-sm text-gray-600 space-y-1">
+          <ol className="text-xs text-gray-600 space-y-1">
             <li>1. Check your email inbox (and spam folder)</li>
             <li>2. Click the verification link in the email</li>
             <li>3. Return to this page - we'll detect verification automatically</li>
@@ -222,29 +259,30 @@ const PreSignupEmailVerification = ({
         </div>
 
         {/* Status */}
-        <div className="flex items-center justify-center gap-2 mb-6 p-3 bg-yellow-50 rounded-lg">
-          <Clock className="w-5 h-5 text-yellow-600" />
-          <span className="text-sm text-yellow-800">
+        <div className="flex items-center justify-center gap-2 mb-8 md:mb-6 p-2 bg-yellow-50 rounded-lg">
+          <Clock className="w-4 h-4 text-yellow-600" />
+          <span className="text-xs text-yellow-800">
             Checking verification status automatically...
           </span>
         </div>
+        </div>
 
-        {/* Action Buttons */}
-        <div className="space-y-3">
+        {/* Bottom section */}
+        <div className="space-y-6 md:space-y-4 pt-2">
           {/* Manual Check Button */}
           <button
             onClick={checkVerificationStatus}
             disabled={checkingStatus}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg md:text-sm"
           >
             {checkingStatus ? (
               <>
-                <RefreshCw className="w-5 h-5 animate-spin" />
+                <RefreshCw className="w-4 h-10 md:h-5 animate-spin" />
                 Checking...
               </>
             ) : (
               <>
-                <CheckCircle className="w-5 h-5" />
+                <CheckCircle className="w-4 h-10 md:h-5" />
                 I've Verified My Email
               </>
             )}
@@ -254,21 +292,21 @@ const PreSignupEmailVerification = ({
           <button
             onClick={sendVerificationEmail}
             disabled={isSending || countdown > 0}
-            className="w-full flex items-center justify-center gap-2 bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 bg-gray-600 text-white py-2 px-3 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-lg md:text-sm"
           >
             {isSending ? (
               <>
-                <RefreshCw className="w-5 h-5 animate-spin" />
+                <RefreshCw className="w-4 h-10 md:h-5 animate-spin" />
                 Sending...
               </>
             ) : countdown > 0 ? (
               <>
-                <Mail className="w-5 h-5" />
+                <Mail className="w-4 h-10 md:h-5" />
                 Resend in {countdown}s
               </>
             ) : (
               <>
-                <Mail className="w-5 h-5" />
+                <Mail className="w-4 h-10 md:h-5" />
                 Resend Verification Email
               </>
             )}
@@ -277,18 +315,12 @@ const PreSignupEmailVerification = ({
           {/* Back Button */}
           <button
             onClick={handleBack}
-            className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors"
+            className="w-full flex items-center justify-center gap-2 text-gray-600 py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors text-sm"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
             Back to Sign Up
           </button>
         </div>
-
-        {/* Help Text */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500">
-            Didn't receive the email? Check your spam folder or try resending.
-          </p>
         </div>
       </div>
     </div>

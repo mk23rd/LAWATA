@@ -702,6 +702,24 @@ export default function MyProjectInfo() {
 
   const progress = getProgressPercentage();
   const daysLeft = project.endDate ? Math.ceil((new Date(project.endDate) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+  
+  // Calculate claimed amount based on funding milestones (25%, 50%, 75%, 100%)
+  const calculateClaimedAmount = () => {
+    if (!project.fundingGoal || !project.fundedMoney) return 0;
+    
+    if (progress >= 100) {
+      return project.fundingGoal; // 100% of funding goal
+    } else if (progress >= 75) {
+      return project.fundingGoal * 0.75; // 75% of funding goal
+    } else if (progress >= 50) {
+      return project.fundingGoal * 0.5; // 50% of funding goal
+    } else if (progress >= 25) {
+      return project.fundingGoal * 0.25; // 25% of funding goal
+    }
+    return 0; // Less than 25% funded, nothing claimed
+  };
+  
+  const claimedAmount = calculateClaimedAmount();
 
   return (
     <div className="min-h-screen bg-white">
@@ -841,13 +859,33 @@ export default function MyProjectInfo() {
           {/* Days Remaining */}
           <div className="bg-white border border-gray-100 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-gray-500">Days Remaining</p>
+              <p className="text-xs font-medium text-gray-500">Ends {new Date(project.endDate?.toDate ? project.endDate.toDate() : project.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
               <div className="p-2 bg-gray-100 rounded-lg">
                 <FiClock className="w-4 h-4 text-gray-600" />
               </div>
             </div>
             <p className="text-2xl font-bold text-gray-900 mb-1">{daysLeft > 0 ? daysLeft : 'Ended'}</p>
-            <p className="text-xs text-gray-500">{daysLeft > 0 ? 'Campaign active' : 'Campaign ended'}</p>
+            <p className="text-xs text-gray-500">{funders.length} Backers</p>
+          </div>
+          
+          {/* Money Claimed */}
+          <div className="bg-white border border-gray-100 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-500">Money Claimed</p>
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <FiDollarSign className="w-4 h-4 text-gray-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {claimedAmount > 0 ? formatCurrency(claimedAmount) : 'Not claimed'}
+            </p>
+            {claimedAmount > 0 && (
+              <p className="text-xs text-gray-500">
+                {progress >= 100 ? '100% - Full amount' : 
+                 progress >= 75 ? '75% - Milestone reached' : 
+                 progress >= 50 ? '50% - Halfway there' : '25% - First milestone'}
+              </p>
+            )}
           </div>
         </div>
       </div>
